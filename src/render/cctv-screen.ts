@@ -5,15 +5,23 @@ const MESH_NAME = 'merged_mon_cctv_uv';
 // Resolution of the off-screen render — low enough to look lo-fi/surveillance-y.
 const RT_SIZE = 256;
 
-// Orbit parameters for the CCTV camera pan loop.
-// The camera slowly circles the board at a fixed height, with a gentle
-// radius pulse to simulate a slow zoom in/out.  Only the cctvCamera is
-// moved — the main camera and all other scene objects are untouched.
-const ORBIT_RADIUS_BASE = 11;   // base distance from board centre
-const ORBIT_RADIUS_PULSE = 2.5; // ±pulse on top of base (slow zoom feel)
-const ORBIT_HEIGHT = 9;         // fixed Y
-const ORBIT_SPEED = 0.06;       // radians per second (very slow pan)
-const PULSE_SPEED = 0.18;       // radians per second (slow zoom cycle)
+// ── Safe angle range ──────────────────────────────────────────────────────
+// The board camera starts at Spherical theta ≈ 0.717 rad (position 6.8, _, 7.8)
+// and is allowed 170° to the right (decreasing theta).
+//
+// In the CCTV convention (x = cos(a), z = sin(a)):
+//   cctv_angle = π/2 − spherical_theta
+//   board start  → 0.85 rad
+//   board end    → 0.85 + 2.97 = 3.82 rad  (170° further)
+//
+// We use only the middle ~100° of that range with 20° margins on each side
+// so the camera never clips a wall.  The sweep is a sine-based ping-pong so
+// it can never drift outside the defined limits.
+const SWEEP_CENTER   = 0.85 + (2.97 / 2);   // ≈ 2.34 rad — midpoint of valid arc
+const SWEEP_HALF     = 0.87;                 // ≈ 50°  on each side of centre
+const SWEEP_SPEED    = 0.10;                 // rad/s — full cycle ≈ 63 s
+const ORBIT_RADIUS   = 11;                   // fixed distance — no zoom pulse
+const ORBIT_HEIGHT   = 9;
 
 const _target = new THREE.Vector3(0, 0.5, 0);
 
@@ -38,24 +46,24 @@ export function createCCTVScreen(): CCTVScreen {
     colorSpace: THREE.SRGBColorSpace
   });
   // WebGL render targets have their origin at the bottom-left, while the mesh
-  // UV expects top-left — flip the texture vertically to correct the 180° rotation.
+  // UV expects top-left — flip the texture vertically to correct the rotation.
   renderTarget.texture.repeat.set(1, -1);
   renderTarget.texture.offset.set(0, 1);
 
   // This camera belongs entirely to the CCTV system.
   // It is never assigned to the renderer as the active camera for the main view.
   const cctvCamera = new THREE.PerspectiveCamera(52, 1, 0.1, 120);
-  cctvCamera.position.set(ORBIT_RADIUS_BASE, ORBIT_HEIGHT, 0);
+  cctvCamera.position.set(ORBIT_RADIUS, ORBIT_HEIGHT, 0);
   cctvCamera.lookAt(_target);
 
   function tick(elapsedMs: number): void {
     const t = elapsedMs / 1000;
-    const angle  = t * ORBIT_SPEED;
-    const radius = ORBIT_RADIUS_BASE + Math.sin(t * PULSE_SPEED) * ORBIT_RADIUS_PULSE;
+    // Sine-based ping-pong — stays strictly within [SWEEP_CENTER ± SWEEP_HALF].
+    const angle = SWEEP_CENTER + Math.sin(t * SWEEP_SPEED) * SWEEP_HALF;
     cctvCamera.position.set(
-      Math.cos(angle) * radius,
+      Math.cos(angle) * ORBIT_RADIUS,
       ORBIT_HEIGHT,
-      Math.sin(angle) * radius
+      Math.sin(angle) * ORBIT_RADIUS
     );
     cctvCamera.lookAt(_target);
   }
