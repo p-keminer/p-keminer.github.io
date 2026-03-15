@@ -75,6 +75,8 @@ export function createRoomCameraControls({
       }
     },
     setPortraitMode: (portrait: boolean) => {
+      // Note: this does NOT trigger a re-render on its own.
+      // It is always called inside resize(), which follows up with a render() call.
       portraitMode = portrait;
     },
     animateExit: (onComplete: () => void) => {

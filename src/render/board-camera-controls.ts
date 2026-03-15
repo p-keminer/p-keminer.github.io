@@ -292,9 +292,10 @@ export function createBoardCameraControls({
 
     if (activeTouches.size === 1) {
       touchGestureMode = 'orbit';
-      // Prevent the browser from also firing pointer/mouse events for this touch,
-      // which would cause the existing orbit handler to apply the same delta twice.
-      event.preventDefault();
+      // Do NOT call preventDefault() here — that suppresses the synthetic click
+      // event the browser fires after a short tap, which breaks piece selection.
+      // handlePointerDown already ignores touch pointers (button === 0), so
+      // there is no double-processing risk for single-finger orbit.
     } else if (activeTouches.size >= 2) {
       // Switch from orbit to pinch when a second finger lands
       touchGestureMode = 'pinch';
