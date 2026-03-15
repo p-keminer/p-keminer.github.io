@@ -1041,13 +1041,21 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
           : '';
       const subtitle = ROOM_HOTSPOT_SUBTITLES[hotspot.id] ?? '';
 
+      // Clamp projected position so the button never overflows the canvas edge.
+      // The button is centered via transform:translate(-50%,-50%), so pad by half
+      // the typical button width/height to keep it fully on-screen.
+      const padX = 70;
+      const padY = 40;
+      const cx = Math.max(padX, Math.min(hotspot.screenX, snapshot.renderer.width - padX));
+      const cy = Math.max(padY, Math.min(hotspot.screenY, snapshot.renderer.height - padY));
+
       return `
         <button
           aria-label="${hotspot.label}"
           class="room-hotspot-btn ${stateClass}"
           data-room-hotspot="${hotspot.id}"
           type="button"
-          style="left: ${hotspot.screenX}px; top: ${hotspot.screenY}px;"
+          style="left: ${cx}px; top: ${cy}px;"
           ${snapshot.startFlow.roomFocusTransitionActive ? 'disabled' : ''}
         >
           <span class="room-hotspot-indicator" aria-hidden="true"></span>
