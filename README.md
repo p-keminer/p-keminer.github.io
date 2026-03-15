@@ -423,7 +423,7 @@ bpy.ops.export_scene.gltf(
 ```bash
 # Repository klonen
 git clone <repo-url>
-cd 3d-web-chess
+cd p-keminer.github.io
 
 # Abhängigkeiten installieren (3D-Shell)
 npm install
