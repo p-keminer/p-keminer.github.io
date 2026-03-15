@@ -288,7 +288,7 @@ const ROOM_HOTSPOT_DEFINITIONS: ReadonlyArray<{
     anchor: new THREE.Vector3(-25.15, 9.12, 4.51),
     focusTarget: 'pictureFrame',
     id: 'pictureFrame',
-    label: 'Picture Frame'
+    label: 'Performance Reports'
   },
   {
     anchor: new THREE.Vector3(-17.47, 6.5, 29.56),
@@ -801,8 +801,8 @@ function createStageScene(
   const cameraController = createCombatCameraController({ camera });
   const lights = createSceneLights();
   const bloom = createBloomEffect(renderer, {
-    threshold: 0.88,  // höherer Threshold → weniger Pixel qualifizieren sich
-    strength:  0.35,  // schwächerer additiver Bloom-Anteil
+    threshold: 0.90,  // höherer Threshold → weniger Pixel qualifizieren sich
+    strength:  0.25,  // schwächerer additiver Bloom-Anteil
     blurScale: 1.5,   // engerer Glow-Radius
     exposure:  1.25
   });

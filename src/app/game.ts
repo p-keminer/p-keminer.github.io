@@ -83,7 +83,7 @@ const ROOM_FOCUS_TARGET_OPTIONS: ReadonlyArray<{ id: RoomFocusTargetId; label: s
   { id: 'displayCase', label: 'Display Case' },
   { id: 'board', label: 'Chess Table' },
   { id: 'workbench', label: 'Workbench' },
-  { id: 'pictureFrame', label: 'Picture Frame' },
+  { id: 'pictureFrame', label: 'Performance Reports' },
   { id: 'pictureFrameDetail', label: 'Certificate Detail' },
   { id: 'webEmbed', label: 'Portfolio Website' }
 ];
@@ -1164,9 +1164,7 @@ function formatPieceAssetFallbackSummary(snapshot: GameSnapshot): string {
 
 const ROOM_HOTSPOT_SUBTITLES: Record<string, string> = {
   board: 'Enter to play',
-  displayCase: 'View pieces',
-  pictureFrame: 'View certificates',
-  workbench: 'View portfolio'
+  displayCase: 'View pieces'
 };
 
 function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocusTargetId | null, hoveredPictureFrameId: string | null): string {
@@ -1301,7 +1299,6 @@ function renderStartFlowControls(
           </button>
         </div>
       </div>
-      <p class="control-note">Vitrinenansicht aktiv. Zurück zum Raum um zu navigieren.</p>
     `;
   }
 
@@ -1375,7 +1372,6 @@ function renderStartFlowControls(
         </div>
         ${contextAction}
       </div>
-      <p class="control-note">Kamerafahrt zu einem Bereich — am Schachbrett „Spiel starten" klicken um zu spielen.</p>
     `;
   }
 
@@ -1401,7 +1397,6 @@ function renderStartFlowControls(
         </button>
       </div>
     </div>
-    <p class="control-note">Raum- und Schachbrettansicht. Klicke einen Button um zu navigieren.</p>
   `;
 }
 
