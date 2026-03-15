@@ -370,10 +370,10 @@ export function createBoardPreviewScene({
   let frameHandle = 0;
   let lastFrameTime = performance.now();
 
+  let isPortrait = false;
+
   applyStartFlowCameraPose();
   syncStartFlowInteractionLock();
-
-  let isPortrait = false;
 
   const resize = (): void => {
     const width = Math.max(container.clientWidth, 1);
