@@ -331,14 +331,9 @@ export function createBoardPreviewScene({
   const stage = createStageScene(container, onStateChange, onSquareClick, currentPieces);
   const lookAround: LookAroundControls = createLookAroundControls(
     stage.renderer.domElement,
-    // onChange — called on every touch-move. When picture-frame hotspots are
-    // visible we must sync the DOM immediately so the tap targets follow the
-    // rotated camera view instead of lagging behind by one state-change cycle.
-    () => {
-      if (startFlowFocusTarget === 'pictureFrame') {
-        onStateChange?.();
-      }
-    }
+    // onChange — called on every touch-move. Always sync DOM so hotspot buttons
+    // (overview + pictureFrame) follow the rotated camera without a frame lag.
+    () => { onStateChange?.(); }
   );
   const size = new THREE.Vector2();
   // Reusable scratch vector — avoids per-frame Vector3 allocation in hotspot projection.
