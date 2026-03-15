@@ -10,7 +10,7 @@ export const DEFAULT_CAMERA_PRESET: CameraPreset = {
   target: { x: 0, y: 0.2, z: 0 }
 };
 
-export const BASE_FOV = 34;
+const BASE_FOV = 34;
 
 export function createBoardCamera(aspect: number): THREE.PerspectiveCamera {
   const camera = new THREE.PerspectiveCamera(BASE_FOV, aspect, 0.1, 100);
@@ -25,16 +25,9 @@ export function applyCameraPreset(camera: THREE.PerspectiveCamera, preset: Camer
 
 export function resizeCamera(camera: THREE.PerspectiveCamera, width: number, height: number): void {
   camera.aspect = width / Math.max(height, 1);
-  camera.fov = BASE_FOV;
-  camera.updateProjectionMatrix();
-}
-
-/**
- * Widens the vertical FOV on portrait screens so the chess board fills the
- * screen width. Only call this in boardFocus mode — room-explore presets were
- * calibrated for BASE_FOV and look distorted with a wider angle.
- */
-export function applyBoardFocusFov(camera: THREE.PerspectiveCamera): void {
+  // On portrait screens (aspect < 1) widen the vertical FOV so the horizontal
+  // FOV stays close to the desktop baseline.  This keeps both the room and the
+  // chess board reasonably sized on narrow screens.
   if (camera.aspect < 1) {
     const baseRad = THREE.MathUtils.degToRad(BASE_FOV);
     const vFov = 2 * Math.atan(Math.tan(baseRad / 2) / camera.aspect);
