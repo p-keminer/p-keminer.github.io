@@ -514,11 +514,7 @@ select {
   width: 112px;
 }
 
-.picture-frame-hotspot:hover,
-.picture-frame-hotspot--hovered {
-  border-color: rgba(139, 231, 255, 0.9);
-  box-shadow: 0 0 18px 5px rgba(139, 231, 255, 0.45), inset 0 0 10px rgba(139, 231, 255, 0.08);
-}
+/* hover highlight intentionally removed — frames navigate silently */
 
 /* ── Canvas HUD Controls ──────────────────────────────────────────────── */
 

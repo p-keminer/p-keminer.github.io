@@ -1086,7 +1086,7 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
           .map(
             (f) => `
             <div
-              class="picture-frame-hotspot${hoveredPictureFrameId === f.id ? ' picture-frame-hotspot--hovered' : ''}"
+              class="picture-frame-hotspot"
               data-frame-id="${f.id}"
               role="button"
               tabindex="0"
