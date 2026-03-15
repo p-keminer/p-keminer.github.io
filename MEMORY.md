@@ -6,7 +6,9 @@
 - Ein vollständiger **Start Flow** (`menu → roomExplore → boardFocus`) ist implementiert.
 - Ein **Room-Explore-Layer** mit 3D-Hotspot-Navigation, freier Kamera, Bilderrahmen-Interaktion und Web-Embed-Overlay ist aktiv.
 - Die wichtigste Leitlinie lautet: Funktion vor Schönheit.
-- Stack: TypeScript, Vite, Three.js, `chess.js` — kein Framework (Vanilla TS).
+- **3D-Shell-Stack:** TypeScript, Vite, Three.js, `chess.js` — kein Framework (Vanilla TS).
+- **Eingebettetes Portfolio:** React + Framer Motion + Vite. Quellcode in `portfolio-src/`, Build-Output in `public/portfolio/`. Die vite.config.ts setzt `base: '/portfolio/'` und `outDir: '../public/portfolio'`.
+- **Persistenter Header/Footer:** `#site-header` (70 px) und `#site-footer` (40 px) sind in `index.html` eingebettet und in allen Views sichtbar. Im webEmbed-Modus werden sie via `body.web-embed-active` ausgeblendet.
 
 ## Bekannte Architekturentscheidungen
 
@@ -49,8 +51,12 @@
 
 - `focusTarget: 'webEmbed'` zoomt die Kamera vollständig in den Workbench-Monitor (`position: (-24.5, 3.22, 18.01)`).
 - Sobald Kamerafahrt abgeschlossen: iframe-Overlay über dem Canvas mit `src="/portfolio/index.html"`.
-- `public/portfolio/index.html` ist ein gestylter Platzhalter (dunkel-warme Farbpalette passend zum Raum).
+- `public/portfolio/` enthält die gebaute React-Portfolio-App (React + Framer Motion). Quellcode in `portfolio-src/`.
 - Zugang: „2D Webseite betreten" (aus Workbench-Ansicht) oder „Zum Portfolio" (direkt aus Menü).
+- Im webEmbed-Modus setzt `syncPanels()` in `game.ts` die Klasse `body.web-embed-active` → blendet `#site-header` / `#site-footer` aus, Overlay nimmt vollen Viewport (`top: 0; bottom: 0`).
+- Zurück- und Hauptmenü-Buttons (`data-control="back-from-web-embed"`, `data-control="return-to-menu-from-focus"`) befinden sich innerhalb des `.web-embed-overlay`-Divs (bottom-left).
+- Click-Forwarding: `handleRoomHotspotClick` leitet `[data-control]`-Klicks an `handleControlsClick` weiter.
+- Medien-Pfade in der React-App nutzen `import.meta.env.BASE_URL` statt absolutem `/`, damit sie unter `/portfolio/` korrekt aufgelöst werden.
 
 ### Navigations-Back-Buttons
 
@@ -86,8 +92,10 @@
 - `src/render/`: Szene, Brett, Figuren, Licht, Kamera, Loader, Room-Controls
 - `src/ui/`: HUD, Overlays, Bedienelemente
 - `src/app/`: App-Bootstrap, Orchestrierung (game.ts)
+- `src/styles/main.css`: Globales Styling inkl. Header, Footer, webEmbed-Overlay
 - `public/models/`: Blender-GLB-Dateien
-- `public/portfolio/`: Eingebettete Sub-Website (iframe)
+- `public/portfolio/`: Build-Output der eingebetteten React-App (nie manuell bearbeiten — wird durch `portfolio-src npm run build` überschrieben)
+- `portfolio-src/`: React-Portfolio-Quellcode (direkt mit Edit/Write-Tools bearbeitbar)
 
 ## Offene Punkte
 

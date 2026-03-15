@@ -316,11 +316,17 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   };
 
   const handleRoomHotspotClick = (event: Event): void => {
-    if (startFlowState !== 'roomExplore') {
+    // Forward [data-control] clicks that live inside the hotspots layer
+    // (e.g. the web-embed-nav buttons) to the controls handler.
+    const target = event.target;
+    if (target instanceof HTMLElement && target.closest('[data-control]')) {
+      handleControlsClick(event);
       return;
     }
 
-    const target = event.target;
+    if (startFlowState !== 'roomExplore') {
+      return;
+    }
 
     if (!(target instanceof HTMLElement)) {
       return;
@@ -398,6 +404,12 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       (snapshot.startFlow.state === 'roomExplore' || snapshot.startFlow.state === 'menu')
         ? renderRoomHotspots(snapshot, hoveredRoomHotspot, hoveredPictureFrameId)
         : '';
+
+    // Toggle body class so CSS can hide the 3D site-header/footer in webEmbed
+    const isWebEmbed =
+      !snapshot.startFlow.roomFocusTransitionActive &&
+      snapshot.startFlow.currentRoomFocusTarget === 'webEmbed';
+    document.body.classList.toggle('web-embed-active', isWebEmbed);
   };
 
   const preview = createBoardPreviewScene({
@@ -1085,6 +1097,10 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
     snapshot.startFlow.currentRoomFocusTarget === 'webEmbed'
       ? `<div class="web-embed-overlay">
            <iframe src="/portfolio/index.html" title="Portfolio" allowfullscreen></iframe>
+           <div class="web-embed-nav">
+             <button class="web-embed-nav__btn" data-control="back-from-web-embed" type="button">Zurück</button>
+             <button class="web-embed-nav__btn" data-control="return-to-menu-from-focus" type="button">Zum Hauptmenü</button>
+           </div>
          </div>`
       : '';
 
@@ -1119,21 +1135,9 @@ function renderStartFlowControls(
 
   // ── Room explore: only Zur Übersicht + contextual action ────────────────
   if (startFlowState === 'roomExplore') {
-    // webEmbed: back-to-workbench + back-to-menu
+    // webEmbed: buttons are rendered inside the web-embed-overlay div itself
     if (!roomFocusTransitionActive && currentRoomFocusTarget === 'webEmbed') {
-      return `
-        <div class="control-group">
-          <p class="control-label">Portfolio</p>
-          <div class="control-row">
-            <button class="control-button control-button--secondary" data-control="back-from-web-embed" type="button">
-              Zurück
-            </button>
-            <button class="control-button control-button--secondary" data-control="return-to-menu-from-focus" type="button">
-              Zum Hauptmenü
-            </button>
-          </div>
-        </div>
-      `;
+      return '';
     }
 
     // pictureFrame: overview of all frames — offer back-to-menu

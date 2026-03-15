@@ -583,21 +583,283 @@ select {
 }
 
 .web-embed-overlay {
-  position: absolute;
-  inset: 0;
+  position: fixed;
+  top: 70px;    /* below site-header */
+  left: 0;
+  right: 0;
+  bottom: 40px; /* above site-footer */
   pointer-events: auto;
   background: #000;
   display: flex;
   flex-direction: column;
+  z-index: 15;
+}
+
+/* When webEmbed is active hide the 3D site header/footer (portfolio has its own) */
+body.web-embed-active #site-header,
+body.web-embed-active #site-footer {
+  display: none;
+}
+
+body.web-embed-active .web-embed-overlay {
+  top: 0;
+  bottom: 0;
 }
 
 .web-embed-overlay iframe {
   flex: 1;
   width: 100%;
-  height: 100%;
   border: none;
   display: block;
+  min-height: 0;
 }
+
+/* Nav-buttons inside webEmbed overlay — bottom-left corner */
+.web-embed-nav {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  display: flex;
+  gap: 8px;
+  z-index: 20;
+  pointer-events: auto;
+}
+
+.web-embed-nav__btn {
+  background: rgba(10, 4, 4, 0.82);
+  border: 1px solid rgba(200, 55, 55, 0.32);
+  border-radius: 9px;
+  color: rgba(255, 200, 200, 0.80);
+  cursor: pointer;
+  font: 600 10px / 1.2 'Inter', 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: 0.07em;
+  padding: 8px 18px;
+  text-transform: uppercase;
+  transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+  backdrop-filter: blur(6px);
+}
+
+.web-embed-nav__btn:hover {
+  background: rgba(35, 8, 8, 0.94);
+  border-color: rgba(255, 90, 90, 0.60);
+  box-shadow: 0 0 12px rgba(220, 60, 60, 0.22);
+}
+
+/* ───────────────────────────────────────────────────────────────────────── */
+
+/* ──── Site Header ────────────────────────────────────────────────────────── */
+
+#site-header {
+  align-items: center;
+  background: rgba(2, 4, 10, 0.72);
+  visibility: visible;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(180, 229, 255, 0.08);
+  display: flex;
+  height: 70px;
+  justify-content: space-between;
+  left: 0;
+  padding: 0 40px;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 200;
+}
+
+.site-header__left {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+}
+
+.site-header__avatar {
+  align-items: center;
+  background: linear-gradient(135deg, #1a4a8a 0%, #0e2d5c 100%);
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.12), 0 4px 12px rgba(58, 142, 255, 0.3);
+  color: #fff;
+  display: flex;
+  flex-shrink: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  height: 36px;
+  justify-content: center;
+  letter-spacing: -0.02em;
+  width: 36px;
+}
+
+.site-header__info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.site-header__name {
+  background: linear-gradient(90deg, #a8d4ff 0%, #70c3ff 50%, #b8a4ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  -webkit-text-fill-color: transparent;
+}
+
+.site-header__status {
+  align-items: center;
+  color: #5f6f86;
+  display: flex;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.60rem;
+  gap: 5px;
+  letter-spacing: 0.06em;
+}
+
+.site-header__dot {
+  background: #4ade80;
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba(74, 222, 128, 0.7);
+  display: inline-block;
+  flex-shrink: 0;
+  height: 5px;
+  width: 5px;
+}
+
+.site-header__socials {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.site-header__badge {
+  align-items: center;
+  background: rgba(12, 18, 32, 0.72);
+  border: 1px solid rgba(180, 229, 255, 0.12);
+  border-radius: 8px;
+  color: #91a5c7;
+  display: flex;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 500;
+  gap: 5px;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  text-decoration: none;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.site-header__badge:hover {
+  background: rgba(20, 30, 52, 0.88);
+  border-color: rgba(112, 195, 255, 0.30);
+  color: #c8dff5;
+}
+
+/* ──── Site Footer / Banner ───────────────────────────────────────────────── */
+
+#site-footer {
+  align-items: center;
+  background: rgba(2, 4, 10, 0.55);
+  visibility: visible;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(180, 229, 255, 0.07);
+  bottom: 0;
+  color: #5f6f86;
+  display: flex;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.70rem;
+  gap: 16px;
+  height: 40px;
+  justify-content: center;
+  left: 0;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  position: fixed;
+  right: 0;
+  z-index: 200;
+}
+
+.site-footer__diamond {
+  color: rgba(112, 195, 255, 0.2);
+  font-size: 0.60rem;
+}
+
+/* Mobile menu button */
+.site-header__mobile-menu {
+  display: none;
+  position: relative;
+}
+
+.site-header__mobile-btn {
+  align-items: center;
+  background: rgba(12, 18, 32, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+  color: #f3f6ff;
+  cursor: pointer;
+  display: flex;
+  font-size: 1.2rem;
+  height: 42px;
+  justify-content: center;
+  line-height: 1;
+  outline: none;
+  padding: 0;
+  width: 42px;
+}
+
+.site-header__mobile-panel {
+  background: rgba(10, 14, 26, 0.96);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(180, 229, 255, 0.10);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 180px;
+  z-index: 300;
+}
+
+.site-header__mobile-link {
+  align-items: center;
+  border-radius: 10px;
+  color: #c8dff5;
+  display: flex;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  gap: 10px;
+  padding: 10px 14px;
+  text-decoration: none;
+  transition: background 150ms ease;
+}
+
+.site-header__mobile-link:hover {
+  background: rgba(112, 195, 255, 0.08);
+}
+
+/* Responsive: show mobile button, hide desktop socials */
+@media (max-width: 600px) {
+  #site-header {
+    padding: 0 20px;
+  }
+
+  .desktop-socials {
+    display: none;
+  }
+
+  .site-header__mobile-menu {
+    display: block;
+  }
+}
+
 
 /* ───────────────────────────────────────────────────────────────────────── */
 

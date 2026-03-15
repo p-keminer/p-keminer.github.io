@@ -5,9 +5,84 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Portfolio - Philip Keminer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <!-- Critical inline CSS: prevents white flash before main.css loads -->
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: linear-gradient(180deg, #d2aa74 0%, #7d5534 45%, #28160c 100%);
+      }
+      #site-header, #site-footer { visibility: hidden; }
+    </style>
   </head>
   <body>
+    <header id="site-header">
+      <div class="site-header__left">
+        <div class="site-header__avatar">pk</div>
+        <div class="site-header__info">
+          <span class="site-header__name">p-keminer</span>
+          <span class="site-header__status">
+            <span class="site-header__dot"></span>
+            cs, robotics, ki &amp; iot | tech career changer
+          </span>
+        </div>
+      </div>
+
+      <!-- Desktop socials -->
+      <div class="site-header__socials desktop-socials">
+        <a class="site-header__badge" href="https://github.com/p-keminer" target="_blank" rel="noopener noreferrer">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0 1 12 7.07a9.573 9.573 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/></svg>
+          GitHub
+        </a>
+        <a class="site-header__badge" href="#" target="_blank" rel="noopener noreferrer">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="4" fill="#0A66C2"/><path d="M7 10v7" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="7" cy="7.5" r="1.2" fill="#fff"/><path d="M11 17v-4c0-1.1.9-2 2-2s2 .9 2 2v4" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M11 13v4" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+          LinkedIn
+        </a>
+      </div>
+
+      <!-- Mobile: ⋯ button -->
+      <div class="site-header__mobile-menu" id="mobile-menu-root">
+        <button class="site-header__mobile-btn" id="mobile-menu-btn" type="button" aria-label="Soziale Links öffnen" aria-expanded="false">
+          <span>⋯</span>
+        </button>
+        <div class="site-header__mobile-panel" id="mobile-menu-panel" hidden>
+          <a class="site-header__mobile-link" href="https://github.com/p-keminer" target="_blank" rel="noopener noreferrer">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="color:#f3f6ff"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0 1 12 7.07a9.573 9.573 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/></svg>
+            GitHub
+          </a>
+          <a class="site-header__mobile-link" href="#" target="_blank" rel="noopener noreferrer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="4" fill="#0A66C2"/><path d="M7 10v7" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="7" cy="7.5" r="1.2" fill="#fff"/><path d="M11 17v-4c0-1.1.9-2 2-2s2 .9 2 2v4" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M11 13v4" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+            LinkedIn
+          </a>
+        </div>
+      </div>
+    </header>
+
     <div id="app"></div>
+
+    <footer id="site-footer">
+      <span>p-keminer</span>
+      <span class="site-footer__diamond">◆</span>
+      <span>built with Three.js + Vite</span>
+    </footer>
+
+    <script>
+      // Mobile menu toggle
+      const btn = document.getElementById('mobile-menu-btn');
+      const panel = document.getElementById('mobile-menu-panel');
+      const root = document.getElementById('mobile-menu-root');
+      btn?.addEventListener('click', () => {
+        const open = panel?.hasAttribute('hidden');
+        if (open) { panel?.removeAttribute('hidden'); btn.setAttribute('aria-expanded','true'); }
+        else { panel?.setAttribute('hidden',''); btn.setAttribute('aria-expanded','false'); }
+      });
+      document.addEventListener('pointerdown', (e) => {
+        if (!root?.contains(e.target)) { panel?.setAttribute('hidden',''); btn?.setAttribute('aria-expanded','false'); }
+      });
+    </script>
     <script type="module" src="/src/app/main.ts"></script>
   </body>
 </html>

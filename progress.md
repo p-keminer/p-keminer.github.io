@@ -1145,3 +1145,52 @@ Dieser Slice schließt den Room-Explore-Layer vollständig ab: Navigation, Hotsp
 - `MEMORY.md` vollständig auf den aktuellen Projektstand aktualisiert (Room Explore, Picture Frames, Web Embed, Navigation, Back-Buttons).
 - `README.md` Status-Sektion aktualisiert.
 - `progress.md` mit diesem Eintrag auf den neusten Stand gebracht.
+
+## Portfolio-Integration & Site-Header/Footer
+
+### Was wurde gemacht
+
+**React-Portfolio eingebettet:**
+- `p-keminer.github.io` (React + Framer Motion) als eigenständige Sub-App in das Projekt integriert.
+- Quellcode liegt jetzt unter `portfolio-src/` (direkt editierbar, kein WSL-Umweg mehr).
+- `portfolio-src/vite.config.ts` setzt `base: '/portfolio/'` und `outDir: '../public/portfolio'` — Build landet direkt im richtigen Verzeichnis, kein manuelles Kopieren nötig.
+- Medien-Dateien (`Cheat-Suite.mp4`, `ags_project-8-bit-219384.mp3`) liegen in `portfolio-src/public/` und werden beim Build nach `public/portfolio/` kopiert.
+- Pfadfehler behoben: `new Audio("/...")` und `src="/..."` auf `import.meta.env.BASE_URL + "..."` umgestellt, da Vite absolute Pfad-Strings bei `--base` nicht automatisch transformiert.
+
+**Persistenter Header & Footer:**
+- `index.html` erhält einen fest eingebetteten `#site-header` (70 px) mit pk-Avatar, p-keminer-Gradient-Name, grünem Status-Dot, Social-Badges (GitHub, Instagram, Spotify) und mobilem `⋯`-Dropdown-Menü.
+- `#site-footer` (40 px) mit „built with Three.js + Vite" — Schrift Inter + JetBrains Mono via Google Fonts.
+- Header und Footer sind in allen Views sichtbar; im webEmbed-Modus werden sie ausgeblendet.
+- FOUC-Fix: Inline-`<style>` im `<head>` setzt sofort Body-Hintergrund und `visibility: hidden` auf Header/Footer, bis main.css geladen ist.
+
+**webEmbed-Vollbild:**
+- `body.web-embed-active` (gesetzt in `syncPanels()` in `game.ts`) blendet `#site-header`/`#site-footer` aus und gibt dem Overlay den vollen Viewport (`top: 0; bottom: 0`).
+- Zurück- und Hauptmenü-Buttons leben jetzt innerhalb des `.web-embed-overlay`-Divs (nicht mehr im Controls-Panel).
+- Click-Forwarding: `handleRoomHotspotClick` leitet `[data-control]`-Klicks an `handleControlsClick` weiter — Buttons waren zuvor nicht anklickbar.
+- Buttons positioniert: `position: absolute; bottom: 20px; left: 20px`.
+
+**Portfolio-Karte aktualisiert (`portfolio-src/src/`):**
+- `data/projects.ts`: Titel „3D Portfolio", neue Beschreibung (Three.js-Shell + eingebettete React-App), Tags um `Three.js` erweitert.
+- `components/ProjectCard.tsx`: `PortfolioCover`-SVG komplett neu designed — zwei Browserzeilen übereinander: oben `localhost:5173` mit isometrischem 3D-Würfel, flankiert von „LEISTUNGEN" (links) und „SCHACHSPIEL" (rechts); unten `p-keminer.github.io` mit `<React App />`, flankiert von „PORTFOLIO" (links) und „MINI-SPIELE" (rechts). Dazwischen gestrichelter Pfeil „embeds".
+
+### Dateien geändert
+
+- `index.html` — Header, Footer, Google Fonts, kritisches Inline-CSS
+- `src/styles/main.css` — `#site-header`, `#site-footer`, `body.web-embed-active`, `.web-embed-overlay`, `.web-embed-nav`, `visibility: visible`-Korrekturen
+- `src/app/game.ts` — `syncPanels()` body-Klasse, webEmbed-HTML-Template, `handleRoomHotspotClick` Click-Forwarding
+- `portfolio-src/vite.config.ts` — `base: '/portfolio/'`, `outDir: '../public/portfolio'`
+- `portfolio-src/src/data/projects.ts` — portfolio-site Karte
+- `portfolio-src/src/components/ProjectCard.tsx` — `PortfolioCover` SVG
+- `portfolio-src/src/components/ChiptunePlayer.tsx` — `import.meta.env.BASE_URL` Pfad
+- `portfolio-src/src/minispiele/cheatsuite/CheatSuiteModal.tsx` — `import.meta.env.BASE_URL` Pfad
+- `README.md` — Architektur-Überblick, Dual-Stack, Projektstruktur, portfolio-src-Workflow
+
+### Build-Status
+
+- `npm run build` (3D-Shell) sauber, keine TypeScript-Fehler.
+- `cd portfolio-src && npm run build` sauber, Output direkt nach `public/portfolio/`.
+
+### Offene Punkte / Risiken
+
+- `portfolio-src/node_modules/` ist per `.gitignore` (`node_modules/`) ausgeschlossen — einmalig `npm install` in `portfolio-src/` nötig nach einem frischen Clone.
+- Der Vite-Devserver der 3D-Shell läuft auf Port 5173; für Änderungen an der React-App muss nach `npm run build` der Dev-Server nicht neugestartet werden (Vite HMR greift für statische `public/`-Dateien nicht — manueller Reload nötig).

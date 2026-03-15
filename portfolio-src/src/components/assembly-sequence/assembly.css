@@ -1,0 +1,59 @@
+/* ─── Assembly Sequence — local keyframes ───────────────────────────────────
+   All animations scoped to this feature; global.css is untouched.           */
+
+/* ── Arm segment extend (base grows up from floor) ── */
+@keyframes asm-arm-extend {
+  from { transform: scaleY(0); transform-origin: bottom center; opacity: 0; }
+  15%  { opacity: 1; }
+  to   { transform: scaleY(1); transform-origin: bottom center; opacity: 1; }
+}
+
+/* ── Weld arc glow  ── */
+@keyframes asm-weld-glow {
+  0%, 100% { opacity: 0.45; }
+  50%       { opacity: 1;    }
+}
+
+/* ── Spark particles (6 directions) ── */
+@keyframes asm-sp1 {
+  from { transform: translate(0,0);        opacity: 1; }
+  to   { transform: translate(34px,-58px); opacity: 0; }
+}
+@keyframes asm-sp2 {
+  from { transform: translate(0,0);         opacity: 1; }
+  to   { transform: translate(-42px,-44px); opacity: 0; }
+}
+@keyframes asm-sp3 {
+  from { transform: translate(0,0);       opacity: 1; }
+  to   { transform: translate(52px,12px); opacity: 0; }
+}
+@keyframes asm-sp4 {
+  from { transform: translate(0,0);        opacity: 1; }
+  to   { transform: translate(-32px,40px); opacity: 0; }
+}
+@keyframes asm-sp5 {
+  from { transform: translate(0,0);        opacity: 1; }
+  to   { transform: translate(18px,-70px); opacity: 0; }
+}
+@keyframes asm-sp6 {
+  from { transform: translate(0,0);         opacity: 1; }
+  to   { transform: translate(-56px,-16px); opacity: 0; }
+}
+
+/* ── Ship thruster flicker ── */
+@keyframes asm-thruster {
+  0%, 100% { opacity: 0.75; transform: scaleX(0.9);  }
+  50%       { opacity: 1;    transform: scaleX(1.25); }
+}
+
+/* ── Ship materialise during finalize ── */
+@keyframes asm-ship-in {
+  from { opacity: 0; transform: scale(0.55); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+/* ── Holding pulse effect ── */
+@keyframes asm-hold-pulse {
+  0%, 100% { opacity: 0.3; }
+  50%       { opacity: 0.7; }
+}

@@ -1,25 +1,27 @@
 # Portfolio — Philip Keminer
 
-> Eine interaktive 3D-Portfolio-Website im Browser. Der Besucher navigiert durch einen vollständig modellierten Cyberpunk-Arbeitsraum und erkundet verschiedene Bereiche über kinematische Kamerafahrten — darunter ein spielbares Schachspiel, eine eingebettete 2D-Website, und einer Leistungsnachweisübersicht.
+> Eine interaktive 3D-Portfolio-Website im Browser. Der Besucher navigiert durch einen vollständig modellierten Cyberpunk-Arbeitsraum und erkundet verschiedene Bereiche über kinematische Kamerafahrten — darunter ein spielbares Schachspiel, eine eingebettete React-Portfolio-App und eine Leistungsnachweisübersicht.
 
-**Technologie:** TypeScript · Three.js · chess.js · Vite 
+**3D-Shell:** TypeScript · Three.js · chess.js · Vite
+**Eingebettetes Portfolio:** React · Framer Motion · TypeScript · Vite
 
 ---
 
 ## Inhaltsverzeichnis
 
 1. [Was ist das?](#was-ist-das)
-2. [Bereiche der Website](#bereiche-der-website)
-3. [Navigation & Spielfluss](#navigation--spielfluss)
-4. [Technologie-Stack](#technologie-stack)
-5. [Projektstruktur](#projektstruktur)
-6. [3D-Rendering & Beleuchtung](#3d-rendering--beleuchtung)
-7. [Kamerasystem](#kamerasystem)
-8. [Schachspiel-Modul](#schachspiel-modul)
-9. [Combat-Präsentation](#combat-präsentation)
-10. [Asset-Pipeline](#asset-pipeline)
-11. [Lokal starten](#lokal-starten)
-12. [Debug-Hooks](#debug-hooks)
+2. [Architektur-Überblick](#architektur-überblick)
+3. [Bereiche der Website](#bereiche-der-website)
+4. [Navigation & Spielfluss](#navigation--spielfluss)
+5. [Technologie-Stack](#technologie-stack)
+6. [Projektstruktur](#projektstruktur)
+7. [3D-Rendering & Beleuchtung](#3d-rendering--beleuchtung)
+8. [Kamerasystem](#kamerasystem)
+9. [Schachspiel-Modul](#schachspiel-modul)
+10. [Combat-Präsentation](#combat-präsentation)
+11. [Asset-Pipeline](#asset-pipeline)
+12. [Lokal starten](#lokal-starten)
+13. [Debug-Hooks](#debug-hooks)
 
 ---
 
@@ -29,12 +31,38 @@
 
 | Bereich | Inhalt |
 |---|---|
-| Workbench-Monitor | Eingebettete 2D-Portfolio-Website (iframe) |
+| Workbench-Monitor | Eingebettete React-Portfolio-App (iframe) |
 | Bilderrahmen-Wand | Leistungsnachweise (8 Rahmen, Einzelzoom) |
 | Zertifikatsvitrine | Präsentation der Zertifikate / Achievements |
 | Schachbrett | Vollständig spielbares Schachspiel als interaktives Feature |
 
-Der Raum ist in Blender modelliert und als GLB-Asset geladen. Die gesamte Navigation läuft über animierte Kamerafahrten.
+Der Raum ist in Blender modelliert und als GLB-Asset geladen. Die gesamte Navigation läuft über animierte Kamerafahrten. Ein persistenter Header (mit Avatar, Name, Status und Social-Links) sowie ein Footer sind auf allen Ansichten sichtbar.
+
+---
+
+## Architektur-Überblick
+
+Das Projekt besteht aus zwei Ebenen:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  3D-SHELL  (Three.js + Vite + TypeScript)           │
+│  index.html → src/app/main.ts → src/app/game.ts     │
+│                                                     │
+│  Persistenter Header (#site-header)                 │
+│  Persistenter Footer (#site-footer)                 │
+│                                                     │
+│  ┌───────────────────────────────────────────────┐  │
+│  │  EINGEBETTETES PORTFOLIO (iframe /portfolio/) │  │
+│  │  portfolio-src/ → React + Framer Motion       │  │
+│  │  Build-Output: public/portfolio/              │  │
+│  └───────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────┘
+```
+
+- **3D-Shell**: Vanilla TypeScript + Three.js + Vite. Kein Frontend-Framework.
+- **Eingebettetes Portfolio**: Eigenständige React-App in `portfolio-src/`. Wird mit `npm run build` direkt nach `public/portfolio/` gebaut. Im Browser eingebettet per iframe unter `/portfolio/index.html`.
+- **webEmbed-Modus**: Beim Betreten des Portfolios verschwindet der 3D-Header/Footer; die React-App läuft vollständig im Fullscreen-iframe. Zurück-Buttons (unten links) führen zur 3D-Welt zurück.
 
 ---
 
@@ -43,13 +71,13 @@ Der Raum ist in Blender modelliert und als GLB-Asset geladen. Die gesamte Naviga
 ### Raumübersicht (Startpunkt)
 Nach dem Ladescreen befindet sich der Besucher in der freien Raumübersicht. Die Kamera kann per Maus gedreht und per Scroll gezoomt werden. Vier 3D-Hotspots sind als animierte Ping-Indikatoren sichtbar und führen zu den jeweiligen Bereichen.
 
-### Workbench-Monitor → Portfolio-Website
-Die Kamera fährt an den Workbench-Monitor heran. Sobald die Fahrt abgeschlossen ist, erscheint ein iframe-Overlay mit der eingebetteten 2D-Portfolio-Seite (`/portfolio/index.html`). Erreichbar auch direkt über „Zum Portfolio" im Hauptmenü.
+### Workbench-Monitor → Eingebettetes Portfolio
+Die Kamera fährt an den Workbench-Monitor heran. Sobald die Fahrt abgeschlossen ist, erscheint ein iframe-Overlay mit der eingebetteten React-Portfolio-App (`/portfolio/index.html`). Der 3D-Header/Footer wird dabei ausgeblendet — das Portfolio bringt seinen eigenen Header mit. Zurück- und Hauptmenü-Buttons befinden sich unten links im Overlay.
 
-### Bilderrahmen-Wand →  Leistungsnachweise (unvollständig)
+### Bilderrahmen-Wand → Leistungsnachweise
 Die Kamera fährt zur Galerie-Ansicht mit 8 interaktiven Bilderrahmen (2 Reihen × 4 Spalten). Jeder Rahmen kann einzeln angeklickt werden — die Kamera zoomt direkt auf das jeweilige Frame. Hover-Effekt via CSS.
 
-### Zertifikatsvitrine/(unvollständig)
+### Zertifikatsvitrine
 Kamerafahrt zur Vitrine mit Zertifikatsansichten.
 
 ### Schachbrett → Spielbares Schachspiel
@@ -62,23 +90,23 @@ Kamerafahrt zum Schachbrett, danach ist das Spiel vollständig spielbar (lokales
 ```
 [ Menü / Ladescreen ]
       │
-      ├──→ [ Raum erkunden ] 
+      ├──→ [ Raum erkunden ]
       │         │
-      │         ├──→ [ Schachbrett ]         → Schach spielen        
+      │         ├──→ [ Schachbrett ]         → Schach spielen
       │         │         └──→ [ Zurück zum Raum ]
       │         │
       │         ├──→ [ Vitrine ]             → Zertifikats-Detailansicht
       │         │         └──→ [ Zurück zur Übersicht ]
       │         │
-      │         ├──→ [ Bilderrahmen-Wand ]   → Galerie-Ansicht      
-      │         │         └──→ [ Einzelrahmen ] → Detailzoom          
+      │         ├──→ [ Bilderrahmen-Wand ]   → Galerie-Ansicht
+      │         │         └──→ [ Einzelrahmen ] → Detailzoom
       │         │                   └──→ [ Zurück zur Galerie ]
       │         │
-      │         └──→ [ Workbench-Monitor ]   → Monitor-Ansicht     
-      │                   └──→ [ 2D-Website betreten ] → Portfolio    
-      │                               └──→ [ Zurück zum Monitor ]
+      │         └──→ [ Workbench-Monitor ]   → Monitor-Ansicht
+      │                   └──→ [ 2D-Website betreten ] → React-Portfolio (Fullscreen)
+      │                               └──→ [ Zurück / Zum Hauptmenü ]
       │
-      └──→ [ Zum Portfolio ]  
+      └──→ [ Zum Portfolio ]
 ```
 
 Alle Übergänge sind animierte Kamerafahrten. Hotspot-Buttons sind nur sichtbar wenn keine Transition läuft und die freie Raumübersicht aktiv ist.
@@ -97,15 +125,20 @@ Alle Übergänge sind animierte Kamerafahrten. Hotspot-Buttons sind nur sichtbar
 |---|---|
 | `overview` | Freie Raumübersicht |
 | `workbench` | Monitor-Ansicht |
-| `webEmbed` | Portfolio-iframe |
+| `webEmbed` | Portfolio-iframe (Fullscreen) |
 | `pictureFrame` | Galerie-Ansicht |
 | `pictureFrameDetail` | Einzelrahmen-Zoom |
 | `displayCase` | Vitrine |
 | `board` | Schachbrett |
 
+**webEmbed-CSS-Klasse:**
+Beim Betreten des Portfolios setzt `syncPanels()` in `game.ts` die Klasse `body.web-embed-active`. Diese blendet `#site-header` und `#site-footer` aus und gibt dem Overlay den vollen Viewport (`top: 0; bottom: 0`).
+
 ---
 
 ## Technologie-Stack
+
+### 3D-Shell
 
 | Ebene | Technologie | Version |
 |---|---|---|
@@ -118,83 +151,111 @@ Alle Übergänge sind animierte Kamerafahrten. Hotspot-Buttons sind nur sichtbar
 | UI | Vanilla HTML/CSS (kein Framework) | — |
 | Post-Processing | Eigene HDR-Bloom-Pipeline (GLSL-Shader) | — |
 | Audio | Web Audio API (synthetische Cues) | — |
+| Schriften | Inter + JetBrains Mono (Google Fonts) | — |
 
-Keine externen Post-Processing-Bibliotheken — Three.js r183 hat `EffectComposer` entfernt, daher eigene Implementierung.
+### Eingebettetes Portfolio (`portfolio-src/`)
+
+| Ebene | Technologie |
+|---|---|
+| Framework | React 19 |
+| Animationen | Framer Motion |
+| Sprache | TypeScript |
+| Build-Tool | Vite (base: `/portfolio/`, outDir: `../public/portfolio`) |
+| Medien | Cheat-Suite.mp4, ags_project-8-bit-219384.mp3 |
+
+Keine externen Post-Processing-Bibliotheken für die 3D-Shell — Three.js r183 hat `EffectComposer` entfernt, daher eigene Implementierung.
 
 ---
 
 ## Projektstruktur
 
 ```
-src/
-├── app/
-│   ├── main.ts                    # Bootstrap, HMR
-│   ├── game.ts                    # Haupt-Orchestrator: Zustand, Interaktion, UI-Sync
-│   ├── combat.ts                  # Combat-State-Machine (5 Phasen)
-│   └── combat-flavor.ts           # Pro-Figur Audio/VFX-Gewichtung
+3d-web-chess/
 │
-├── chess/
-│   ├── engine.ts                  # chess.js-Wrapper + stabile Figur-IDs
-│   ├── state.ts                   # Typdefinitionen (Square, Piece, Move, Status)
-│   ├── moves.ts                   # Zug-Formatierungshelfer
-│   └── mapping.ts                 # Brettkoordinate ↔ 3D-Weltposition
+├── index.html                     # Einstiegspunkt: Header, Footer, #app, kritisches CSS
 │
-├── render/
-│   ├── scene.ts                   # Three.js-Szene, Hotspot-System, Focus-System
-│   ├── board.ts                   # 8×8-Grid, Raycasting-Meshes, Hologramm-Overlay
-│   ├── pieces.ts                  # Figurlayer, Animationsloop, Feedback
-│   ├── lights.ts                  # Ambient, Hemisphere, Key, Neon-Points, Rim
-│   ├── bloom.ts                   # HDR-Bloom (Threshold → Gauss → ACESFilmic)
-│   ├── loaders.ts                 # GLTFLoader + DRACOLoader, Fallback-Kette
-│   ├── camera.ts                  # Kamera-Presets, FOV 34°
-│   ├── board-camera-controls.ts   # Orbit/Zoom/Pan mit Winkel-Clamp
-│   ├── room-camera-controls.ts    # Sphärische freie Kamera, Zoom-Dämpfung
-│   ├── combat-camera.ts           # Kampfkamera-Framing, Kurven-Transition
-│   ├── combat-presentation.ts     # Kampfphasen-Abfolge, Figurbewegung
-│   ├── combat-feedback.ts         # Partikel-VFX: Kern-Puls, Servo, Funken, Shutdown
-│   ├── combat-motion-profiles.ts  # Ease-Kurven pro Figurtyp
-│   ├── combat-cyber-mech-style.ts # Gemeinsame Maschinen-Bewegungssprache
-│   ├── piece-animations.ts        # Bewegungsinterpolation (kubisch, 220 ms)
-│   ├── capture-animations.ts      # Einfache Schlag-Animationen
-│   ├── piece-material-style.ts    # Materialprofil-Slots, Neon-Paletten
-│   └── interaction.ts             # Klick-Raycast, Hover/Select-Highlighting
+├── src/
+│   ├── app/
+│   │   ├── main.ts                # Bootstrap, Intro-Overlay, HMR
+│   │   ├── game.ts                # Haupt-Orchestrator: Zustand, Interaktion, UI-Sync
+│   │   ├── combat.ts              # Combat-State-Machine (5 Phasen)
+│   │   └── combat-flavor.ts       # Pro-Figur Audio/VFX-Gewichtung
+│   │
+│   ├── chess/
+│   │   ├── engine.ts              # chess.js-Wrapper + stabile Figur-IDs
+│   │   ├── state.ts               # Typdefinitionen (Square, Piece, Move, Status)
+│   │   ├── moves.ts               # Zug-Formatierungshelfer
+│   │   └── mapping.ts             # Brettkoordinate ↔ 3D-Weltposition
+│   │
+│   ├── render/
+│   │   ├── scene.ts               # Three.js-Szene, Hotspot-System, Focus-System
+│   │   ├── board.ts               # 8×8-Grid, Raycasting-Meshes, Hologramm-Overlay
+│   │   ├── pieces.ts              # Figurlayer, Animationsloop, Feedback
+│   │   ├── lights.ts              # Ambient, Hemisphere, Key, Neon-Points, Rim
+│   │   ├── bloom.ts               # HDR-Bloom (Threshold → Gauss → ACESFilmic)
+│   │   ├── loaders.ts             # GLTFLoader + DRACOLoader, Fallback-Kette
+│   │   ├── camera.ts              # Kamera-Presets, FOV 34°
+│   │   ├── board-camera-controls.ts   # Orbit/Zoom/Pan mit Winkel-Clamp
+│   │   ├── room-camera-controls.ts    # Sphärische freie Kamera, Zoom-Dämpfung
+│   │   ├── combat-camera.ts           # Kampfkamera-Framing, Kurven-Transition
+│   │   ├── combat-presentation.ts     # Kampfphasen-Abfolge, Figurbewegung
+│   │   ├── combat-feedback.ts         # Partikel-VFX: Kern-Puls, Servo, Funken, Shutdown
+│   │   ├── combat-motion-profiles.ts  # Ease-Kurven pro Figurtyp
+│   │   ├── combat-cyber-mech-style.ts # Gemeinsame Maschinen-Bewegungssprache
+│   │   ├── piece-animations.ts        # Bewegungsinterpolation (kubisch, 220 ms)
+│   │   ├── capture-animations.ts      # Einfache Schlag-Animationen
+│   │   ├── piece-material-style.ts    # Materialprofil-Slots, Neon-Paletten
+│   │   └── interaction.ts             # Klick-Raycast, Hover/Select-Highlighting
+│   │
+│   ├── ui/
+│   │   ├── controls.ts            # Steuerleiste (Rückgängig, Neustart, Kamera, Raum)
+│   │   ├── game-status.ts         # Zuganzeige, Schach/Matt-Status
+│   │   ├── hud.ts                 # HUD-Karten-Renderer
+│   │   ├── move-list.ts           # Zughistorie (SAN)
+│   │   ├── captured-pieces.ts     # Geschlagene-Figuren-Galerie
+│   │   └── overlays.ts            # Raum-Hotspot-Overlays
+│   │
+│   ├── audio/
+│   │   ├── sound.ts               # Audio-Basis-Controller (Web Audio API)
+│   │   └── combat-sfx.ts          # Kampfphasen-Soundcues (synthetisch)
+│   │
+│   ├── utils/
+│   │   └── coords.ts              # Board-Index ↔ zentrierte Koordinate
+│   │
+│   └── styles/
+│       └── main.css               # Globales Styling: 3D-Shell, Header, Footer, webEmbed
 │
-├── ui/
-│   ├── controls.ts                # Steuerleiste (Rückgängig, Neustart, Kamera, Raum)
-│   ├── game-status.ts             # Zuganzeige, Schach/Matt-Status
-│   ├── hud.ts                     # HUD-Karten-Renderer
-│   ├── move-list.ts               # Zughistorie (SAN)
-│   ├── captured-pieces.ts         # Geschlagene-Figuren-Galerie
-│   └── overlays.ts                # Raum-Hotspot-Overlays
+├── portfolio-src/                 # React-Portfolio — Quellcode (direkt editierbar)
+│   ├── src/
+│   │   ├── components/            # React-Komponenten (inkl. ChiptunePlayer, ProjectCard)
+│   │   ├── data/projects.ts       # Projektkarteninhalte
+│   │   └── minispiele/            # Mini-Spiele-Module
+│   ├── public/
+│   │   ├── Cheat-Suite.mp4        # Demo-Video für Cheat-Suite-Minispiel
+│   │   └── ags_project-8-bit-219384.mp3  # Hintergrundmusik
+│   └── vite.config.ts             # base: '/portfolio/', outDir: '../public/portfolio'
 │
-├── audio/
-│   ├── sound.ts                   # Audio-Basis-Controller (Web Audio API)
-│   └── combat-sfx.ts              # Kampfphasen-Soundcues (synthetisch)
+├── public/
+│   ├── models/
+│   │   ├── room.glb               # Cyberpunk-Arbeitsraum (~9.98 MB)
+│   │   ├── board_cyber.glb        # Holografisches Schachbrett (primär)
+│   │   ├── board.glb              # Fallback-Brett
+│   │   ├── {bishop,king,knight,…}.glb  # Starter-Figuren
+│   │   ├── blockout/              # Cyber-Mech-Review-Prototypen
+│   │   └── README.md              # Asset-Konventionen
+│   │
+│   ├── portfolio/                 # Build-Output der React-App (via portfolio-src npm run build)
+│   │   ├── index.html
+│   │   ├── assets/
+│   │   ├── Cheat-Suite.mp4
+│   │   └── ags_project-8-bit-219384.mp3
+│   │
+│   └── draco/
+│       └── draco_decoder.wasm     # DRACO-Mesh-Dekompression (WebAssembly)
 │
-├── utils/
-│   └── coords.ts                  # Board-Index ↔ zentrierte Koordinate
-│
-└── styles/
-    └── main.css                   # Globales Styling, dunkle Warm-Palette
-
-public/
-├── models/
-│   ├── room.glb                   # Cyberpunk-Arbeitsraum (~9.98 MB)
-│   ├── board_cyber.glb            # Holografisches Schachbrett (primär)
-│   ├── board.glb                  # Fallback-Brett
-│   ├── {bishop,king,knight,…}.glb # Starter-Figuren
-│   ├── blockout/                  # Cyber-Mech-Review-Prototypen
-│   └── README.md                  # Asset-Konventionen
-│
-├── portfolio/
-│   └── index.html                 # Eingebettete 2D-Portfolio-Seite (iframe-Ziel)
-│
-└── draco/
-    └── draco_decoder.wasm         # DRACO-Mesh-Dekompression (WebAssembly)
-
-docs/
-├── assets/blender/                # Blender-Quelldateien + Export-Skripte
-└── sprints/ROADMAP.md             # Phasenplan
+└── docs/
+    ├── assets/blender/            # Blender-Quelldateien + Export-Skripte
+    └── sprints/ROADMAP.md         # Phasenplan
 ```
 
 ---
@@ -364,18 +425,31 @@ bpy.ops.export_scene.gltf(
 git clone <repo-url>
 cd 3d-web-chess
 
-# Abhängigkeiten installieren
+# Abhängigkeiten installieren (3D-Shell)
 npm install
 
 # Entwicklungsserver (http://localhost:5173)
 npm run dev
 
-# Produktions-Build
+# Produktions-Build der 3D-Shell
 npm run build
 
 # Build lokal vorschauen
 npm run preview
 ```
+
+### Portfolio-App neu bauen (nach Änderungen in portfolio-src/)
+
+```bash
+# Abhängigkeiten installieren (einmalig)
+cd portfolio-src
+npm install
+
+# Build → geht direkt nach public/portfolio/
+npm run build
+```
+
+> `vite.config.ts` in `portfolio-src/` setzt `base: '/portfolio/'` und `outDir: '../public/portfolio'` — kein manueller Copy-Schritt nötig.
 
 ---
 

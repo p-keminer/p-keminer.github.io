@@ -8,6 +8,7 @@ import {
   type BoardCameraControlsSnapshot
 } from './board-camera-controls';
 import { computeFreeCameraEntryPreset, createRoomCameraControls, type RoomCameraControls } from './room-camera-controls';
+import { createLookAroundControls, type LookAroundControls } from './look-around-controls';
 import {
   createCombatCameraController,
   type CombatCameraController,
@@ -328,6 +329,17 @@ export function createBoardPreviewScene({
   let pieceAssetFiles: PieceAssetFileMap = {};
   let pieceAssetSet: PieceAssetSet = DEFAULT_PIECE_ASSET_SET;
   const stage = createStageScene(container, onStateChange, onSquareClick, currentPieces);
+  const lookAround: LookAroundControls = createLookAroundControls(
+    stage.renderer.domElement,
+    // onChange — called on every touch-move. When picture-frame hotspots are
+    // visible we must sync the DOM immediately so the tap targets follow the
+    // rotated camera view instead of lagging behind by one state-change cycle.
+    () => {
+      if (startFlowFocusTarget === 'pictureFrame') {
+        onStateChange?.();
+      }
+    }
+  );
   const size = new THREE.Vector2();
   // Reusable scratch vector — avoids per-frame Vector3 allocation in hotspot projection.
   const _projScratch = new THREE.Vector3();
@@ -360,6 +372,15 @@ export function createBoardPreviewScene({
     );
     resizeCamera(stage.camera, width, height);
     render();
+    // Hotspot-Positionen nach Resize neu berechnen — nur wenn die
+    // Bilderrahmen-Ansicht aktiv ist, da nur dort DOM-Pixel-Koordinaten
+    // direkt von der Canvas-Größe abhängen.
+    // requestAnimationFrame stellt sicher, dass onStateChange erst nach
+    // vollständiger Initialisierung (preview-Rückgabe in game.ts) aufgerufen
+    // wird und keinen synchronen ResizeObserver-Feedback-Loop auslöst.
+    if (startFlowMode === 'roomExplore' && startFlowFocusTarget === 'pictureFrame') {
+      window.requestAnimationFrame(() => onStateChange?.());
+    }
   };
 
   const resizeObserver = new ResizeObserver(() => {
@@ -505,10 +526,51 @@ export function createBoardPreviewScene({
     const preset = getStartFlowCameraPreset();
 
     if (!preset) {
+      lookAround.setEnabled(false);
       return;
     }
 
     applyCameraPreset(stage.camera, preset);
+
+    // Look-around (touch only): rotate view direction ±45° while keeping
+    // camera position fixed. Active in the four user-facing areas:
+    //   overview (Raum erkunden), displayCase (Zertifikate),
+    //   pictureFrame (Leistungsnachweise), workbench (Portfolio)
+    // Disabled in: webEmbed (iframe covers the view), pictureFrameDetail
+    // (close-up), boardFocus (board camera takes over), menu/introTransition.
+    // Must be fully arrived at the target (not mid-transition).
+    const LOOK_AROUND_TARGETS: ReadonlyArray<RoomFocusTargetId> = [
+      'overview', 'displayCase', 'pictureFrame', 'workbench'
+    ];
+    const isFixedView =
+      startFlowMode === 'roomExplore' &&
+      LOOK_AROUND_TARGETS.includes(startFlowFocusTarget) &&
+      startFlowFocusProgress >= 1;
+
+    lookAround.setEnabled(isFixedView);
+
+    if (isFixedView) {
+      const { yaw, pitch } = lookAround.getOffset();
+      if (yaw !== 0 || pitch !== 0) {
+        const pos = stage.camera.position.clone();
+        // Base look direction: preset position → preset target
+        const forward = new THREE.Vector3(
+          preset.target.x - preset.position.x,
+          preset.target.y - preset.position.y,
+          preset.target.z - preset.position.z
+        ).normalize();
+        // Right axis for pitch (perpendicular to forward + world-up)
+        const right = new THREE.Vector3()
+          .crossVectors(forward, new THREE.Vector3(0, 1, 0))
+          .normalize();
+        // Apply yaw around world Y, then pitch around right vector
+        forward
+          .applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw)
+          .applyAxisAngle(right, pitch)
+          .normalize();
+        stage.camera.lookAt(pos.clone().add(forward));
+      }
+    }
   }
 
   function getStartFlowCameraPreset(): CameraPreset | null {
@@ -652,6 +714,7 @@ export function createBoardPreviewScene({
       stage.board.dispose();
       stage.pieceLayer.dispose();
       stage.bloom.dispose();
+      lookAround.dispose();
       stage.renderer.dispose();
       container.innerHTML = '';
     },
@@ -676,6 +739,11 @@ export function createBoardPreviewScene({
     syncStartFlowState: (nextState) => {
       startFlowFocusFromTarget = nextState.focusFromTarget;
       startFlowFocusProgress = THREE.MathUtils.clamp(nextState.focusProgress, 0, 1);
+      // Reset look-around when navigating to a new area so each fixed view
+      // starts from the default look direction.
+      if (startFlowFocusTarget !== nextState.focusTarget) {
+        lookAround.reset();
+      }
       startFlowFocusTarget = nextState.focusTarget;
       startFlowMode = nextState.mode;
       startFlowProgress = THREE.MathUtils.clamp(nextState.progress, 0, 1);
