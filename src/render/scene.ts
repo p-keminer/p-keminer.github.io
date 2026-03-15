@@ -399,11 +399,16 @@ export function createBoardPreviewScene({
     clockState.elapsedMs += deltaMs;
 
     const seconds = clockState.elapsedMs / 1000;
-    // Subtle overhead drift on the key light — keeps the room feeling alive
-    // without visible flicker on static geometry.  The amplitude is small
-    // relative to the room scale so shadow edges only shift slightly.
-    stage.lights.key.position.x = -9 + Math.sin(seconds * 0.18) * 1.5;
-    stage.lights.key.position.z =  5 + Math.cos(seconds * 0.13) * 1.5;
+    // Subtle overhead drift on the key light — keeps the board feeling alive
+    // without visible flicker on static geometry.  Only active in boardFocus;
+    // in room explore the moving shadow makes the floor look like it rotates.
+    if (startFlowMode === 'boardFocus') {
+      stage.lights.key.position.x = -9 + Math.sin(seconds * 0.18) * 1.5;
+      stage.lights.key.position.z =  5 + Math.cos(seconds * 0.13) * 1.5;
+    } else {
+      stage.lights.key.position.x = -9;
+      stage.lights.key.position.z =  5;
+    }
     stage.pieceLayer.step(deltaMs);
     stage.cameraController.step(deltaMs);
     syncCameraControlLock();
