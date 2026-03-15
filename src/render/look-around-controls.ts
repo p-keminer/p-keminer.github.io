@@ -10,6 +10,8 @@ export interface LookAroundControls {
   setEnabled(enabled: boolean): void;
   /** Allow or lock vertical look-around (pitch). When locked, only yaw is applied. */
   setAllowPitch(allow: boolean): void;
+  /** Set maximum yaw angle for looking left (positive yaw), in degrees. Default 45. */
+  setMaxYawLeft(degrees: number): void;
   /** Reset yaw/pitch to zero (call when navigating to a new area). */
   reset(): void;
   /** Remove all event listeners. */
@@ -38,6 +40,7 @@ export function createLookAroundControls(
 ): LookAroundControls {
   let enabled = false;
   let allowPitch = true;
+  let maxYawPositive = MAX_ANGLE_RAD; // positive yaw = look left
   let yaw = 0;   // horizontal offset (radians)
   let pitch = 0; // vertical offset (radians)
 
@@ -96,7 +99,7 @@ export function createLookAroundControls(
     const w = Math.max(domElement.clientWidth, 1);
     const h = Math.max(domElement.clientHeight, 1);
 
-    yaw   = THREE.MathUtils.clamp(yaw   - (dx / w) * MAX_ANGLE_RAD * 2, -MAX_ANGLE_RAD, MAX_ANGLE_RAD);
+    yaw   = THREE.MathUtils.clamp(yaw   - (dx / w) * MAX_ANGLE_RAD * 2, -MAX_ANGLE_RAD, maxYawPositive);
     if (allowPitch) {
       pitch = THREE.MathUtils.clamp(pitch - (dy / h) * MAX_ANGLE_RAD * 2, -MAX_ANGLE_RAD, MAX_ANGLE_RAD);
     }
@@ -134,6 +137,13 @@ export function createLookAroundControls(
       allowPitch = allow;
       if (!allow && pitch !== 0) {
         pitch = 0;
+      }
+    },
+
+    setMaxYawLeft(degrees: number): void {
+      maxYawPositive = THREE.MathUtils.clamp(THREE.MathUtils.degToRad(degrees), 0, MAX_ANGLE_RAD);
+      if (yaw > maxYawPositive) {
+        yaw = maxYawPositive;
       }
     },
 

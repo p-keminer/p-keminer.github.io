@@ -371,6 +371,7 @@ export function createBoardPreviewScene({
     isPortrait = stage.camera.aspect < 1;
     stage.roomCameraControls.setPortraitMode(isPortrait);
     lookAround.setAllowPitch(!isPortrait);
+    lookAround.setMaxYawLeft(isPortrait ? 20 : 45);
     render();
     // Hotspot-Positionen nach Resize neu berechnen — immer wenn roomExplore
     // aktiv ist, da alle 3D-projizierten Buttons (overview + pictureFrame)
