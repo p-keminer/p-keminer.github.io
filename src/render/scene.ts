@@ -436,7 +436,6 @@ export function createBoardPreviewScene({
     }
     stage.pieceLayer.step(deltaMs);
     stage.cameraController.step(deltaMs);
-    stage.cctvScreen.tick(clockState.elapsedMs);
     syncCameraControlLock();
     applyStartFlowCameraPose();
 
@@ -444,6 +443,9 @@ export function createBoardPreviewScene({
   }
 
   function render(): void {
+    // Render the CCTV feed into its off-screen target before the main pass
+    // so the screen texture is up to date when bloom composites the scene.
+    stage.cctvScreen.renderToTarget(stage.scene, stage.renderer);
     stage.bloom.render(stage.scene, stage.camera);
   }
 
