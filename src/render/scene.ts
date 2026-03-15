@@ -37,6 +37,7 @@ import {
   type PieceLayerAnimationSnapshot,
   type PiecePresentationDebugSnapshot
 } from './pieces';
+import { createCCTVScreen, type CCTVScreen } from './cctv-screen';
 
 export interface BoardPresentationStateInput extends CombatPresentationStateInput {
   combatDurationMs: CombatCameraStateInput['combatDurationMs'];
@@ -187,6 +188,7 @@ interface StageScene {
   camera: THREE.PerspectiveCamera;
   cameraController: CombatCameraController;
   boardCameraControls: BoardCameraControls;
+  cctvScreen: CCTVScreen;
   interaction: BoardInteractionLayer;
   lights: SceneLights;
   pieceLayer: ChessPieceLayer;
@@ -434,6 +436,7 @@ export function createBoardPreviewScene({
     }
     stage.pieceLayer.step(deltaMs);
     stage.cameraController.step(deltaMs);
+    stage.cctvScreen.tick(clockState.elapsedMs);
     syncCameraControlLock();
     applyStartFlowCameraPose();
 
@@ -740,6 +743,7 @@ export function createBoardPreviewScene({
       stage.pieceLayer.dispose();
       stage.bloom.dispose();
       lookAround.dispose();
+      stage.cctvScreen.dispose();
       stage.renderer.dispose();
       container.innerHTML = '';
     },
@@ -1007,6 +1011,7 @@ function createStageScene(
   // active (Three.js engine pieces take over) and shown otherwise.
   const roomPieceNodes: THREE.Object3D[] = [];
   const ROOM_PIECE_PATTERN = /^[wb]_(bishop|rook|knight|queen|king|pawn)/i;
+  const cctvScreen = createCCTVScreen();
 
   loadRoomAsset().then((room) => {
     if (room) {
@@ -1018,6 +1023,7 @@ function createStageScene(
           roomPieceNodes.push(node);
         }
       });
+      cctvScreen.attach(roomGroup);
       onStateChange?.();
     }
   });
@@ -1028,6 +1034,7 @@ function createStageScene(
     camera,
     cameraController,
     boardCameraControls,
+    cctvScreen,
     interaction,
     lights,
     pieceLayer,
