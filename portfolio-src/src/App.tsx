@@ -406,6 +406,7 @@ export default function App() {
         aria-label={cardsVisible ? "Karten ausblenden" : "Karten einblenden"}
         title={cardsVisible ? "Karten ausblenden" : "Karten einblenden"}
         onClick={() => setCardsVisible((v) => !v)}
+        className="cards-toggle-btn"
         style={{
           position: "fixed",
           bottom: "calc(24px + env(safe-area-inset-bottom, 0px))",

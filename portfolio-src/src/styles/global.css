@@ -662,6 +662,14 @@ body {
   100% { transform: scale(1); opacity: 1; }
 }
 
+/* ── Mobile: lift fixed bottom buttons above browser chrome ── */
+@media (max-width: 600px) {
+  .chiptune-btn,
+  .cards-toggle-btn {
+    bottom: 80px !important;
+  }
+}
+
 /* ── Reduced motion: pause all decorative animations ── */
 @media (prefers-reduced-motion: reduce) {
   *,

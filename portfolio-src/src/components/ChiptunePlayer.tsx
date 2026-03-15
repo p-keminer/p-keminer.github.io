@@ -31,6 +31,7 @@ export default function ChiptunePlayer() {
     <button
       onClick={toggle}
       title={playing ? "Musik stoppen" : "Musik starten"}
+      className="chiptune-btn"
       style={{
         position: "fixed",
         bottom: "calc(24px + env(safe-area-inset-bottom, 0px))",

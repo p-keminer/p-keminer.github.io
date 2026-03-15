@@ -372,13 +372,13 @@ export function createBoardPreviewScene({
     );
     resizeCamera(stage.camera, width, height);
     render();
-    // Hotspot-Positionen nach Resize neu berechnen — nur wenn die
-    // Bilderrahmen-Ansicht aktiv ist, da nur dort DOM-Pixel-Koordinaten
-    // direkt von der Canvas-Größe abhängen.
+    // Hotspot-Positionen nach Resize neu berechnen — immer wenn roomExplore
+    // aktiv ist, da alle 3D-projizierten Buttons (overview + pictureFrame)
+    // auf Canvas-Pixel-Koordinaten basieren und nach einem Resize falsch liegen.
     // requestAnimationFrame stellt sicher, dass onStateChange erst nach
     // vollständiger Initialisierung (preview-Rückgabe in game.ts) aufgerufen
     // wird und keinen synchronen ResizeObserver-Feedback-Loop auslöst.
-    if (startFlowMode === 'roomExplore' && startFlowFocusTarget === 'pictureFrame') {
+    if (startFlowMode === 'roomExplore') {
       window.requestAnimationFrame(() => onStateChange?.());
     }
   };
