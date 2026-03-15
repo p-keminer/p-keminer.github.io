@@ -110,6 +110,11 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   let hoveredPictureFrameId: string | null = null;
   let activePictureFrameDetailId = 'frame0';
   let pendingMenuReturn = false;
+  // Frozen screen positions for overview hotspot buttons.
+  // Captured once when each hotspot first becomes visible; cleared whenever
+  // the camera leaves the overview.  This prevents buttons from swinging
+  // across the screen as the user pans the camera.
+  const frozenHotspotPositions = new Map<string, { x: number; y: number }>();
   const controllerState: GameInteractionControllerState = {
     legalTargetSquares: [],
     selectedSquare: null
@@ -386,6 +391,29 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       hoveredPictureFrameId = null;
     }
     const snapshot = buildGameSnapshot();
+
+    // ── Freeze / clear hotspot positions ─────────────────────────────────
+    // While the camera is at the overview, capture each hotspot's screen
+    // position the first time it becomes visible, then never move it again.
+    // This prevents buttons from drifting when the user pans the camera.
+    // When we leave the overview, clear the cache so positions are fresh
+    // on the next visit.
+    const isOverviewWithHotspots =
+      snapshot.startFlow.state === 'roomExplore' &&
+      !snapshot.startFlow.roomFocusTransitionActive &&
+      (snapshot.startFlow.currentRoomFocusTarget === 'overview' ||
+        snapshot.startFlow.currentRoomFocusTarget === null);
+
+    if (!isOverviewWithHotspots) {
+      frozenHotspotPositions.clear();
+    } else {
+      for (const hotspot of snapshot.roomExplore.hotspots) {
+        if (hotspot.isVisible && !frozenHotspotPositions.has(hotspot.id)) {
+          frozenHotspotPositions.set(hotspot.id, { x: hotspot.screenX, y: hotspot.screenY });
+        }
+      }
+    }
+
     controlsRoot.innerHTML =
       snapshot.startFlow.state === 'boardFocus'
         ? renderControls({
@@ -402,7 +430,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
           );
     roomHotspotsRoot.innerHTML =
       (snapshot.startFlow.state === 'roomExplore' || snapshot.startFlow.state === 'menu')
-        ? renderRoomHotspots(snapshot, hoveredRoomHotspot, hoveredPictureFrameId)
+        ? renderRoomHotspots(snapshot, hoveredRoomHotspot, hoveredPictureFrameId, frozenHotspotPositions)
         : '';
 
     // Toggle body class so CSS can hide the 3D site-header/footer in webEmbed
@@ -1018,7 +1046,7 @@ const ROOM_HOTSPOT_SUBTITLES: Record<string, string> = {
   board: 'Klicken zum Spielen'
 };
 
-function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocusTargetId | null, hoveredPictureFrameId: string | null): string {
+function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocusTargetId | null, hoveredPictureFrameId: string | null, frozenPositions: Map<string, { x: number; y: number }>): string {
   const isRoomExplore = snapshot.startFlow.state === 'roomExplore';
 
   if (!isRoomExplore) {
@@ -1041,13 +1069,18 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
           : '';
       const subtitle = ROOM_HOTSPOT_SUBTITLES[hotspot.id] ?? '';
 
-      // Clamp projected position so the button never overflows the canvas edge.
-      // The button is centered via transform:translate(-50%,-50%), so pad by half
-      // the typical button width/height to keep it fully on-screen.
+      // Use frozen position (captured on first visibility) so the button stays
+      // fixed on screen as the camera pans.  Fall back to the live projection
+      // only if no frozen position exists yet.
+      const frozen = frozenPositions.get(hotspot.id);
+      const rawX = frozen ? frozen.x : hotspot.screenX;
+      const rawY = frozen ? frozen.y : hotspot.screenY;
+
+      // Clamp so the button never overflows the canvas edge.
       const padX = 70;
       const padY = 40;
-      const cx = Math.max(padX, Math.min(hotspot.screenX, snapshot.renderer.width - padX));
-      const cy = Math.max(padY, Math.min(hotspot.screenY, snapshot.renderer.height - padY));
+      const cx = Math.max(padX, Math.min(rawX, snapshot.renderer.width - padX));
+      const cy = Math.max(padY, Math.min(rawY, snapshot.renderer.height - padY));
 
       return `
         <button

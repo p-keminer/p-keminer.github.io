@@ -662,12 +662,12 @@ body {
   100% { transform: scale(1); opacity: 1; }
 }
 
-/* ── Lift fixed bottom buttons above mobile browser chrome ── */
-/* Applied globally since the portfolio runs full-viewport inside an iframe
-   and media queries see the iframe width, not the device width. */
-.chiptune-btn,
-.cards-toggle-btn {
-  bottom: 80px !important;
+/* ── Lift fixed bottom buttons above mobile browser chrome (touch devices only) ── */
+@media (hover: none) and (pointer: coarse) {
+  .chiptune-btn,
+  .cards-toggle-btn {
+    bottom: 60px !important;
+  }
 }
 
 /* ── Reduced motion: pause all decorative animations ── */
