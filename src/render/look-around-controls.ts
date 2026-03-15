@@ -43,6 +43,12 @@ export function createLookAroundControls(
   let lastX = 0;
   let lastY = 0;
   let activeTouchCount = 0;
+  // Snapshot of yaw/pitch when the first finger lands. If a second finger
+  // arrives (= pinch intent), we restore these to cancel any accidental
+  // look-around movement that happened between first and second finger.
+  let snapshotYaw = 0;
+  let snapshotPitch = 0;
+  let gestureContaminated = false; // true once ≥2 fingers were seen in this gesture
 
   function onPointerDown(e: PointerEvent): void {
     // Touch only — desktop mouse drag is not handled here.
@@ -55,15 +61,28 @@ export function createLookAroundControls(
       primaryPointerId = e.pointerId;
       lastX = e.clientX;
       lastY = e.clientY;
+      snapshotYaw = yaw;
+      snapshotPitch = pitch;
+      gestureContaminated = false;
       domElement.setPointerCapture(e.pointerId);
+    } else {
+      // Second+ finger arrived → this is a pinch, not a look-around.
+      // Revert any accidental offset accumulated since the first finger.
+      if (!gestureContaminated) {
+        gestureContaminated = true;
+        const changed = yaw !== snapshotYaw || pitch !== snapshotPitch;
+        yaw = snapshotYaw;
+        pitch = snapshotPitch;
+        if (changed) onChange?.();
+      }
     }
-    // Second+ finger: stop dragging to avoid conflict with pinch-to-zoom
   }
 
   function onPointerMove(e: PointerEvent): void {
     if (!enabled || e.pointerType !== 'touch') return;
-    // Only process moves from the primary finger, and only when exactly 1 touch is active
-    if (e.pointerId !== primaryPointerId || activeTouchCount !== 1) return;
+    // Only process moves from the primary finger, only when exactly 1 touch
+    // is active, and only if the gesture was never a pinch.
+    if (e.pointerId !== primaryPointerId || activeTouchCount !== 1 || gestureContaminated) return;
 
     const dx = e.clientX - lastX;
     const dy = e.clientY - lastY;
