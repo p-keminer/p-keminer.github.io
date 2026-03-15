@@ -17,7 +17,6 @@ import {
   type StartFlowMode
 } from '../render/scene';
 import { renderControls } from '../ui/controls';
-import { renderOverlay } from '../ui/overlays';
 
 export interface MountedGame {
   advanceTime: (ms: number) => void;
@@ -80,10 +79,10 @@ const START_FLOW_INTRO_DURATION_MS = 1400;
 const ROOM_FOCUS_TRANSITION_DURATION_MS = 700;
 const ROOM_FOCUS_TARGET_OPTIONS: ReadonlyArray<{ id: RoomFocusTargetId; label: string }> = [
   { id: 'overview', label: 'Room Overview' },
-  { id: 'displayCase', label: 'Certificates' },
-  { id: 'board', label: 'Chess Table' },
+  { id: 'displayCase', label: 'Zertifikate' },
+  { id: 'board', label: 'Schachbrett' },
   { id: 'workbench', label: 'Workbench' },
-  { id: 'pictureFrame', label: 'Performance Reports' },
+  { id: 'pictureFrame', label: 'Leistungsnachweise' },
   { id: 'pictureFrameDetail', label: 'Certificate Detail' },
   { id: 'webEmbed', label: 'Portfolio Website' }
 ];
@@ -110,6 +109,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   let hoveredRoomHotspot: RoomFocusTargetId | null = null;
   let hoveredPictureFrameId: string | null = null;
   let activePictureFrameDetailId = 'frame0';
+  let pendingMenuReturn = false;
   const controllerState: GameInteractionControllerState = {
     legalTargetSquares: [],
     selectedSquare: null
@@ -147,19 +147,14 @@ export function mountGame(root: HTMLDivElement): MountedGame {
           <div class="canvas-hud-controls" data-controls-root></div>
         </div>
       </section>
-
-      <aside class="info-panel">
-        <section class="panel" data-overlay-root></section>
-      </aside>
     </main>
   `;
 
   const sceneRoot = root.querySelector<HTMLDivElement>('[data-scene-root]');
   const controlsRoot = root.querySelector<HTMLElement>('[data-controls-root]');
-  const overlayRoot = root.querySelector<HTMLElement>('[data-overlay-root]');
   const roomHotspotsRoot = root.querySelector<HTMLDivElement>('[data-room-hotspots-root]');
 
-  if (!sceneRoot || !controlsRoot || !overlayRoot || !roomHotspotsRoot) {
+  if (!sceneRoot || !controlsRoot || !roomHotspotsRoot) {
     throw new Error('Missing game shell mount points.');
   }
 
@@ -217,8 +212,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
 
     if (action === 'direct-to-leistungen') {
       if (startFlowState === 'menu') {
-        beginStartFlowTransition();
-        focusRoomTarget('pictureFrame');
+        beginStartFlowTransitionToTarget('pictureFrame');
       }
 
       return;
@@ -226,8 +220,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
 
     if (action === 'direct-to-portfolio') {
       if (startFlowState === 'menu') {
-        beginStartFlowTransition();
-        focusRoomTarget('webEmbed');
+        beginStartFlowTransitionToTarget('webEmbed');
       }
 
       return;
@@ -252,6 +245,14 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     if (action === 'return-to-menu') {
       if (startFlowState === 'roomExplore' && roomFocusTarget === 'overview' && !isRoomFocusTransitionActive()) {
         returnToMenu();
+      }
+
+      return;
+    }
+
+    if (action === 'return-to-menu-from-focus') {
+      if (startFlowState === 'roomExplore' && !isRoomFocusTransitionActive()) {
+        returnToMenuFromFocus();
       }
 
       return;
@@ -397,7 +398,6 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       (snapshot.startFlow.state === 'roomExplore' || snapshot.startFlow.state === 'menu')
         ? renderRoomHotspots(snapshot, hoveredRoomHotspot, hoveredPictureFrameId)
         : '';
-    overlayRoot.innerHTML = renderOverlay(buildOverlayMessage(snapshot));
   };
 
   const preview = createBoardPreviewScene({
@@ -706,6 +706,20 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     stopStartFlowLoop();
   }
 
+  function beginStartFlowTransitionToTarget(target: Exclude<RoomFocusTargetId, 'overview'>): void {
+    // Directly animate from overview (= menu camera) to the given target without
+    // stopping at the overview free-camera state first.  This avoids the
+    // entrance/exit animation conflict that occurs when beginStartFlowTransition
+    // activates roomCameraFree before focusRoomTarget deactivates it.
+    startFlowState = 'roomExplore';
+    hoveredRoomHotspot = null;
+    roomFocusFromTarget = 'overview';
+    roomFocusTarget = target;
+    roomFocusElapsedMs = 0;
+    syncStartFlowToPreview();
+    ensureStartFlowLoop();
+  }
+
   function returnToMenu(): void {
     // Menu camera matches the overview position, so no visible snap occurs.
     startFlowState = 'menu';
@@ -717,6 +731,13 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     syncStartFlowToPreview();
     stopStartFlowLoop();
     syncPanels();
+  }
+
+  function returnToMenuFromFocus(): void {
+    // Animate camera back to the overview/menu position first, then switch
+    // to menu state when the transition completes (via pendingMenuReturn).
+    pendingMenuReturn = true;
+    returnToRoomExplore();
   }
 
   function advanceStartFlow(ms: number): void {
@@ -750,6 +771,10 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
       syncStartFlowToPreview();
       stopStartFlowLoop();
+      if (pendingMenuReturn && roomFocusTarget === 'overview') {
+        pendingMenuReturn = false;
+        returnToMenu();
+      }
       return;
     }
 
@@ -870,6 +895,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       focusProgress: isRoomFocusTransitionActive() ? roomFocusElapsedMs / ROOM_FOCUS_TRANSITION_DURATION_MS : 1,
       focusTarget: roomFocusTarget,
       mode: startFlowState,
+      pendingMenuReturn,
       pictureFrameDetailId: activePictureFrameDetailId,
       progress:
         startFlowState === 'introTransition'
@@ -921,7 +947,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     const fromTarget: RoomFocusTargetId =
       startFlowState === 'boardFocus'       ? 'board'       :
       startFlowState === 'displayCaseFocus' ? 'displayCase' :
-      'overview';
+      roomFocusTarget; // when already in roomExplore, start from the current target
 
     startFlowState = 'roomExplore';
     hoveredRoomHotspot = null;
@@ -944,90 +970,6 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   }
 }
 
-function buildOverlayMessage(snapshot: GameSnapshot): string {
-  if (snapshot.startFlow.state === 'menu') {
-    return 'Vollständige Raumansicht. Klicke „Raum erkunden" um zur Navigation zu wechseln.';
-  }
-
-  if (snapshot.startFlow.state === 'introTransition') {
-    return 'Kamerafahrt läuft. Board-Interaktion bleibt gesperrt bis Room Explore bereit ist.';
-  }
-
-  if (snapshot.startFlow.state === 'displayCaseFocus') {
-    return 'Vitrinenansicht aktiv. Board-Interaktion inaktiv. „Zurück zum Raum" um zu navigieren.';
-  }
-
-  if (snapshot.startFlow.state === 'roomExplore') {
-    if (snapshot.startFlow.roomFocusTransitionActive) {
-      return 'Kamerafahrt läuft …';
-    }
-
-    if (snapshot.startFlow.currentRoomFocusTarget === 'board') {
-      return 'Schachbrett im Fokus — „Spiel starten" klicken um zu spielen.';
-    }
-
-    if (snapshot.startFlow.currentRoomFocusTarget === 'displayCase') {
-      return 'Vitrine im Fokus — „Vitrine erkunden" für Nahansicht.';
-    }
-
-    if (snapshot.startFlow.currentRoomFocusTarget === 'workbench') {
-      return 'Workbench im Fokus.';
-    }
-
-    if (snapshot.startFlow.currentRoomFocusTarget === 'pictureFrame') {
-      return 'Bilderrahmen im Fokus.';
-    }
-
-    return 'Raum-Navigation aktiv. Ziel per Button anfahren.';
-  }
-
-  if (snapshot.presentation.mode === 'combat' && snapshot.presentation.combatEvent) {
-    const { attacker, victim, capturedSquare } = snapshot.presentation.combatEvent;
-    const combatPhase = snapshot.presentation.combatPhase ?? 'combat';
-    const styleLabel = snapshot.animation.combat.styleLabel ? ` ${snapshot.animation.combat.styleLabel}` : '';
-    return `Combat ${combatPhase}:${styleLabel} ${attacker.color} ${attacker.type} engages ${victim.color} ${victim.type} on ${capturedSquare}.`;
-  }
-
-  if (snapshot.gameOver) {
-    return `${snapshot.gameResult.text} Use Restart to reset the board${snapshot.undoAvailable ? ' or Undo to step back one half-move.' : '.'}`;
-  }
-
-  if (snapshot.inCheck && snapshot.checkedKingSquare) {
-    return `${capitalize(snapshot.turn)} king is in check on ${snapshot.checkedKingSquare}.`;
-  }
-
-  if (snapshot.interaction.selectedSquare && snapshot.interaction.legalTargetSquares.length > 0) {
-    return `Selected ${snapshot.interaction.selectedSquare}. Legal targets: ${snapshot.interaction.legalTargetSquares.join(', ')}.`;
-  }
-
-  if (snapshot.lastMove) {
-    return `Last move: ${snapshot.lastMove.san} (${snapshot.lastMove.from} -> ${snapshot.lastMove.to}). Select a ${snapshot.turn} piece to continue.`;
-  }
-
-  return '';
-}
-
-function capitalize(value: string): string {
-  return `${value[0].toUpperCase()}${value.slice(1)}`;
-}
-
-function formatCapturedSummary(pieces: ChessPieceType[]): string {
-  if (pieces.length === 0) {
-    return 'none';
-  }
-
-  const counts = new Map<ChessPieceType, number>();
-
-  for (const piece of pieces) {
-    counts.set(piece, (counts.get(piece) ?? 0) + 1);
-  }
-
-  return ['queen', 'rook', 'bishop', 'knight', 'pawn']
-    .filter((piece) => counts.has(piece as ChessPieceType))
-    .map((piece) => `${piece} x${counts.get(piece as ChessPieceType)}`)
-    .join(', ');
-}
-
 function getAnimatedPieceId(snapshot: ChessGameSnapshot): string | null {
   if (!snapshot.lastMove) {
     return null;
@@ -1048,15 +990,6 @@ function playMoveSound(soundController: ReturnType<typeof createSoundController>
   }
 }
 
-function formatCombatEventSummary(snapshot: GameSnapshot): string {
-  if (!snapshot.presentation.combatEvent) {
-    return 'none';
-  }
-
-  const { attacker, victim, capturedSquare } = snapshot.presentation.combatEvent;
-  return `${attacker.type} -> ${victim.type} on ${capturedSquare}`;
-}
-
 function mapCombatPresentationEvent(combatEvent: NonNullable<GameSnapshot['presentation']['combatEvent']>): CombatPresentationEventInput {
   return {
     attackerId: combatEvent.attacker.id,
@@ -1069,131 +1002,15 @@ function mapCombatPresentationEvent(combatEvent: NonNullable<GameSnapshot['prese
   };
 }
 
-function formatCombatAnimationSummary(snapshot: GameSnapshot): string {
-  if (!snapshot.animation.combat.active) {
-    return 'idle';
-  }
-
-  const style = snapshot.animation.combat.motionStyle ?? 'generic';
-  const styleLabel = snapshot.animation.combat.styleLabel ?? 'style';
-  return `${snapshot.animation.combat.phase ?? 'combat'} ${styleLabel}/${style} (${snapshot.animation.combat.attackerId ?? 'unknown'} vs ${snapshot.animation.combat.victimId ?? 'unknown'})`;
-}
-
-function formatCombatFeedbackSummary(snapshot: GameSnapshot): string {
-  if (!snapshot.animation.feedback.active) {
-    return 'idle';
-  }
-
-  const flags = [
-    snapshot.animation.feedback.corePulseActive ? 'core' : null,
-    snapshot.animation.feedback.servoAccentActive ? 'servo' : null,
-    snapshot.animation.feedback.impactPulseActive ? 'impact' : null,
-    snapshot.animation.feedback.sparkActive ? 'spark' : null,
-    snapshot.animation.feedback.shutdownActive ? 'shutdown' : null
-  ].filter((flag): flag is string => flag !== null);
-
-  const flavor =
-    snapshot.animation.feedback.attackerFlavorLabel && snapshot.animation.feedback.victimFlavorLabel
-      ? ` ${snapshot.animation.feedback.attackerFlavorLabel} -> ${snapshot.animation.feedback.victimFlavorLabel}`
-      : '';
-
-  return `${snapshot.animation.feedback.phase ?? 'combat'} [${flags.join(', ')}]${flavor}`;
-}
-
-function formatCombatMotionProfileSummary(snapshot: GameSnapshot): string {
-  if (!snapshot.animation.combat.active) {
-    return 'none';
-  }
-
-  const attackerProfile = snapshot.animation.combat.attackerProfile ?? 'unknown';
-  const victimProfile = snapshot.animation.combat.victimProfile ?? 'unknown';
-  const style = snapshot.animation.combat.motionStyle ?? 'generic';
-  return `${attackerProfile} -> ${victimProfile} (${style})`;
-}
-
-function formatCombatStyleSummary(snapshot: GameSnapshot): string {
-  if (!snapshot.animation.combat.active) {
-    return 'none';
-  }
-
-  const worldStyle = snapshot.animation.combat.worldStyle ?? 'unknown-world';
-  const styleLabel = snapshot.animation.combat.styleLabel ?? 'unknown-style';
-  const attackerWeight = snapshot.animation.combat.attackerWeightClass ?? 'unknown';
-  const victimWeight = snapshot.animation.combat.victimWeightClass ?? 'unknown';
-  return `${worldStyle} ${styleLabel} (${attackerWeight} -> ${victimWeight})`;
-}
-
-function formatCombatSfxSummary(snapshot: GameSnapshot): string {
-  if (!snapshot.sound.combat.activeCue) {
-    return 'idle';
-  }
-
-  const flavor =
-    snapshot.sound.combat.attackerFlavorLabel && snapshot.sound.combat.victimFlavorLabel
-      ? ` ${snapshot.sound.combat.attackerFlavorLabel} -> ${snapshot.sound.combat.victimFlavorLabel}`
-      : '';
-
-  return `${snapshot.sound.combat.activeCue} (${snapshot.sound.combat.phase ?? 'combat'})${flavor}`;
-}
-
-function formatPieceAssetFilesSummary(snapshot: GameSnapshot): string {
-  const entries = Object.entries(snapshot.assets.pieceAssetFiles);
-
-  if (entries.length === 0) {
-    return 'none yet';
-  }
-
-  return entries
-    .sort(([leftType], [rightType]) => leftType.localeCompare(rightType))
-    .map(([pieceType, filePath]) => `${pieceType}: ${filePath}`)
-    .join(', ');
-}
-
-function formatPieceAssetFallbackSummary(snapshot: GameSnapshot): string {
-  const entries = Object.entries(snapshot.assets.pieceAssetFallbacks);
-
-  if (entries.length === 0) {
-    return 'none';
-  }
-
-  return entries
-    .sort(([leftType], [rightType]) => leftType.localeCompare(rightType))
-    .map(([pieceType, fallback]) => `${pieceType}: ${fallback.requested} -> ${fallback.resolved}`)
-    .join(', ');
-}
-
 const ROOM_HOTSPOT_SUBTITLES: Record<string, string> = {
-  board: 'Enter to play'
+  board: 'Klicken zum Spielen'
 };
 
 function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocusTargetId | null, hoveredPictureFrameId: string | null): string {
   const isRoomExplore = snapshot.startFlow.state === 'roomExplore';
 
-  // ── Camera XYZ debug overlay ───────────────────────────────────────────
-  const { x, y, z } = snapshot.camera.position;
-  const { x: tx, y: ty, z: tz } = snapshot.camera.target;
-  const fmt = (v: number): string => v.toFixed(2).padStart(7);
-  const cameraOverlay = `
-    <div style="
-      position: absolute;
-      bottom: 12px;
-      right: 12px;
-      background: rgba(0,0,0,0.65);
-      color: #e0e0e0;
-      font-family: monospace;
-      font-size: 11px;
-      line-height: 1.6;
-      padding: 6px 10px;
-      border-radius: 4px;
-      pointer-events: none;
-      user-select: none;
-      white-space: pre;
-    ">Kamera pos  x${fmt(x)} y${fmt(y)} z${fmt(z)}
-Blick  ziel x${fmt(tx)} y${fmt(ty)} z${fmt(tz)}</div>
-  `;
-
   if (!isRoomExplore) {
-    return `<div class="room-hotspots-layer">${cameraOverlay}</div>`;
+    return '<div class="room-hotspots-layer"></div>';
   }
 
   // ── Hotspot buttons (overview only, not during transition) ───────────────
@@ -1277,7 +1094,6 @@ Blick  ziel x${fmt(tx)} y${fmt(ty)} z${fmt(tz)}</div>
       ${pictureFrameGlows}
       ${webEmbedOverlay}
       ${infoPlate}
-      ${cameraOverlay}
     </div>
   `;
 }
@@ -1303,7 +1119,7 @@ function renderStartFlowControls(
 
   // ── Room explore: only Zur Übersicht + contextual action ────────────────
   if (startFlowState === 'roomExplore') {
-    // webEmbed: only a back-to-workbench button
+    // webEmbed: back-to-workbench + back-to-menu
     if (!roomFocusTransitionActive && currentRoomFocusTarget === 'webEmbed') {
       return `
         <div class="control-group">
@@ -1311,6 +1127,26 @@ function renderStartFlowControls(
           <div class="control-row">
             <button class="control-button control-button--secondary" data-control="back-from-web-embed" type="button">
               Zurück
+            </button>
+            <button class="control-button control-button--secondary" data-control="return-to-menu-from-focus" type="button">
+              Zum Hauptmenü
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // pictureFrame: overview of all frames — offer back-to-menu
+    if (!roomFocusTransitionActive && currentRoomFocusTarget === 'pictureFrame') {
+      return `
+        <div class="control-group">
+          <p class="control-label">Leistungsnachweise</p>
+          <div class="control-row">
+            <button class="control-button control-button--secondary" data-control="room-focus" data-room-focus-target="overview" type="button">
+              Zur Übersicht
+            </button>
+            <button class="control-button control-button--secondary" data-control="return-to-menu-from-focus" type="button">
+              Zum Hauptmenü
             </button>
           </div>
         </div>
@@ -1405,9 +1241,4 @@ function isRoomFocusTargetId(value: string | undefined): value is RoomFocusTarge
 
 function isRoomHotspotId(value: string | undefined): value is Exclude<RoomFocusTargetId, 'overview'> {
   return value === 'board' || value === 'displayCase' || value === 'pictureFrame' || value === 'workbench';
-}
-
-function getRoomFocusLabel(target: RoomFocusTargetId | null): string {
-  const match = ROOM_FOCUS_TARGET_OPTIONS.find((option) => option.id === target);
-  return match?.label ?? 'None';
 }

@@ -1,13 +1,13 @@
 import * as THREE from 'three';
 import type { CameraPreset } from './camera';
 
-type RoomGestureMode = 'idle' | 'orbit' | 'pan';
-
 export interface RoomCameraControls {
+  animateExit: (onComplete: () => void) => void;
   dispose: () => void;
   getPose: () => CameraPreset;
   setEnabled: (enabled: boolean) => void;
   setPose: (preset: CameraPreset) => void;
+  startEntranceAnimation: () => void;
 }
 
 interface CreateRoomCameraControlsOptions {
@@ -15,83 +15,106 @@ interface CreateRoomCameraControlsOptions {
   onPoseChange: (preset: CameraPreset) => void;
 }
 
-const MIN_RADIUS = 3;
-const MAX_RADIUS = 200;
-const MIN_PHI = 0.08;
-const MAX_PHI = Math.PI - 0.08;
-
-// Room world bounds (generous — user calibrating camera positions)
-const TARGET_MIN_X = -60;
-const TARGET_MAX_X = 30;
-const TARGET_MIN_Y = -10;
-const TARGET_MAX_Y = 30;
-const TARGET_MIN_Z = -30;
-const TARGET_MAX_Z = 60;
+// Each scroll step multiplies radius by this factor (zoom-in = decrease)
+const ZOOM_FACTOR_PER_STEP = 0.9;
+// Maximum zoom-in steps from the initial overview radius
+const MAX_ZOOM_STEPS = 3;
+const ENTRANCE_DURATION_MS = 700;
+const EXIT_DURATION_MS = 500;
 
 export function createRoomCameraControls({
   domElement,
   onPoseChange
 }: CreateRoomCameraControlsOptions): RoomCameraControls {
   const target = new THREE.Vector3(-10, 6, 8.6);
-  const spherical = new THREE.Spherical(63, 1.0, -0.85); // roughly overview position
-
-  // Scratch vectors for pan calculations — reused every pointermove, avoids GC pressure.
-  const _panPos   = new THREE.Vector3();
-  const _panTgt   = new THREE.Vector3();
-  const _panView  = new THREE.Vector3();
-  const _panRight = new THREE.Vector3();
-  const _panFwd   = new THREE.Vector3();
-  const _panUp    = new THREE.Vector3(0, 1, 0);
+  const spherical = new THREE.Spherical(63, 1.0, -0.85);
 
   let enabled = false;
-  let gestureMode: RoomGestureMode = 'idle';
-  let activePointerId: number | null = null;
-  let pointerCaptureActive = false;
+  // baseRadius is the radius at the last setPose call — acts as the zoom-out ceiling
+  let baseRadius = spherical.radius;
+  let minZoomRadius = baseRadius * Math.pow(ZOOM_FACTOR_PER_STEP, MAX_ZOOM_STEPS);
 
-  domElement.addEventListener('contextmenu', handleContextMenu);
-  domElement.addEventListener('mousedown', handleMiddleMouseInterception, true);
-  domElement.addEventListener('mouseup', handleMiddleMouseInterception, true);
-  domElement.addEventListener('click', handleMiddleMouseInterception, true);
-  domElement.addEventListener('auxclick', handleMiddleMouseInterception, true);
-  domElement.addEventListener('pointerdown', handlePointerDown);
-  domElement.addEventListener('pointermove', handlePointerMove);
-  domElement.addEventListener('pointerup', handlePointerUpOrCancel);
-  domElement.addEventListener('pointercancel', handlePointerUpOrCancel);
-  domElement.addEventListener('lostpointercapture', handleLostPointerCapture);
+  let entranceRafId = 0;
+  let entranceStartTime = 0;
+  let entranceStartRadius = baseRadius;
+  let entranceEndRadius = baseRadius;
+
+  let exitRafId = 0;
+  let exitStartTime = 0;
+  let exitStartRadius = baseRadius;
+  let exitOnComplete: (() => void) | null = null;
+
   domElement.addEventListener('wheel', handleWheel, { passive: false });
 
   return {
     dispose: () => {
-      domElement.removeEventListener('contextmenu', handleContextMenu);
-      domElement.removeEventListener('mousedown', handleMiddleMouseInterception, true);
-      domElement.removeEventListener('mouseup', handleMiddleMouseInterception, true);
-      domElement.removeEventListener('click', handleMiddleMouseInterception, true);
-      domElement.removeEventListener('auxclick', handleMiddleMouseInterception, true);
-      domElement.removeEventListener('pointerdown', handlePointerDown);
-      domElement.removeEventListener('pointermove', handlePointerMove);
-      domElement.removeEventListener('pointerup', handlePointerUpOrCancel);
-      domElement.removeEventListener('pointercancel', handlePointerUpOrCancel);
-      domElement.removeEventListener('lostpointercapture', handleLostPointerCapture);
       domElement.removeEventListener('wheel', handleWheel);
-      cancelGesture();
+      cancelAnimationFrame(entranceRafId);
+      cancelAnimationFrame(exitRafId);
     },
     getPose: () => buildCurrentPose(),
     setEnabled: (nextEnabled: boolean) => {
       enabled = nextEnabled;
-
-      if (!enabled) {
-        cancelGesture();
+      if (!nextEnabled) {
+        cancelAnimationFrame(entranceRafId);
       }
     },
+    animateExit: (onComplete: () => void) => {
+      cancelAnimationFrame(entranceRafId);
+      cancelAnimationFrame(exitRafId);
+      exitStartRadius = spherical.radius;
+      exitOnComplete = onComplete;
+      exitStartTime = performance.now();
+      animateExit();
+    },
     setPose: (preset: CameraPreset) => {
+      cancelAnimationFrame(entranceRafId);
+      cancelAnimationFrame(exitRafId);
       const pos = new THREE.Vector3(preset.position.x, preset.position.y, preset.position.z);
       target.set(preset.target.x, preset.target.y, preset.target.z);
       const offset = pos.clone().sub(target);
       spherical.setFromVector3(offset);
-      spherical.radius = clamp(spherical.radius, MIN_RADIUS, MAX_RADIUS);
-      spherical.phi = clamp(spherical.phi, MIN_PHI, MAX_PHI);
+      baseRadius = spherical.radius;
+      minZoomRadius = baseRadius * Math.pow(ZOOM_FACTOR_PER_STEP, MAX_ZOOM_STEPS);
+      // Land at the default zoomed-in position immediately (no animation).
+      // Call startEntranceAnimation() afterwards for the menu-entry zoom effect.
+      spherical.radius = baseRadius * ZOOM_FACTOR_PER_STEP;
+    },
+    startEntranceAnimation: () => {
+      cancelAnimationFrame(entranceRafId);
+      // Begin from the unzoomed overview position and ease in by one step.
+      spherical.radius = baseRadius;
+      entranceStartRadius = baseRadius;
+      entranceEndRadius = baseRadius * ZOOM_FACTOR_PER_STEP;
+      entranceStartTime = performance.now();
+      animateEntrance();
     }
   };
+
+  function animateEntrance(): void {
+    const elapsed = performance.now() - entranceStartTime;
+    const t = Math.min(elapsed / ENTRANCE_DURATION_MS, 1);
+    const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+    spherical.radius = entranceStartRadius + (entranceEndRadius - entranceStartRadius) * eased;
+    onPoseChange(buildCurrentPose());
+    if (t < 1) {
+      entranceRafId = requestAnimationFrame(animateEntrance);
+    }
+  }
+
+  function animateExit(): void {
+    const elapsed = performance.now() - exitStartTime;
+    const t = Math.min(elapsed / EXIT_DURATION_MS, 1);
+    const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // ease-in-out quad
+    spherical.radius = exitStartRadius + (baseRadius - exitStartRadius) * eased;
+    onPoseChange(buildCurrentPose());
+    if (t < 1) {
+      exitRafId = requestAnimationFrame(animateExit);
+    } else {
+      exitOnComplete?.();
+      exitOnComplete = null;
+    }
+  }
 
   function buildCurrentPose(): CameraPreset {
     const position = new THREE.Vector3().setFromSpherical(spherical).add(target);
@@ -102,128 +125,38 @@ export function createRoomCameraControls({
     };
   }
 
-  function cancelGesture(): void {
-    if (activePointerId !== null && pointerCaptureActive && domElement.hasPointerCapture(activePointerId)) {
-      domElement.releasePointerCapture(activePointerId);
-    }
-
-    activePointerId = null;
-    gestureMode = 'idle';
-    pointerCaptureActive = false;
-  }
-
-  function handleContextMenu(event: MouseEvent): void {
-    if (!enabled) {
-      return;
-    }
-
-    event.preventDefault();
-  }
-
-  function handleMiddleMouseInterception(event: MouseEvent): void {
-    if (!enabled || event.button !== 1) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
-  function handlePointerDown(event: PointerEvent): void {
-    if (!enabled) {
-      return;
-    }
-
-    if (event.button === 0) {
-      gestureMode = event.shiftKey ? 'pan' : 'orbit';
-    } else if (event.button === 1) {
-      gestureMode = 'pan';
-    } else if (event.button === 2) {
-      gestureMode = event.shiftKey ? 'pan' : 'orbit';
-    } else {
-      return;
-    }
-
-    activePointerId = event.pointerId;
-
-    try {
-      domElement.setPointerCapture(event.pointerId);
-      pointerCaptureActive = true;
-    } catch {
-      pointerCaptureActive = false;
-    }
-
-    event.preventDefault();
-  }
-
-  function handlePointerMove(event: PointerEvent): void {
-    if (!enabled || activePointerId !== event.pointerId || gestureMode === 'idle') {
-      return;
-    }
-
-    if (!pointerCaptureActive && event.buttons === 0) {
-      cancelGesture();
-      return;
-    }
-
-    event.preventDefault();
-
-    if (gestureMode === 'orbit') {
-      spherical.theta -= event.movementX * 0.005;
-      spherical.phi = clamp(spherical.phi + event.movementY * 0.004, MIN_PHI, MAX_PHI);
-      onPoseChange(buildCurrentPose());
-      return;
-    }
-
-    const pose = buildCurrentPose();
-    _panPos.set(pose.position.x, pose.position.y, pose.position.z);
-    _panTgt.set(pose.target.x, pose.target.y, pose.target.z);
-    _panView.subVectors(_panTgt, _panPos).normalize();
-    _panRight.crossVectors(_panView, _panUp).normalize();
-    _panFwd.crossVectors(_panUp, _panRight).normalize();
-    const right = _panRight;
-    const forward = _panFwd;
-    const panScale = spherical.radius * 0.002;
-
-    target.addScaledVector(right, -event.movementX * panScale);
-    target.addScaledVector(forward, event.movementY * panScale);
-    target.x = clamp(target.x, TARGET_MIN_X, TARGET_MAX_X);
-    target.y = clamp(target.y, TARGET_MIN_Y, TARGET_MAX_Y);
-    target.z = clamp(target.z, TARGET_MIN_Z, TARGET_MAX_Z);
-
-    onPoseChange(buildCurrentPose());
-  }
-
-  function handlePointerUpOrCancel(event: PointerEvent): void {
-    if (activePointerId !== event.pointerId) {
-      return;
-    }
-
-    cancelGesture();
-  }
-
-  function handleLostPointerCapture(event: PointerEvent): void {
-    if (activePointerId !== event.pointerId) {
-      return;
-    }
-
-    activePointerId = null;
-    gestureMode = 'idle';
-    pointerCaptureActive = false;
-  }
-
   function handleWheel(event: WheelEvent): void {
     if (!enabled) {
       return;
     }
 
     event.preventDefault();
+    cancelAnimationFrame(entranceRafId);
+
+    // Zoom in (deltaY < 0) or out (deltaY > 0), clamped between minZoomRadius and baseRadius
     const zoomFactor = 1 + event.deltaY * 0.001;
-    spherical.radius = clamp(spherical.radius * zoomFactor, MIN_RADIUS, MAX_RADIUS);
+    spherical.radius = clamp(spherical.radius * zoomFactor, minZoomRadius, baseRadius);
     onPoseChange(buildCurrentPose());
   }
 }
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+/**
+ * Returns the camera position that the free camera will rest at when
+ * setPose() is called with the given preset.  Use this as the transition
+ * toPreset so the lerp ends exactly where the free camera activates.
+ */
+export function computeFreeCameraEntryPreset(preset: CameraPreset): CameraPreset {
+  const tgt = new THREE.Vector3(preset.target.x, preset.target.y, preset.target.z);
+  const offset = new THREE.Vector3(preset.position.x, preset.position.y, preset.position.z).sub(tgt);
+  const sph = new THREE.Spherical().setFromVector3(offset);
+  sph.radius *= ZOOM_FACTOR_PER_STEP;
+  const pos = new THREE.Vector3().setFromSpherical(sph).add(tgt);
+  return {
+    position: { x: pos.x, y: pos.y, z: pos.z },
+    target: preset.target
+  };
 }

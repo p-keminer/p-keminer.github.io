@@ -17,19 +17,19 @@ export function renderControls({
       <p class="control-label">Navigation</p>
       <div class="control-row">
         <button class="control-button control-button--secondary" data-control="return-to-room" type="button">
-          Back to Room
+          Zur Übersicht
         </button>
       </div>
     </div>` : ''}
     <div class="control-row">
       <button class="control-button" data-control="undo" type="button" ${undoAvailable ? '' : 'disabled'}>
-        Undo
+        Rückgängig
       </button>
       <button class="control-button control-button--secondary" data-control="restart" type="button" ${restartAvailable ? '' : 'disabled'}>
-        Restart
+        Neustart
       </button>
       <button class="control-button control-button--secondary" data-control="camera-reset" type="button" ${cameraLocked ? 'disabled' : ''}>
-        Reset Camera
+        Kamera zentrieren
       </button>
     </div>
   `;

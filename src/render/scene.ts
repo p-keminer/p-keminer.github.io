@@ -7,7 +7,7 @@ import {
   type BoardCameraControls,
   type BoardCameraControlsSnapshot
 } from './board-camera-controls';
-import { createRoomCameraControls, type RoomCameraControls } from './room-camera-controls';
+import { computeFreeCameraEntryPreset, createRoomCameraControls, type RoomCameraControls } from './room-camera-controls';
 import {
   createCombatCameraController,
   type CombatCameraController,
@@ -51,6 +51,7 @@ export interface StartFlowStateInput {
   focusProgress: number;
   focusTarget: RoomFocusTargetId;
   mode: StartFlowMode;
+  pendingMenuReturn?: boolean;
   pictureFrameDetailId?: string;
   progress: number;
 }
@@ -236,7 +237,7 @@ const MENU_CAMERA_PRESET: CameraPreset = {
 const ROOM_FOCUS_TARGET_PRESETS: Record<Exclude<RoomFocusTargetId, 'board'>, CameraPreset> = {
   // Display case — back-left of the room.
   displayCase: {
-    position: { x: -19.0, y: 5.2, z: 15.2 },
+    position: { x: -20.5, y: 4.5, z: 9.0 },
     target: { x: -24.9, y: 2.7, z: -8.0 }
   },
   // Full-room overview — same as MENU_CAMERA_PRESET (see above).
@@ -276,19 +277,19 @@ const ROOM_HOTSPOT_DEFINITIONS: ReadonlyArray<{
     anchor: new THREE.Vector3(0.15, 4.5, 0.55),
     focusTarget: 'board',
     id: 'board',
-    label: 'Chess Table'
+    label: 'Schachbrett'
   },
   {
     anchor: new THREE.Vector3(-15.5, 5.22, 2.29),
     focusTarget: 'displayCase',
     id: 'displayCase',
-    label: 'Certificates'
+    label: 'Zertifikate'
   },
   {
     anchor: new THREE.Vector3(-25.15, 9.12, 4.51),
     focusTarget: 'pictureFrame',
     id: 'pictureFrame',
-    label: 'Performance Reports'
+    label: 'Leistungsnachweise'
   },
   {
     anchor: new THREE.Vector3(-17.47, 6.5, 29.56),
@@ -339,6 +340,8 @@ export function createBoardPreviewScene({
   let startFlowProgress = 0;
   let activePictureFrameDetailId = 'frame0';
   let roomCameraFree = false;
+  let freeCameraExitPreset: CameraPreset | null = null;
+  let startFlowPendingMenuReturn = false;
   let frameHandle = 0;
   let lastFrameTime = performance.now();
 
@@ -531,14 +534,30 @@ export function createBoardPreviewScene({
       return lerpCameraPreset(MENU_CAMERA_PRESET, getRoomFocusTargetPreset('overview'), easeInOutCubic(startFlowProgress));
     }
 
-    const fromPreset = getRoomFocusTargetPreset(startFlowFocusFromTarget);
-    const toPreset = getRoomFocusTargetPreset(startFlowFocusTarget);
+    const fromPreset = (startFlowFocusFromTarget === 'overview' && freeCameraExitPreset !== null)
+      ? freeCameraExitPreset
+      : getRoomFocusTargetPreset(startFlowFocusFromTarget);
+    // When transitioning TO overview the free camera will activate at the
+    // zoomed-in resting position.  Use that as toPreset so the lerp ends
+    // exactly there and no jump occurs when the free camera takes over.
+    // Exception: when returning to menu we want to land at the exact menu
+    // camera position (baseRadius), not the zoomed-in variant.
+    const toPreset = startFlowFocusTarget === 'overview'
+      ? (startFlowPendingMenuReturn
+          ? getRoomFocusTargetPreset('overview')
+          : computeFreeCameraEntryPreset(getRoomFocusTargetPreset('overview')))
+      : getRoomFocusTargetPreset(startFlowFocusTarget);
 
     if (startFlowFocusFromTarget === startFlowFocusTarget || startFlowFocusProgress >= 1) {
       return toPreset;
     }
 
-    return lerpCameraPreset(fromPreset, toPreset, easeInOutCubic(startFlowFocusProgress));
+    const t = easeInOutCubic(startFlowFocusProgress);
+    const isDisplayCaseTransition =
+      startFlowFocusTarget === 'displayCase' || startFlowFocusFromTarget === 'displayCase';
+    return isDisplayCaseTransition
+      ? arcLerpCameraPreset(fromPreset, toPreset, t, 4.0)
+      : lerpCameraPreset(fromPreset, toPreset, t);
   }
 
   function getRoomHotspotSnapshots(): BoardPreviewSnapshot['roomExplore']['hotspots'] {
@@ -660,6 +679,7 @@ export function createBoardPreviewScene({
       startFlowFocusTarget = nextState.focusTarget;
       startFlowMode = nextState.mode;
       startFlowProgress = THREE.MathUtils.clamp(nextState.progress, 0, 1);
+      startFlowPendingMenuReturn = nextState.pendingMenuReturn ?? false;
       if (nextState.pictureFrameDetailId !== undefined) {
         activePictureFrameDetailId = nextState.pictureFrameDetailId;
       }
@@ -686,17 +706,38 @@ export function createBoardPreviewScene({
       const shouldBeFree =
         startFlowMode === 'roomExplore' &&
         startFlowFocusTarget === 'overview' &&
-        startFlowFocusProgress >= 1;
+        startFlowFocusProgress >= 1 &&
+        !startFlowPendingMenuReturn;
 
       if (shouldBeFree && !roomCameraFree) {
         // Seed controls from the overview preset so the camera starts at the
         // correct position.  The user can then orbit/pan freely from there.
         stage.roomCameraControls.setPose(ROOM_FOCUS_TARGET_PRESETS.overview);
+        freeCameraExitPreset = null;
+        // Only play the entrance zoom when first entering from the menu.
+        // When returning from a focus target the transition already moved the
+        // camera; we land at the zoomed-in position without a second animation.
+        if (startFlowFocusFromTarget === 'overview') {
+          stage.roomCameraControls.startEntranceAnimation();
+        }
         stage.roomCameraControls.setEnabled(true);
         roomCameraFree = true;
       } else if (!shouldBeFree && roomCameraFree) {
         stage.roomCameraControls.setEnabled(false);
-        roomCameraFree = false;
+        if (startFlowMode === 'menu') {
+          // Returning to menu: animate the zoom-out so the camera doesn't snap.
+          // syncStartFlowState won't be called again in a tight loop here, so
+          // the animateExit callback reliably fires.
+          stage.roomCameraControls.animateExit(() => {
+            roomCameraFree = false;
+          });
+        } else {
+          // Navigating to a focus target: capture the live free-camera pose so
+          // the transition lerp starts from the actual zoomed position, not the
+          // fixed overview preset.
+          freeCameraExitPreset = stage.roomCameraControls.getPose();
+          roomCameraFree = false;
+        }
       }
 
       syncCameraControlLock();
@@ -923,5 +964,16 @@ function lerpCameraPreset(from: CameraPreset, to: CameraPreset, t: number): Came
 
 function easeInOutCubic(value: number): number {
   return value < 0.5 ? 4 * value * value * value : 1 - Math.pow(-2 * value + 2, 3) / 2;
+}
+
+// Lerps between two presets with a parabolic Y arc on the camera position.
+// arcLift defines the maximum height added at t=0.5 (sin bell curve).
+function arcLerpCameraPreset(from: CameraPreset, to: CameraPreset, t: number, arcLift: number): CameraPreset {
+  const base = lerpCameraPreset(from, to, t);
+  const lift = arcLift * Math.sin(Math.PI * t);
+  return {
+    position: { x: base.position.x, y: base.position.y + lift, z: base.position.z },
+    target: base.target
+  };
 }
 
