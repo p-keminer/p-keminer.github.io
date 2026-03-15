@@ -144,19 +144,12 @@ export function mountGame(root: HTMLDivElement): MountedGame {
         <div class="stage-frame" style="position: relative;">
           <div class="scene-root" data-scene-root></div>
           <div data-room-hotspots-root style="inset: 0; pointer-events: none; position: absolute;"></div>
+          <div class="canvas-hud-controls" data-controls-root></div>
         </div>
       </section>
 
       <aside class="info-panel">
-        <section class="panel">
-          <h2>Controls</h2>
-          <div data-controls-root></div>
-        </section>
         <section class="panel" data-overlay-root></section>
-        <section class="panel">
-          <h2>Slice status</h2>
-          <ul class="detail-list" data-detail-list></ul>
-        </section>
       </aside>
     </main>
   `;
@@ -165,9 +158,8 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   const controlsRoot = root.querySelector<HTMLElement>('[data-controls-root]');
   const overlayRoot = root.querySelector<HTMLElement>('[data-overlay-root]');
   const roomHotspotsRoot = root.querySelector<HTMLDivElement>('[data-room-hotspots-root]');
-  const detailList = root.querySelector<HTMLUListElement>('[data-detail-list]');
 
-  if (!sceneRoot || !controlsRoot || !overlayRoot || !roomHotspotsRoot || !detailList) {
+  if (!sceneRoot || !controlsRoot || !overlayRoot || !roomHotspotsRoot) {
     throw new Error('Missing game shell mount points.');
   }
 
@@ -387,13 +379,6 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       hoveredPictureFrameId = null;
     }
     const snapshot = buildGameSnapshot();
-    const hoveredSquare = snapshot.interaction.hoveredSquare ?? 'none';
-    const selectedSquare = snapshot.interaction.selectedSquare ?? 'none';
-    const legalTargets = snapshot.interaction.legalTargetSquares.length
-      ? snapshot.interaction.legalTargetSquares.join(', ')
-      : 'none';
-    const checkedKingSquare = snapshot.checkedKingSquare ?? 'none';
-    const lastMoveSquares = snapshot.lastMove ? `${snapshot.lastMove.from} -> ${snapshot.lastMove.to}` : 'none';
     controlsRoot.innerHTML =
       snapshot.startFlow.state === 'boardFocus'
         ? renderControls({
@@ -413,48 +398,6 @@ export function mountGame(root: HTMLDivElement): MountedGame {
         ? renderRoomHotspots(snapshot, hoveredRoomHotspot, hoveredPictureFrameId)
         : '';
     overlayRoot.innerHTML = renderOverlay(buildOverlayMessage(snapshot));
-
-    detailList.innerHTML = [
-      `<li>Startflow state: ${snapshot.startFlow.state}.</li>`,
-      `<li>Current room focus target: ${snapshot.startFlow.currentRoomFocusTarget ?? 'none'}.</li>`,
-      `<li>Gameplay interaction enabled: ${snapshot.startFlow.gameplayInteractionEnabled ? 'yes' : 'no'}.</li>`,
-      `<li>Intro transition active: ${snapshot.startFlow.introTransitionActive ? 'yes' : 'no'}.</li>`,
-      `<li>Room focus transition active: ${snapshot.startFlow.roomFocusTransitionActive ? 'yes' : 'no'}.</li>`,
-      `<li>${snapshot.pieces.totalCount} rendered pieces are fully derived from chess.js.</li>`,
-      `<li>Selected square: ${selectedSquare}.</li>`,
-      `<li>Hovered square: ${hoveredSquare}.</li>`,
-      `<li>Legal target squares: ${legalTargets}.</li>`,
-      `<li>Last move squares: ${lastMoveSquares}.</li>`,
-      `<li>Captured by White: ${formatCapturedSummary(snapshot.capturedPieces.byWhite)}.</li>`,
-      `<li>Captured by Black: ${formatCapturedSummary(snapshot.capturedPieces.byBlack)}.</li>`,
-      `<li>Game result: ${snapshot.gameResult.text}</li>`,
-      `<li>Check state: ${snapshot.inCheck ? `king highlighted on ${checkedKingSquare}` : 'none'}.</li>`,
-      `<li>Undo available: ${snapshot.undoAvailable ? 'yes' : 'no'}.</li>`,
-      `<li>Presentation mode: ${snapshot.presentation.mode}.</li>`,
-      `<li>Camera mode: ${snapshot.camera.mode}.</li>`,
-      `<li>Camera priority: ${snapshot.camera.priority}.</li>`,
-      `<li>Combat side: ${snapshot.camera.combatSide}.</li>`,
-      `<li>Camera controls locked: ${snapshot.camera.controlsLocked ? 'yes' : 'no'}.</li>`,
-      `<li>Selection locked: ${snapshot.gameOver || snapshot.presentation.interactionLocked || !snapshot.startFlow.gameplayInteractionEnabled ? 'yes' : 'no'}.</li>`,
-      `<li>Combat event: ${formatCombatEventSummary(snapshot)}.</li>`,
-      `<li>Combat phase: ${snapshot.presentation.combatPhase ?? 'none'}.</li>`,
-      `<li>Board asset mode: ${snapshot.assets.board}.</li>`,
-      `<li>Piece asset mode: ${snapshot.assets.pieces}.</li>`,
-      `<li>Piece asset set: ${snapshot.assets.pieceAssetSet}${snapshot.assetLoading.pieces ? ` (loading ${snapshot.assetLoading.pendingPieceAssetSet ?? 'request'})` : ''}.</li>`,
-      `<li>Loaded model files: ${snapshot.assets.loadedModelFiles.length > 0 ? snapshot.assets.loadedModelFiles.join(', ') : 'none yet'}.</li>`,
-      `<li>Loaded piece model files: ${snapshot.assets.loadedPieceModelFiles.length > 0 ? snapshot.assets.loadedPieceModelFiles.join(', ') : 'none yet'}.</li>`,
-      `<li>Piece asset files: ${formatPieceAssetFilesSummary(snapshot)}.</li>`,
-      `<li>Piece asset fallbacks: ${formatPieceAssetFallbackSummary(snapshot)}.</li>`,
-      `<li>Piece animation: ${snapshot.animation.activePieceIds.length > 0 ? `active for ${snapshot.animation.activePieceIds.join(', ')}` : 'idle'}.</li>`,
-      `<li>Capture animation: ${snapshot.animation.activeCapturePieceIds.length > 0 ? snapshot.animation.activeCapturePieceIds.join(', ') : 'idle'}.</li>`,
-      `<li>Combat motion profile: ${formatCombatMotionProfileSummary(snapshot)}.</li>`,
-      `<li>Combat style layer: ${formatCombatStyleSummary(snapshot)}.</li>`,
-      `<li>Combat animation: ${formatCombatAnimationSummary(snapshot)}.</li>`,
-      `<li>Combat feedback: ${formatCombatFeedbackSummary(snapshot)}.</li>`,
-      `<li>Combat SFX cue: ${formatCombatSfxSummary(snapshot)}.</li>`,
-      `<li>Last sound: ${snapshot.sound.lastEvent ?? 'none'}.</li>`,
-      `<li>Highlight priority: ${snapshot.interaction.highlightPriority.join(' > ')}.</li>`
-    ].join('');
   };
 
   const preview = createBoardPreviewScene({
