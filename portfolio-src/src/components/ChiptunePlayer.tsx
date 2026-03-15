@@ -33,7 +33,7 @@ export default function ChiptunePlayer() {
       title={playing ? "Musik stoppen" : "Musik starten"}
       style={{
         position: "fixed",
-        bottom: 24,
+        bottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
         right: 24,
         zIndex: 100,
         width: 40,

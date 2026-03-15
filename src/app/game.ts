@@ -1047,7 +1047,6 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
           class="room-hotspot-btn ${stateClass}"
           data-room-hotspot="${hotspot.id}"
           type="button"
-          style="left: ${hotspot.screenX}px; top: ${hotspot.screenY}px;"
           ${snapshot.startFlow.roomFocusTransitionActive ? 'disabled' : ''}
         >
           <span class="room-hotspot-indicator" aria-hidden="true"></span>
