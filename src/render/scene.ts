@@ -436,6 +436,7 @@ export function createBoardPreviewScene({
     }
     stage.pieceLayer.step(deltaMs);
     stage.cameraController.step(deltaMs);
+    stage.cctvScreen.tick(clockState.elapsedMs);
     syncCameraControlLock();
     applyStartFlowCameraPose();
 
