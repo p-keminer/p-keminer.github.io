@@ -1,0 +1,66 @@
+# ── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
+
+# ── Production build ──────────────────────────────────────────────────────────
+dist/
+
+# ── Staging / scratch output ──────────────────────────────────────────────────
+output/
+
+# ── Environment variables ─────────────────────────────────────────────────────
+.env
+.env.*
+.env.local
+.env.development
+.env.production
+.env.staging
+
+# ── TypeScript build cache ────────────────────────────────────────────────────
+*.tsbuildinfo
+
+# ── Vite cache ────────────────────────────────────────────────────────────────
+.vite/
+
+# ── Python bytecode ───────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ── Blender source files (exceed GitHub 100 MB limit; export GLBs to public/models/) ──
+docs/assets/blender/*.blend
+docs/assets/blender/*.blend1
+
+# ── Ad-hoc Blender debug / dev scripts (contain machine-specific paths) ───────
+artefacts/
+
+# ── Playwright / visual validation artefacts ─────────────────────────────────
+validation/
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── OS files ──────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ── Editor / IDE ──────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+
+# ── AI assistant local config (machine-specific launch / settings) ────────────
+.claude/
