@@ -37,6 +37,10 @@ export function createCCTVScreen(): CCTVScreen {
     format: THREE.RGBAFormat,
     colorSpace: THREE.SRGBColorSpace
   });
+  // WebGL render targets have their origin at the bottom-left, while the mesh
+  // UV expects top-left — flip the texture vertically to correct the 180° rotation.
+  renderTarget.texture.repeat.set(1, -1);
+  renderTarget.texture.offset.set(0, 1);
 
   // This camera belongs entirely to the CCTV system.
   // It is never assigned to the renderer as the active camera for the main view.
