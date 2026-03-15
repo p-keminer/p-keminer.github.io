@@ -6,6 +6,7 @@ export interface RoomCameraControls {
   dispose: () => void;
   getPose: () => CameraPreset;
   setEnabled: (enabled: boolean) => void;
+  setPortraitMode: (portrait: boolean) => void;
   setPose: (preset: CameraPreset) => void;
   startEntranceAnimation: () => void;
 }
@@ -30,6 +31,7 @@ export function createRoomCameraControls({
   const spherical = new THREE.Spherical(63, 1.0, -0.85);
 
   let enabled = false;
+  let portraitMode = false;
   // baseRadius is the radius at the last setPose call — acts as the zoom-out ceiling
   let baseRadius = spherical.radius;
   let minZoomRadius = baseRadius * Math.pow(ZOOM_FACTOR_PER_STEP, MAX_ZOOM_STEPS);
@@ -72,6 +74,9 @@ export function createRoomCameraControls({
         cancelAnimationFrame(entranceRafId);
       }
     },
+    setPortraitMode: (portrait: boolean) => {
+      portraitMode = portrait;
+    },
     animateExit: (onComplete: () => void) => {
       cancelAnimationFrame(entranceRafId);
       cancelAnimationFrame(exitRafId);
@@ -89,16 +94,16 @@ export function createRoomCameraControls({
       spherical.setFromVector3(offset);
       baseRadius = spherical.radius;
       minZoomRadius = baseRadius * Math.pow(ZOOM_FACTOR_PER_STEP, MAX_ZOOM_STEPS);
-      // Land at the default zoomed-in position immediately (no animation).
-      // Call startEntranceAnimation() afterwards for the menu-entry zoom effect.
-      spherical.radius = baseRadius * ZOOM_FACTOR_PER_STEP;
+      // Portrait: land at maximum zoom immediately. Desktop: one step in.
+      spherical.radius = portraitMode ? minZoomRadius : baseRadius * ZOOM_FACTOR_PER_STEP;
     },
     startEntranceAnimation: () => {
       cancelAnimationFrame(entranceRafId);
-      // Begin from the unzoomed overview position and ease in by one step.
+      // Begin from the unzoomed overview position and ease in.
       spherical.radius = baseRadius;
       entranceStartRadius = baseRadius;
-      entranceEndRadius = baseRadius * ZOOM_FACTOR_PER_STEP;
+      // Portrait: animate to max zoom. Desktop: one step in.
+      entranceEndRadius = portraitMode ? minZoomRadius : baseRadius * ZOOM_FACTOR_PER_STEP;
       entranceStartTime = performance.now();
       animateEntrance();
     }
@@ -139,7 +144,7 @@ export function createRoomCameraControls({
   }
 
   function handleWheel(event: WheelEvent): void {
-    if (!enabled) {
+    if (!enabled || portraitMode) {
       return;
     }
 
@@ -162,7 +167,7 @@ export function createRoomCameraControls({
   }
 
   function handleTouchStart(event: TouchEvent): void {
-    if (!enabled) return;
+    if (!enabled || portraitMode) return;
 
     for (let i = 0; i < event.changedTouches.length; i++) {
       const t = event.changedTouches[i];
@@ -178,7 +183,7 @@ export function createRoomCameraControls({
   }
 
   function handleTouchMove(event: TouchEvent): void {
-    if (!enabled || activeTouches.size < 2) return;
+    if (!enabled || portraitMode || activeTouches.size < 2) return;
 
     for (let i = 0; i < event.changedTouches.length; i++) {
       const t = event.changedTouches[i];
@@ -211,12 +216,15 @@ function clamp(value: number, min: number, max: number): number {
  * Returns the camera position that the free camera will rest at when
  * setPose() is called with the given preset.  Use this as the transition
  * toPreset so the lerp ends exactly where the free camera activates.
+ *
+ * @param portrait  If true, returns the max-zoom position (3 steps in)
+ *                  matching portrait mode's setPose behaviour.
  */
-export function computeFreeCameraEntryPreset(preset: CameraPreset): CameraPreset {
+export function computeFreeCameraEntryPreset(preset: CameraPreset, portrait = false): CameraPreset {
   const tgt = new THREE.Vector3(preset.target.x, preset.target.y, preset.target.z);
   const offset = new THREE.Vector3(preset.position.x, preset.position.y, preset.position.z).sub(tgt);
   const sph = new THREE.Spherical().setFromVector3(offset);
-  sph.radius *= ZOOM_FACTOR_PER_STEP;
+  sph.radius *= portrait ? Math.pow(ZOOM_FACTOR_PER_STEP, MAX_ZOOM_STEPS) : ZOOM_FACTOR_PER_STEP;
   const pos = new THREE.Vector3().setFromSpherical(sph).add(tgt);
   return {
     position: { x: pos.x, y: pos.y, z: pos.z },

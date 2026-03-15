@@ -355,6 +355,8 @@ export function createBoardPreviewScene({
   applyStartFlowCameraPose();
   syncStartFlowInteractionLock();
 
+  let isPortrait = false;
+
   const resize = (): void => {
     const width = Math.max(container.clientWidth, 1);
     const height = Math.max(container.clientHeight, 1);
@@ -366,6 +368,9 @@ export function createBoardPreviewScene({
       Math.floor(height * Math.min(window.devicePixelRatio || 1, 2))
     );
     resizeCamera(stage.camera, width, height);
+    isPortrait = stage.camera.aspect < 1;
+    stage.roomCameraControls.setPortraitMode(isPortrait);
+    lookAround.setAllowPitch(!isPortrait);
     render();
     // Hotspot-Positionen nach Resize neu berechnen — immer wenn roomExplore
     // aktiv ist, da alle 3D-projizierten Buttons (overview + pictureFrame)
@@ -607,7 +612,7 @@ export function createBoardPreviewScene({
     const toPreset = startFlowFocusTarget === 'overview'
       ? (startFlowPendingMenuReturn
           ? getRoomFocusTargetPreset('overview')
-          : computeFreeCameraEntryPreset(getRoomFocusTargetPreset('overview')))
+          : computeFreeCameraEntryPreset(getRoomFocusTargetPreset('overview'), isPortrait))
       : getRoomFocusTargetPreset(startFlowFocusTarget);
 
     if (startFlowFocusFromTarget === startFlowFocusTarget || startFlowFocusProgress >= 1) {

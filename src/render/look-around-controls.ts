@@ -8,6 +8,8 @@ export interface LookAroundControls {
   getOffset(): { yaw: number; pitch: number };
   /** Enable or disable the controller. Resets drag state. */
   setEnabled(enabled: boolean): void;
+  /** Allow or lock vertical look-around (pitch). When locked, only yaw is applied. */
+  setAllowPitch(allow: boolean): void;
   /** Reset yaw/pitch to zero (call when navigating to a new area). */
   reset(): void;
   /** Remove all event listeners. */
@@ -35,6 +37,7 @@ export function createLookAroundControls(
   onChange?: () => void
 ): LookAroundControls {
   let enabled = false;
+  let allowPitch = true;
   let yaw = 0;   // horizontal offset (radians)
   let pitch = 0; // vertical offset (radians)
 
@@ -94,7 +97,9 @@ export function createLookAroundControls(
     const h = Math.max(domElement.clientHeight, 1);
 
     yaw   = THREE.MathUtils.clamp(yaw   - (dx / w) * MAX_ANGLE_RAD * 2, -MAX_ANGLE_RAD, MAX_ANGLE_RAD);
-    pitch = THREE.MathUtils.clamp(pitch - (dy / h) * MAX_ANGLE_RAD * 2, -MAX_ANGLE_RAD, MAX_ANGLE_RAD);
+    if (allowPitch) {
+      pitch = THREE.MathUtils.clamp(pitch - (dy / h) * MAX_ANGLE_RAD * 2, -MAX_ANGLE_RAD, MAX_ANGLE_RAD);
+    }
 
     onChange?.();
   }
@@ -122,6 +127,13 @@ export function createLookAroundControls(
       if (!val) {
         primaryPointerId = null;
         activeTouchCount = 0;
+      }
+    },
+
+    setAllowPitch(allow: boolean): void {
+      allowPitch = allow;
+      if (!allow && pitch !== 0) {
+        pitch = 0;
       }
     },
 
