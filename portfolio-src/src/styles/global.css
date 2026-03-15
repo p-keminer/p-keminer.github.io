@@ -663,7 +663,7 @@ body {
 }
 
 /* ── Mobile: lift fixed bottom buttons above browser chrome ── */
-@media (max-width: 600px) {
+@media (max-width: 900px) {
   .chiptune-btn,
   .cards-toggle-btn {
     bottom: 80px !important;

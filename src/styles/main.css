@@ -880,7 +880,7 @@ body.web-embed-active .web-embed-overlay {
 
   /* WebEmbed nav: lift above mobile browser chrome */
   .web-embed-nav {
-    bottom: 80px;
+    bottom: 60px;
     gap: 6px;
     left: 16px;
   }
