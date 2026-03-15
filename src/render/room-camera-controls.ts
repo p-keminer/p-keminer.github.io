@@ -44,11 +44,24 @@ export function createRoomCameraControls({
   let exitStartRadius = baseRadius;
   let exitOnComplete: (() => void) | null = null;
 
+  // ── Touch pinch-to-zoom ──────────────────────────────────────────────
+  const activeTouches = new Map<number, { x: number; y: number }>();
+  let pinchStartDistance = 0;
+  let pinchStartRadius = 0;
+
   domElement.addEventListener('wheel', handleWheel, { passive: false });
+  domElement.addEventListener('touchstart', handleTouchStart, { passive: false });
+  domElement.addEventListener('touchmove', handleTouchMove, { passive: false });
+  domElement.addEventListener('touchend', handleTouchEnd);
+  domElement.addEventListener('touchcancel', handleTouchEnd);
 
   return {
     dispose: () => {
       domElement.removeEventListener('wheel', handleWheel);
+      domElement.removeEventListener('touchstart', handleTouchStart);
+      domElement.removeEventListener('touchmove', handleTouchMove);
+      domElement.removeEventListener('touchend', handleTouchEnd);
+      domElement.removeEventListener('touchcancel', handleTouchEnd);
       cancelAnimationFrame(entranceRafId);
       cancelAnimationFrame(exitRafId);
     },
@@ -137,6 +150,56 @@ export function createRoomCameraControls({
     const zoomFactor = 1 + event.deltaY * 0.001;
     spherical.radius = clamp(spherical.radius * zoomFactor, minZoomRadius, baseRadius);
     onPoseChange(buildCurrentPose());
+  }
+
+  // ── Touch pinch-to-zoom handlers ────────────────────────────────────────
+
+  function getTouchDistance(): number {
+    const pts = [...activeTouches.values()];
+    const dx = pts[1].x - pts[0].x;
+    const dy = pts[1].y - pts[0].y;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function handleTouchStart(event: TouchEvent): void {
+    if (!enabled) return;
+
+    for (let i = 0; i < event.changedTouches.length; i++) {
+      const t = event.changedTouches[i];
+      activeTouches.set(t.identifier, { x: t.clientX, y: t.clientY });
+    }
+
+    if (activeTouches.size >= 2) {
+      cancelAnimationFrame(entranceRafId);
+      pinchStartDistance = getTouchDistance();
+      pinchStartRadius = spherical.radius;
+      event.preventDefault();
+    }
+  }
+
+  function handleTouchMove(event: TouchEvent): void {
+    if (!enabled || activeTouches.size < 2) return;
+
+    for (let i = 0; i < event.changedTouches.length; i++) {
+      const t = event.changedTouches[i];
+      const prev = activeTouches.get(t.identifier);
+      if (prev) {
+        prev.x = t.clientX;
+        prev.y = t.clientY;
+      }
+    }
+
+    const currentDistance = getTouchDistance();
+    const scale = pinchStartDistance / Math.max(currentDistance, 1);
+    spherical.radius = clamp(pinchStartRadius * scale, minZoomRadius, baseRadius);
+    onPoseChange(buildCurrentPose());
+    event.preventDefault();
+  }
+
+  function handleTouchEnd(event: TouchEvent): void {
+    for (let i = 0; i < event.changedTouches.length; i++) {
+      activeTouches.delete(event.changedTouches[i].identifier);
+    }
   }
 }
 

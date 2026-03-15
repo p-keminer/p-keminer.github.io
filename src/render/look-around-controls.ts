@@ -22,6 +22,9 @@ export interface LookAroundControls {
  * Sensitivity is normalised to the DOM element size so a full-width swipe
  * covers the entire ±45° range regardless of screen size.
  *
+ * Multi-touch is detected: when a second finger lands, dragging pauses so
+ * pinch-to-zoom (handled elsewhere) doesn't cause wild camera jumps.
+ *
  * @param domElement  Canvas element to attach to.
  * @param onChange    Called on every touch-move that changes the offset.
  *                    Use to keep DOM overlays (hotspots) in sync with the
@@ -32,23 +35,36 @@ export function createLookAroundControls(
   onChange?: () => void
 ): LookAroundControls {
   let enabled = false;
-  let isDragging = false;
   let yaw = 0;   // horizontal offset (radians)
   let pitch = 0; // vertical offset (radians)
+
+  // Track active touch pointers to detect multi-touch and ignore pinch gestures.
+  let primaryPointerId: number | null = null;
   let lastX = 0;
   let lastY = 0;
+  let activeTouchCount = 0;
 
   function onPointerDown(e: PointerEvent): void {
     // Touch only — desktop mouse drag is not handled here.
     if (!enabled || e.pointerType !== 'touch') return;
-    isDragging = true;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    domElement.setPointerCapture(e.pointerId);
+
+    activeTouchCount++;
+
+    // Only start dragging with the first finger
+    if (activeTouchCount === 1) {
+      primaryPointerId = e.pointerId;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      domElement.setPointerCapture(e.pointerId);
+    }
+    // Second+ finger: stop dragging to avoid conflict with pinch-to-zoom
   }
 
   function onPointerMove(e: PointerEvent): void {
-    if (!enabled || !isDragging || e.pointerType !== 'touch') return;
+    if (!enabled || e.pointerType !== 'touch') return;
+    // Only process moves from the primary finger, and only when exactly 1 touch is active
+    if (e.pointerId !== primaryPointerId || activeTouchCount !== 1) return;
+
     const dx = e.clientX - lastX;
     const dy = e.clientY - lastY;
     lastX = e.clientX;
@@ -65,8 +81,13 @@ export function createLookAroundControls(
   }
 
   function onPointerUp(e: PointerEvent): void {
-    if (!isDragging || e.pointerType !== 'touch') return;
-    isDragging = false;
+    if (e.pointerType !== 'touch') return;
+
+    activeTouchCount = Math.max(0, activeTouchCount - 1);
+
+    if (e.pointerId === primaryPointerId) {
+      primaryPointerId = null;
+    }
   }
 
   domElement.addEventListener('pointerdown',   onPointerDown);
@@ -80,14 +101,16 @@ export function createLookAroundControls(
     setEnabled(val: boolean): void {
       enabled = val;
       if (!val) {
-        isDragging = false;
+        primaryPointerId = null;
+        activeTouchCount = 0;
       }
     },
 
     reset(): void {
       yaw = 0;
       pitch = 0;
-      isDragging = false;
+      primaryPointerId = null;
+      activeTouchCount = 0;
     },
 
     dispose(): void {

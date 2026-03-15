@@ -58,6 +58,14 @@ export function createBoardCameraControls({
   let activePointerId: number | null = null;
   let pointerCaptureActive = false;
 
+  // ── Touch support ──────────────────────────────────────────────────────
+  // Single-finger drag → orbit, two-finger pinch → zoom.
+  // We track active touches separately from the mouse/pointer gesture above.
+  const activeTouches = new Map<number, { x: number; y: number }>();
+  let touchGestureMode: 'idle' | 'orbit' | 'pinch' = 'idle';
+  let pinchStartDistance = 0;
+  let pinchStartRadius = 0;
+
   domElement.addEventListener('contextmenu', handleContextMenu);
   domElement.addEventListener('mousedown', handleMiddleMouseInterception, true);
   domElement.addEventListener('mouseup', handleMiddleMouseInterception, true);
@@ -69,6 +77,10 @@ export function createBoardCameraControls({
   domElement.addEventListener('pointercancel', handlePointerUpOrCancel);
   domElement.addEventListener('lostpointercapture', handleLostPointerCapture);
   domElement.addEventListener('wheel', handleWheel, { passive: false });
+  domElement.addEventListener('touchstart', handleTouchStart, { passive: false });
+  domElement.addEventListener('touchmove', handleTouchMove, { passive: false });
+  domElement.addEventListener('touchend', handleTouchEnd);
+  domElement.addEventListener('touchcancel', handleTouchEnd);
   window.addEventListener('keydown', handleKeyDown);
 
   return {
@@ -84,6 +96,10 @@ export function createBoardCameraControls({
       domElement.removeEventListener('pointercancel', handlePointerUpOrCancel);
       domElement.removeEventListener('lostpointercapture', handleLostPointerCapture);
       domElement.removeEventListener('wheel', handleWheel);
+      domElement.removeEventListener('touchstart', handleTouchStart);
+      domElement.removeEventListener('touchmove', handleTouchMove);
+      domElement.removeEventListener('touchend', handleTouchEnd);
+      domElement.removeEventListener('touchcancel', handleTouchEnd);
       window.removeEventListener('keydown', handleKeyDown);
       cancelGesture();
     },
@@ -254,6 +270,79 @@ export function createBoardCameraControls({
     const zoomFactor = 1 + event.deltaY * 0.0012;
     spherical.radius = clamp(spherical.radius * zoomFactor, MIN_RADIUS, MAX_RADIUS);
     onPoseChange(buildCurrentPose());
+  }
+
+  // ── Touch gesture handlers ─────────────────────────────────────────────
+  // Single finger = orbit, two fingers = pinch-to-zoom.
+
+  function getTouchDistance(touches: Map<number, { x: number; y: number }>): number {
+    const pts = [...touches.values()];
+    const dx = pts[1].x - pts[0].x;
+    const dy = pts[1].y - pts[0].y;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function handleTouchStart(event: TouchEvent): void {
+    if (controlsLocked) return;
+
+    for (let i = 0; i < event.changedTouches.length; i++) {
+      const t = event.changedTouches[i];
+      activeTouches.set(t.identifier, { x: t.clientX, y: t.clientY });
+    }
+
+    if (activeTouches.size === 1) {
+      touchGestureMode = 'orbit';
+    } else if (activeTouches.size >= 2) {
+      // Switch from orbit to pinch when a second finger lands
+      touchGestureMode = 'pinch';
+      pinchStartDistance = getTouchDistance(activeTouches);
+      pinchStartRadius = spherical.radius;
+      event.preventDefault();
+    }
+  }
+
+  function handleTouchMove(event: TouchEvent): void {
+    if (controlsLocked || touchGestureMode === 'idle') return;
+
+    // Update stored positions
+    for (let i = 0; i < event.changedTouches.length; i++) {
+      const t = event.changedTouches[i];
+      const prev = activeTouches.get(t.identifier);
+      if (!prev) continue;
+
+      if (touchGestureMode === 'orbit' && activeTouches.size === 1) {
+        const dx = t.clientX - prev.x;
+        const dy = t.clientY - prev.y;
+        spherical.theta = clamp(spherical.theta - dx * 0.0085, minTheta, maxTheta);
+        spherical.phi = clamp(spherical.phi + dy * 0.0068, MIN_PHI, MAX_PHI);
+        onPoseChange(buildCurrentPose());
+        event.preventDefault();
+      }
+
+      prev.x = t.clientX;
+      prev.y = t.clientY;
+    }
+
+    if (touchGestureMode === 'pinch' && activeTouches.size >= 2) {
+      const currentDistance = getTouchDistance(activeTouches);
+      const scale = pinchStartDistance / Math.max(currentDistance, 1);
+      spherical.radius = clamp(pinchStartRadius * scale, MIN_RADIUS, MAX_RADIUS);
+      onPoseChange(buildCurrentPose());
+      event.preventDefault();
+    }
+  }
+
+  function handleTouchEnd(event: TouchEvent): void {
+    for (let i = 0; i < event.changedTouches.length; i++) {
+      activeTouches.delete(event.changedTouches[i].identifier);
+    }
+
+    if (activeTouches.size === 0) {
+      touchGestureMode = 'idle';
+    } else if (activeTouches.size === 1) {
+      // Went from pinch back to one finger — switch to orbit
+      touchGestureMode = 'orbit';
+    }
   }
 }
 
