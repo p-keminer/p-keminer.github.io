@@ -292,6 +292,9 @@ export function createBoardCameraControls({
 
     if (activeTouches.size === 1) {
       touchGestureMode = 'orbit';
+      // Prevent the browser from also firing pointer/mouse events for this touch,
+      // which would cause the existing orbit handler to apply the same delta twice.
+      event.preventDefault();
     } else if (activeTouches.size >= 2) {
       // Switch from orbit to pinch when a second finger lands
       touchGestureMode = 'pinch';
@@ -340,8 +343,18 @@ export function createBoardCameraControls({
     if (activeTouches.size === 0) {
       touchGestureMode = 'idle';
     } else if (activeTouches.size === 1) {
-      // Went from pinch back to one finger — switch to orbit
+      // Went from pinch back to one finger — switch to orbit.
+      // Re-snapshot the remaining finger's current position from targetTouches
+      // so the first orbit move doesn't compute a large stale delta.
       touchGestureMode = 'orbit';
+      for (let i = 0; i < event.targetTouches.length; i++) {
+        const t = event.targetTouches[i];
+        const entry = activeTouches.get(t.identifier);
+        if (entry) {
+          entry.x = t.clientX;
+          entry.y = t.clientY;
+        }
+      }
     }
   }
 }
