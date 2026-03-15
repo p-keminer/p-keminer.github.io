@@ -516,6 +516,37 @@ select {
 
 /* hover highlight intentionally removed — frames navigate silently */
 
+/* ── Picture frame detail overlay ──────────────────────────────────────── */
+
+.frame-detail-overlay {
+  background: rgba(7, 16, 20, 0.82);
+  border: 1px solid rgba(139, 231, 255, 0.22);
+  border-radius: 10px;
+  left: 50%;
+  max-width: 320px;
+  padding: 20px 24px;
+  pointer-events: none;
+  position: absolute;
+  text-align: center;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: max-content;
+}
+
+.frame-detail-semester {
+  color: rgba(139, 231, 255, 0.7);
+  font: 700 11px / 1.2 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: 0.18em;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+}
+
+.frame-detail-placeholder {
+  color: rgba(220, 245, 255, 0.55);
+  font: 400 13px / 1.6 'Segoe UI', system-ui, sans-serif;
+  margin: 0;
+}
+
 /* ── Canvas HUD Controls ──────────────────────────────────────────────── */
 
 .canvas-hud-controls {

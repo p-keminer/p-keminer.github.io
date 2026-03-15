@@ -63,6 +63,7 @@ interface GameSnapshot extends BoardPreviewSnapshot {
     lastEvent: string | null;
   };
   startFlow: {
+    activePictureFrameDetailId: string;
     currentRoomFocusTarget: RoomFocusTargetId | null;
     gameplayInteractionEnabled: boolean;
     hoveredRoomHotspot: RoomFocusTargetId | null;
@@ -569,6 +570,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
         combat: combatSfxController.getSnapshot()
       },
       startFlow: {
+        activePictureFrameDetailId,
         currentRoomFocusTarget: startFlowState === 'menu' ? null : roomFocusTarget,
         gameplayInteractionEnabled: isGameplayInteractionEnabled(),
         hoveredRoomHotspot,
@@ -1098,6 +1100,28 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
           .join('')
       : '';
 
+  // ── Picture frame detail placeholder (pictureFrameDetail focus only) ──────
+  // Maps frame IDs to semester numbers (top-left → bottom-right order).
+  const FRAME_SEMESTER: Record<string, number> = {
+    frame0: 1, frame2: 2, frame3: 3, frame4: 4,
+    frame1: 5, frame5: 6, frame6: 7, frame7: 8
+  };
+  const pictureFrameDetailOverlay =
+    !snapshot.startFlow.roomFocusTransitionActive &&
+    snapshot.startFlow.currentRoomFocusTarget === 'pictureFrameDetail'
+      ? (() => {
+          const semester = FRAME_SEMESTER[snapshot.startFlow.activePictureFrameDetailId] ?? '?';
+          return `
+            <div class="frame-detail-overlay">
+              <p class="frame-detail-semester">Semester ${semester}</p>
+              <p class="frame-detail-placeholder">
+                Hier folgen Leistungsnachweise sobald<br>
+                sie für das jeweilige Semester vorhanden sind.
+              </p>
+            </div>`;
+        })()
+      : '';
+
   // ── Web embed overlay (webEmbed focus only) ──────────────────────────────
   const webEmbedOverlay =
     !snapshot.startFlow.roomFocusTransitionActive &&
@@ -1115,6 +1139,7 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
     <div class="room-hotspots-layer">
       ${hotspotButtons}
       ${pictureFrameGlows}
+      ${pictureFrameDetailOverlay}
       ${webEmbedOverlay}
       ${infoPlate}
     </div>
