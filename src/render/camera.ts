@@ -25,14 +25,17 @@ export function applyCameraPreset(camera: THREE.PerspectiveCamera, preset: Camer
 
 export function resizeCamera(camera: THREE.PerspectiveCamera, width: number, height: number): void {
   camera.aspect = width / Math.max(height, 1);
-  // On portrait screens (aspect < 1) the fixed vertical FOV makes the board
-  // appear small because the horizontal FOV becomes very narrow. We widen
-  // the vertical FOV so that the horizontal FOV stays close to the desktop
-  // baseline: hFov = 2·atan(aspect · tan(baseFov/2)).
-  // On landscape (aspect >= 1) we keep the original 34° FOV.
+  camera.fov = BASE_FOV;
+  camera.updateProjectionMatrix();
+}
+
+/**
+ * Widens the vertical FOV on portrait screens so the chess board fills the
+ * screen width. Only call this in boardFocus mode — room-explore presets were
+ * calibrated for BASE_FOV and look distorted with a wider angle.
+ */
+export function applyBoardFocusFov(camera: THREE.PerspectiveCamera): void {
   if (camera.aspect < 1) {
-    // Target: keep the same horizontal extent as a landscape 1:1 screen.
-    // vFov = 2·atan( tan(baseFov/2) / aspect )
     const baseRad = THREE.MathUtils.degToRad(BASE_FOV);
     const vFov = 2 * Math.atan(Math.tan(baseRad / 2) / camera.aspect);
     camera.fov = THREE.MathUtils.radToDeg(vFov);

@@ -15,7 +15,7 @@ import {
   type CombatCameraStateInput
 } from './combat-camera';
 import type { CombatPresentationStateInput } from './combat-presentation';
-import { applyCameraPreset, createBoardCamera, type CameraPreset, resizeCamera } from './camera';
+import { applyCameraPreset, applyBoardFocusFov, BASE_FOV, createBoardCamera, type CameraPreset, resizeCamera } from './camera';
 import { createBoardInteraction, type BoardInteractionLayer } from './interaction';
 import { createSceneLights, type SceneLights } from './lights';
 import { createBloomEffect, type BloomEffect } from './bloom';
@@ -366,6 +366,7 @@ export function createBoardPreviewScene({
       Math.floor(height * Math.min(window.devicePixelRatio || 1, 2))
     );
     resizeCamera(stage.camera, width, height);
+    syncCameraFov();
     render();
     // Hotspot-Positionen nach Resize neu berechnen — immer wenn roomExplore
     // aktiv ist, da alle 3D-projizierten Buttons (overview + pictureFrame)
@@ -515,6 +516,18 @@ export function createBoardPreviewScene({
 
   function syncStartFlowInteractionLock(): void {
     stage.interaction.setEnabled(startFlowMode === 'boardFocus');
+  }
+
+  function syncCameraFov(): void {
+    // Wider FOV on portrait screens only when the chess board is visible.
+    // Room-explore presets were calibrated for BASE_FOV — applying a wide
+    // angle there makes the room floor look visually distorted.
+    if (startFlowMode === 'boardFocus') {
+      applyBoardFocusFov(stage.camera);
+    } else {
+      stage.camera.fov = BASE_FOV;
+      stage.camera.updateProjectionMatrix();
+    }
   }
 
   function applyStartFlowCameraPose(): void {
@@ -805,6 +818,7 @@ export function createBoardPreviewScene({
 
       syncCameraControlLock();
       syncStartFlowInteractionLock();
+      syncCameraFov();
       if (startFlowMode === 'boardFocus') {
         applyCameraPreset(stage.camera, stage.boardCameraControls.getPose());
       } else {
