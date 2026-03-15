@@ -235,6 +235,24 @@ const MENU_CAMERA_PRESET: CameraPreset = {
   target: { x: -14.76, y: 6.0, z: 8.95 }
 };
 
+// Portrait menu: one zoom step closer (radius × 0.9) so the room feels
+// closer on narrow screens, but still 2 steps away from the max-zoom
+// overview position used in room explore.
+const PORTRAIT_MENU_CAMERA_PRESET: CameraPreset = (() => {
+  const dx = MENU_CAMERA_PRESET.position.x - MENU_CAMERA_PRESET.target.x;
+  const dy = MENU_CAMERA_PRESET.position.y - MENU_CAMERA_PRESET.target.y;
+  const dz = MENU_CAMERA_PRESET.position.z - MENU_CAMERA_PRESET.target.z;
+  const f = 0.9;
+  return {
+    position: {
+      x: MENU_CAMERA_PRESET.target.x + dx * f,
+      y: MENU_CAMERA_PRESET.target.y + dy * f,
+      z: MENU_CAMERA_PRESET.target.z + dz * f
+    },
+    target: MENU_CAMERA_PRESET.target
+  };
+})();
+
 const ROOM_FOCUS_TARGET_PRESETS: Record<Exclude<RoomFocusTargetId, 'board'>, CameraPreset> = {
   // Display case — back-left of the room.
   displayCase: {
@@ -371,7 +389,7 @@ export function createBoardPreviewScene({
     isPortrait = stage.camera.aspect < 1;
     stage.roomCameraControls.setPortraitMode(isPortrait);
     lookAround.setAllowPitch(!isPortrait);
-    lookAround.setMaxYawLeft(isPortrait ? 20 : 45);
+    lookAround.setMaxYawLeft(isPortrait ? 13 : 45);
     render();
     // Hotspot-Positionen nach Resize neu berechnen — immer wenn roomExplore
     // aktiv ist, da alle 3D-projizierten Buttons (overview + pictureFrame)
@@ -595,11 +613,12 @@ export function createBoardPreviewScene({
     }
 
     if (startFlowMode === 'menu') {
-      return MENU_CAMERA_PRESET;
+      return isPortrait ? PORTRAIT_MENU_CAMERA_PRESET : MENU_CAMERA_PRESET;
     }
 
     if (startFlowMode === 'introTransition') {
-      return lerpCameraPreset(MENU_CAMERA_PRESET, getRoomFocusTargetPreset('overview'), easeInOutCubic(startFlowProgress));
+      const menuPreset = isPortrait ? PORTRAIT_MENU_CAMERA_PRESET : MENU_CAMERA_PRESET;
+      return lerpCameraPreset(menuPreset, getRoomFocusTargetPreset('overview'), easeInOutCubic(startFlowProgress));
     }
 
     const fromPreset = (startFlowFocusFromTarget === 'overview' && freeCameraExitPreset !== null)
