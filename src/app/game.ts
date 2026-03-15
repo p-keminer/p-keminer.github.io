@@ -80,7 +80,7 @@ const START_FLOW_INTRO_DURATION_MS = 1400;
 const ROOM_FOCUS_TRANSITION_DURATION_MS = 700;
 const ROOM_FOCUS_TARGET_OPTIONS: ReadonlyArray<{ id: RoomFocusTargetId; label: string }> = [
   { id: 'overview', label: 'Room Overview' },
-  { id: 'displayCase', label: 'Display Case' },
+  { id: 'displayCase', label: 'Certificates' },
   { id: 'board', label: 'Chess Table' },
   { id: 'workbench', label: 'Workbench' },
   { id: 'pictureFrame', label: 'Performance Reports' },
@@ -1163,8 +1163,7 @@ function formatPieceAssetFallbackSummary(snapshot: GameSnapshot): string {
 }
 
 const ROOM_HOTSPOT_SUBTITLES: Record<string, string> = {
-  board: 'Enter to play',
-  displayCase: 'View pieces'
+  board: 'Enter to play'
 };
 
 function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocusTargetId | null, hoveredPictureFrameId: string | null): string {

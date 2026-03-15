@@ -527,78 +527,67 @@ select {
 
 .canvas-hud-controls {
   bottom: 1.5rem;
-  left: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
   pointer-events: none;
   position: absolute;
   z-index: 10;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
 }
 
 .canvas-hud-controls .control-group {
-  margin-top: 0.45rem;
-}
-
-.canvas-hud-controls .control-group:first-child {
-  margin-top: 0;
+  display: contents;
 }
 
 .canvas-hud-controls .control-label {
-  color: rgba(139, 231, 255, 0.45);
-  font: 400 8px / 1.2 'Segoe UI', system-ui, sans-serif;
-  letter-spacing: 0.14em;
-  margin: 0 0 4px;
-  text-transform: uppercase;
+  display: none;
 }
 
 .canvas-hud-controls .control-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
+  display: contents;
 }
 
 .canvas-hud-controls .control-button {
-  background: rgba(7, 16, 20, 0.8);
-  border: 1px solid rgba(139, 231, 255, 0.28);
+  background: rgba(18, 5, 5, 0.82);
+  border: 1px solid rgba(220, 60, 60, 0.42);
   border-radius: 9px;
   box-shadow: none;
-  color: #daf4ff;
+  color: #ffd4d4;
   cursor: pointer;
   font: 600 10px / 1.2 'Segoe UI', system-ui, sans-serif;
   letter-spacing: 0.07em;
-  padding: 7px 14px;
+  padding: 7px 16px;
   pointer-events: auto;
   text-transform: uppercase;
   transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
 }
 
 .canvas-hud-controls .control-button:hover:not(:disabled) {
-  background: rgba(9, 30, 38, 0.92);
-  border-color: rgba(197, 248, 255, 0.65);
-  box-shadow: 0 0 14px rgba(117, 228, 255, 0.18);
+  background: rgba(35, 8, 8, 0.94);
+  border-color: rgba(255, 90, 90, 0.72);
+  box-shadow: 0 0 14px rgba(220, 60, 60, 0.22);
   transform: none;
 }
 
 .canvas-hud-controls .control-button--secondary {
-  background: rgba(7, 16, 20, 0.62);
-  border-color: rgba(139, 231, 255, 0.16);
-  color: rgba(210, 245, 255, 0.75);
+  background: rgba(14, 4, 4, 0.68);
+  border-color: rgba(200, 55, 55, 0.24);
+  color: rgba(255, 200, 200, 0.75);
 }
 
 .canvas-hud-controls .control-button--active {
-  background: rgba(9, 45, 58, 0.9);
-  border-color: rgba(139, 231, 255, 0.55);
-  box-shadow: 0 0 18px rgba(117, 228, 255, 0.22);
+  background: rgba(45, 9, 9, 0.9);
+  border-color: rgba(220, 60, 60, 0.62);
+  box-shadow: 0 0 18px rgba(220, 60, 60, 0.24);
 }
 
 .canvas-hud-controls .control-button:disabled {
   cursor: not-allowed;
   opacity: 0.35;
-}
-
-.canvas-hud-controls .control-note {
-  color: rgba(139, 231, 255, 0.28);
-  font: 400 8px / 1.4 'Segoe UI', system-ui, sans-serif;
-  letter-spacing: 0.03em;
-  margin: 0.4rem 0 0;
 }
 
 .web-embed-overlay {

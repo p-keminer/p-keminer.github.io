@@ -282,7 +282,7 @@ const ROOM_HOTSPOT_DEFINITIONS: ReadonlyArray<{
     anchor: new THREE.Vector3(-15.5, 5.22, 2.29),
     focusTarget: 'displayCase',
     id: 'displayCase',
-    label: 'Display Case'
+    label: 'Certificates'
   },
   {
     anchor: new THREE.Vector3(-25.15, 9.12, 4.51),
