@@ -39,8 +39,8 @@ export function createChessboard(): ChessboardMesh {
 
   visualRoot.add(fallbackVisual);
 
-  // Holographic projection grid — crisp additive scanlines on top of the GLB
-  // projection zones, giving the play surface its "energy grid" read.
+  // Holografisches Projektionsgitter — scharfe additive Scan-Linien auf den GLB-
+  // Projektionszonen, die der Spieloberfläche ihren „Energiegitter"-Eindruck verleihen.
   const holoGrid = createHolographicGridOverlay();
   group.add(holoGrid.mesh);
 
@@ -207,26 +207,26 @@ function createFallbackBoardVisual(): THREE.Group {
   return group;
 }
 
-// ─── Holographic play surface ─────────────────────────────────────────────────
+// ─── Holografische Spieloberfläche ─────────────────────────────────────────────────
 //
-// The GLB sq_light / sq_dark tiles are hidden in loaders.ts so the physical
-// frame / rails / pedestal read as the mech-tech base layer.  This procedural
-// surface replaces them with a two-layer projection effect:
+// Die GLB-Kacheln sq_light / sq_dark sind in loaders.ts versteckt, sodass der physische
+// Rahmen / die Schienen / der Sockel als die Mech-Tech-Basis-Schicht gelesen werden.
+// Diese prozedurale Oberfläche ersetzt sie mit einem zwei-schichtigen Projektionseffekt:
 //
-//   1. Base energy field  — a single 8×8 plane with a faint unified teal glow
-//      that stitches the play area into a coherent energy platform.
-//   2. Zone planes × 64  — per-square 0.94×0.94 planes with a slight inset gap
-//      to break the surface into visible projection zones.  Light and dark
-//      squares use different luminance so the checker pattern stays readable.
+//   1. Basis-Energiefeld — eine einzige 8×8-Ebene mit sanftem einheitlichem Türkis-Glanz,
+//      die den Spielbereich in eine kohärente Energieplattform verbindet.
+//   2. Zoneneebenen × 64 — pro-Quadrat 0,94×0,94-Ebenen mit leichtem Innenabstand,
+//      um die Oberfläche in sichtbare Projektionszonen zu unterteilen. Helle und dunkle
+//      Quadrate verwenden unterschiedliche Leuchtkraft, damit das Schachbrettmuster lesbar bleibt.
 //
-// All elements use AdditiveBlending so they read as emitted light projected
-// onto the physical base rather than opaque physical objects.
+// Alle Elemente verwenden AdditiveBlending, sodass sie als emittiertes Licht erscheinen,
+// das auf die physische Basis projiziert wird, anstatt undurchsichtige physische Objekte zu sein.
 
 function createHolographicPlaySurface(): { dispose: () => void; group: THREE.Group } {
   const group = new THREE.Group();
   group.name = 'holo-play-surface';
 
-  // ── 1. Base energy field ──────────────────────────────────────────────────
+  // ── 1. Basis-Energiefeld ──────────────────────────────────────────────────
   const baseFieldGeometry = new THREE.PlaneGeometry(8.0, 8.0);
   const baseFieldMaterial = new THREE.MeshBasicMaterial({
     blending: THREE.AdditiveBlending,
@@ -244,10 +244,10 @@ function createHolographicPlaySurface(): { dispose: () => void; group: THREE.Gro
   baseField.receiveShadow = false;
   group.add(baseField);
 
-  // ── 2. Zone planes ────────────────────────────────────────────────────────
+  // ── 2. Zoneneebenen ────────────────────────────────────────────────────────
   const zoneGeometry = new THREE.PlaneGeometry(0.94, 0.94);
 
-  // Light zones: noticeably brighter so the checker distinction survives.
+  // Lichtzonen: merklich heller, damit die Schachbrettmuster-Unterscheidung erhalten bleibt.
   const lightZoneMaterial = new THREE.MeshBasicMaterial({
     blending: THREE.AdditiveBlending,
     color: new THREE.Color('#005a70'),
@@ -256,7 +256,7 @@ function createHolographicPlaySurface(): { dispose: () => void; group: THREE.Gro
     transparent: true
   });
 
-  // Dark zones: very dim — present enough to fill the gap but not competing.
+  // Dunkle Zonen: sehr gedimmt — ausreichend vorhanden, um die Lücke zu füllen, aber nicht konkurrierend.
   const darkZoneMaterial = new THREE.MeshBasicMaterial({
     blending: THREE.AdditiveBlending,
     color: new THREE.Color('#001520'),
@@ -267,10 +267,10 @@ function createHolographicPlaySurface(): { dispose: () => void; group: THREE.Gro
 
   for (let file = 0; file < BOARD_SIZE; file++) {
     for (let rank = 0; rank < BOARD_SIZE; rank++) {
-      // Match the hit-square light/dark convention:
-      //   hit squares use 1-indexed rank → isLight = (file + rank) % 2 === 0
-      //   here rank is 0-indexed → isLight when (file + (rank+1)) % 2 === 0
-      //                                       = (file + rank) % 2 !== 0
+      // Entsprechen Sie der Hit-Square-Licht/Dunkel-Konvention:
+      //   Hit-Quadrate verwenden 1-indizierte Ränge → isLight = (file + rank) % 2 === 0
+      //   hier ist der Rang 0-indiziert → isLight wenn (file + (rank+1)) % 2 === 0
+      //                                              = (file + rank) % 2 !== 0
       const isLight = (file + rank) % 2 !== 0;
       const squareName = `${String.fromCharCode(97 + file)}${rank + 1}`;
       const world = squareToWorld(squareName);
@@ -298,12 +298,12 @@ function createHolographicPlaySurface(): { dispose: () => void; group: THREE.Gro
   };
 }
 
-// ─── Holographic grid overlay ─────────────────────────────────────────────────
+// ─── Holografische Gitter-Überlagerung ─────────────────────────────────────────────────
 
-// Canvas-based projection grid texture: thin cyan lines at every square
-// boundary with small corner dots at intersections.  The result renders as a
-// subtle additive overlay — enough to suggest a tactical energy surface without
-// adding noise or hurting gameplay readability.
+// Canvas-basierte Projektionsgitter-Textur: dünne Cyan-Linien an jeder Quadrat-
+// grenze mit kleinen Eckpunkten an Schnittpunkten. Das Ergebnis wird als
+// subtile additive Überlagerung gerendert — genug, um eine taktische Energiefläche zu suggerieren,
+// ohne Rauschen hinzuzufügen oder die Spielbarkeit zu beeinträchtigen.
 function createHolographicGridTexture(): THREE.CanvasTexture {
   const SIZE = 512;
   const CELLS = 8;
@@ -320,7 +320,7 @@ function createHolographicGridTexture(): THREE.CanvasTexture {
 
   ctx.clearRect(0, 0, SIZE, SIZE);
 
-  // Thin grid lines at square boundaries
+  // Dünne Gitterlinien an Quadratgrenzen
   ctx.strokeStyle = 'rgba(0, 224, 236, 1.0)';
   ctx.lineWidth = 0.9;
 
@@ -338,7 +338,7 @@ function createHolographicGridTexture(): THREE.CanvasTexture {
     ctx.stroke();
   }
 
-  // Small corner dots at each grid intersection
+  // Kleine Eckpunkte an jeder Gitter-Kreuzung
   ctx.fillStyle = 'rgba(0, 240, 255, 1.0)';
 
   for (let r = 0; r <= CELLS; r++) {
@@ -362,8 +362,8 @@ function createHolographicGridOverlay(): { dispose: () => void; mesh: THREE.Mesh
     blending: THREE.AdditiveBlending,
     depthWrite: false,
     map: texture,
-    // Stronger than the previous 0.25 because the sq_tiles are now hidden —
-    // the grid lines carry primary responsibility for defining square boundaries.
+    // Stärker als die vorherige 0,25, da die Sq_Tiles jetzt versteckt sind —
+    // die Gitterlinien tragen die primäre Verantwortung für die Quadratgrenzen-Definition.
     opacity: 0.40,
     transparent: true
   });
@@ -371,11 +371,11 @@ function createHolographicGridOverlay(): { dispose: () => void; mesh: THREE.Mesh
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = 'holo-grid-overlay';
   mesh.rotation.x = -Math.PI / 2;
-  // Sits just above the GLB board surface (~0.068 after BOARD_CYBER_SCALE);
-  // well below highlight markers which start at Y = 0.095.
+  // Sitzt knapp über der GLB-Brett-Oberfläche (~0,068 nach BOARD_CYBER_SCALE);
+  // weit unter Hervorhebungsmarkierungen, die bei Y = 0,095 beginnen.
   mesh.position.y = 0.085;
-  // renderOrder 4: above the GLB board surface (0), below coordinate
-  // label sprites (50) and all highlight markers (95–210).
+  // renderOrder 4: über der GLB-Brett-Oberfläche (0), unter Koordinaten-
+  // label-Sprites (50) und allen Hervorhebungsmarkierungen (95–210).
   mesh.renderOrder = 4;
   mesh.castShadow = false;
   mesh.receiveShadow = false;
