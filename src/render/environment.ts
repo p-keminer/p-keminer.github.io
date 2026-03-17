@@ -1,5 +1,5 @@
 /**
- * Environment asset integration placeholder.
+ * Platzhalter für die Integration von Umgebungs-Assets.
  *
  * Der Raum (Sci-fi Workstation) wird in Blender gebaut und als raum.glb
  * exportiert.  Diese Datei wird dann den GLTFLoader-Aufruf enthalten und
