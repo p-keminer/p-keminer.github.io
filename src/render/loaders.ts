@@ -12,10 +12,11 @@ export const BOARD_MODEL_FILE = 'board.glb';
 export const BOARD_CYBER_MODEL_FILE = 'board_cyber.glb';
 export const DEFAULT_PIECE_ASSET_SET = 'blockout';
 
-// ─── Cyber board alignment constants ─────────────────────────────────────────
-// The Blender cyber board uses SQ=0.50 and GAP=0.012, so each square step is
-// 0.512 Blender units.  The game grid uses a 1.0-unit step per square.
-// Applying this uniform scale makes one Blender step equal one game unit.
+// ─── Cyber-Board-Ausrichtungskonstanten ──────────────────────────────────────
+// Das Blender-Cyber-Board verwendet SQ=0,50 und GAP=0,012, sodass jeder
+// Quadratschritt 0,512 Blender-Einheiten beträgt. Das Spielgitter verwendet
+// einen Schritt von 1,0 Einheiten pro Quadrat. Die Anwendung dieser
+// einheitlichen Skalierung macht einen Blender-Schritt gleich einer Spieleinheit.
 const BOARD_CYBER_SCALE = 1.0 / 0.512; // ≈ 1.953125
 
 export const PIECE_MODEL_FILES: Record<ChessPieceType, string> = {
@@ -149,9 +150,10 @@ export async function loadRoomAsset(): Promise<THREE.Group | null> {
 }
 
 export function getExpectedModelFiles(pieceAssetSet: PieceAssetSet = DEFAULT_PIECE_ASSET_SET): string[] {
-  // Board is reported via loadedBoardFile (cyber → board_cyber.glb, fallback → board.glb).
-  // Listing BOARD_CYBER_MODEL_FILE as the primary expected file keeps the debug
-  // overlay accurate when the new asset is present.
+  // Das Board wird über loadedBoardFile gemeldet (cyber → board_cyber.glb,
+  // Fallback → board.glb). Das Auflisten von BOARD_CYBER_MODEL_FILE als primäre
+  // erwartete Datei hält die Debug-Überlagerung genau, wenn sich das neue
+  // Asset vorhanden ist.
   return [BOARD_CYBER_MODEL_FILE, ...Object.keys(PIECE_MODEL_FILES).map((pieceType) => getRequestedPieceModelFile(pieceType as ChessPieceType, pieceAssetSet))];
 }
 
@@ -170,7 +172,7 @@ export function getPieceAssetMode(pieceTemplates: PieceAssetTemplates): PieceAss
 }
 
 export async function loadBoardVisualAsset(): Promise<BoardVisualAssets> {
-  // Try the cyber board first; fall back to the original board.glb if missing.
+  // Versuchen Sie zuerst das Cyber-Board; Fallback zum ursprünglichen board.glb, wenn nicht vorhanden.
   for (const candidateFile of [BOARD_CYBER_MODEL_FILE, BOARD_MODEL_FILE]) {
     try {
       return {
@@ -178,7 +180,7 @@ export async function loadBoardVisualAsset(): Promise<BoardVisualAssets> {
         loadedBoardFile: candidateFile
       };
     } catch {
-      // Missing or broken candidate — try next.
+      // Fehlender oder beschädigter Kandidat — versuchen Sie den nächsten.
     }
   }
 
@@ -215,7 +217,7 @@ export async function loadPieceVisualAssets(pieceAssetSet: PieceAssetSet = DEFAU
 
           return;
         } catch {
-          // Missing or broken models intentionally fall back to the next candidate, then to procedural placeholders.
+          // Fehlende oder beschädigte Modelle fallen absichtlich auf den nächsten Kandidaten zurück, dann auf prozeduale Platzhalter.
         }
       }
     })
@@ -313,17 +315,19 @@ function prepareBoardTemplate(root: THREE.Group, sourceFile: string): THREE.Grou
   root.name = 'board-template';
 
   if (sourceFile === BOARD_CYBER_MODEL_FILE) {
-    // Scale the Blender asset so its 0.512-unit square step matches the game's
-    // 1.0-unit square step.  After this transform the board surface sits at
-    // approximately Y ≈ 0.068, consistent with the placeholder fallback board
-    // (whose square surface tops are at Y ≈ 0.07).  No additional Y-shift is
-    // applied so that pieces continue to stand with their bases at Y = 0.
+    // Skalieren Sie das Blender-Asset so, dass sein 0,512-Unit-Quadratschritt
+    // dem 1,0-Unit-Quadratschritt des Spiels entspricht. Nach dieser Transformation
+    // sitzt die Board-Oberfläche bei ungefähr Y ≈ 0,068, was mit dem Fallback-Board-
+    // Platzhalter übereinstimmt (dessen Quadratoberflächenspitzen bei Y ≈ 0,07 liegen).
+    // Es wird keine zusätzliche Y-Verschiebung angewendet, damit die Figuren mit ihren
+    // Basen bei Y = 0 stehen bleiben.
     root.scale.setScalar(BOARD_CYBER_SCALE);
 
-    // Restore emissive glow that ACESFilmic tone mapping compresses.
-    // Materials named emit_* are the cyan accent strips, corner studs, and
-    // energy core.  Setting toneMapped=false lets them render at their full
-    // HDR brightness instead of being pulled toward mid-grey by the tone curve.
+    // Stellen Sie das Emissiv-Glühen wieder her, das die ACESFilmic-Tonabbildung
+    // komprimiert. Materialien mit dem Namen emit_* sind die Cyan-Akzentstreifen,
+    // Eckenstifte und der Energiekern. Das Einstellen von toneMapped=false ermöglicht
+    // das Rendern mit voller HDR-Helligkeit, statt von der Tonkurve in die
+    // Mitte-Grau gezogen zu werden.
     root.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) {
         return;
@@ -336,8 +340,8 @@ function prepareBoardTemplate(root: THREE.Group, sourceFile: string): THREE.Grou
           continue;
         }
 
-        // Cyan accent strips, corner studs, energy core — amplify the Blender
-        // emission strength that ACESFilmic tone mapping would compress.
+        // Cyan-Akzentstreifen, Eckenstifte, Energiekern — verstärken Sie die
+        // Blender-Emissionsstärke, die die ACESFilmic-Tonabbildung komprimieren würde.
         if (material.name.toLowerCase().startsWith('emit_')) {
           material.toneMapped = false;
           material.emissiveIntensity = material.emissiveIntensity > 0
@@ -345,30 +349,31 @@ function prepareBoardTemplate(root: THREE.Group, sourceFile: string): THREE.Grou
             : 3.0;
         }
 
-        // Holographic projection tiles — Blender defines the base colour,
-        // emission, and alpha (sq_light: emit 5.0 alpha 0.52;
-        // sq_dark: emit 2.5 alpha 0.28).  GLTF carries all of those via
-        // KHR_materials_emissive_strength + alphaMode=BLEND.  We only need to
-        // disable tone mapping so the projected-light colour is not compressed.
-        // depthWrite=false ensures highlight markers (hover, selection, check)
-        // always render visibly over the semi-transparent projection tiles.
+        // Holografische Projektionskacheln — Blender definiert die Basisfarbe,
+        // Emission und Alpha (sq_light: emit 5,0 alpha 0,52; sq_dark: emit 2,5
+        // alpha 0,28). GLTF trägt alles davon über KHR_materials_emissive_strength
+        // + alphaMode=BLEND. Wir müssen nur die Tonabbildung deaktivieren, damit
+        // die projizierte Lichtfarbe nicht komprimiert wird. depthWrite=false
+        // stellt sicher, dass Hervorhebungsmarkierungen (Hover, Auswahl, Schach)
+        // immer über den halbtransparenten Projektionskacheln sichtbar sind.
         if (material.name === 'sq_light' || material.name === 'sq_dark') {
           material.toneMapped = false;
           material.depthWrite = false;
-          // Fallback intensities when KHR_materials_emissive_strength is absent.
+          // Fallback-Intensitäten, wenn KHR_materials_emissive_strength nicht vorhanden ist.
           if (material.emissiveIntensity === 0) {
             material.emissiveIntensity = material.name === 'sq_light' ? 5.0 : 2.0;
           }
-          // Fallback transparency when alphaMode was not carried.
+          // Fallback-Transparenz, wenn alphaMode nicht übertragen wurde.
           if (!material.transparent) {
             material.transparent = true;
             material.opacity = material.name === 'sq_light' ? 0.38 : 0.16;
           }
         }
 
-        // Unified projection field — the large translucent plane between the
-        // physical base and the floating sq tiles.  Marked depthWrite=false so
-        // it never occludes the tiles or highlight markers above it.
+        // Einheitliches Projektionsfeld — die große durchscheinende Ebene zwischen
+        // der physischen Basis und den schwebenden Quadratkacheln. Mit depthWrite=false
+        // gekennzeichnet, damit es die Kacheln oder Hervorhebungsmarkierungen darüber
+        // niemals verdeckt.
         if (material.name === 'proj_field_mat') {
           material.toneMapped = false;
           material.depthWrite = false;
