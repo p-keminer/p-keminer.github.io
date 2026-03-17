@@ -20,10 +20,7 @@ body {
 body {
   min-height: 100vh;
   min-height: 100dvh;
-  background:
-    radial-gradient(circle at 20% 20%, rgba(255, 245, 220, 0.22), transparent 30%),
-    radial-gradient(circle at 80% 0%, rgba(255, 226, 179, 0.15), transparent 20%),
-    linear-gradient(180deg, #d2aa74 0%, #7d5534 45%, #28160c 100%);
+  background: #000;
 }
 
 #app {
