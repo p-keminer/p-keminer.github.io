@@ -681,7 +681,6 @@ body.web-embed-active .web-embed-overlay {
 #site-header {
   align-items: center;
   background: rgba(2, 4, 10, 0.72);
-  visibility: visible;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(180, 229, 255, 0.08);
@@ -790,7 +789,6 @@ body.web-embed-active .web-embed-overlay {
 #site-footer {
   align-items: center;
   background: rgba(2, 4, 10, 0.55);
-  visibility: visible;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-top: 1px solid rgba(180, 229, 255, 0.07);
