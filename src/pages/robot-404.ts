@@ -20,7 +20,7 @@ const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 60);
 camera.position.set(0, 0.5, 9.5);
 camera.lookAt(new THREE.Vector3(0, -2.0, 0));
 
-// ── Lights ──────────────────────────────────────────────────────────────
+// ── Lichter ──────────────────────────────────────────────────────────────
 scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 
 const key = new THREE.PointLight(0x4fc3f7, 3, 25);
@@ -42,7 +42,7 @@ const SIREN_SPEED  = (2 * Math.PI) / 3.5; // 3.5 s/Umdrehung — sync mit CSS
 const SIREN_R      = 0.7;                  // Kreisradius um die Antenne
 const ANTENNA_WORLD_Y = 1.46;             // AntennaBall Y-Pos in Weltkoord. (1.76 − 0.3 Model-Offset)
 
-// ── Load GLB ─────────────────────────────────────────────────────────────
+// ── GLB laden ──────────────────────────────────────────────────────────────
 let headGroup:   THREE.Object3D | null = null;
 let antennaBall: THREE.Mesh | null     = null;
 let leftEye:     THREE.Mesh | null     = null;
@@ -90,15 +90,15 @@ loader.load('/robot-404.glb', (gltf) => {
     }
   });
 
-  // ── Scratch animation from baked Blender armature ────────────────────
+  // ── Kratzbewegung-Animation aus gebakener Blender-Armatur ────────────────────
   if (gltf.animations.length > 0) {
     mixer = new THREE.AnimationMixer(model);
-    // Use the first (and only) clip — the baked arm scratch
+    // Verwende den ersten (und einzigen) Clip — die gebakene Arm-Kratzbewegung
     scratchAction = mixer.clipAction(gltf.animations[0]);
     scratchAction.setLoop(THREE.LoopOnce, 1);
     scratchAction.clampWhenFinished = true;
 
-    // When animation finishes, reset so it can be re-triggered
+    // Wenn Animation fertig ist, zurücksetzen, damit sie erneut ausgelöst wird
     mixer.addEventListener('finished', () => {
       scratchAction?.stop();
     });
@@ -163,7 +163,7 @@ function typeMessage(): void {
 
 setTimeout(typeMessage, 1000);
 
-// ── Look-around sequence ──────────────────────────────────────────────────
+// ── Umschauen-Sequenz ──────────────────────────────────────────────────
 const poses = [
   { yaw:  0.00, pitch:  0.00, hold: 1.6 },
   { yaw:  0.38, pitch:  0.07, hold: 1.4 },
@@ -178,12 +178,12 @@ let poseTimer = 0;
 let yaw   = 0;
 let pitch = 0;
 
-// ── Blink state ───────────────────────────────────────────────────────────
+// ── Blink-Status ───────────────────────────────────────────────────────────
 let blinkTimer = 2.8;
 let blinking   = false;
 let blinkT     = 0;
 
-// ── Animate ───────────────────────────────────────────────────────────────
+// ── Animieren ───────────────────────────────────────────────────────────────
 const clock = new THREE.Clock();
 
 function animate(): void {
@@ -191,7 +191,7 @@ function animate(): void {
   const dt = Math.min(clock.getDelta(), 0.1);
   const t  = clock.getElapsedTime();
 
-  // ── Head look-around ──────────────────────────────────────────────────
+  // ── Kopf-Umschauen ──────────────────────────────────────────────────
   if (headGroup) {
     poseTimer += dt;
     if (poseTimer >= poses[poseIdx].hold) {
@@ -205,10 +205,10 @@ function animate(): void {
 
     headGroup.rotation.y = yaw;
     headGroup.rotation.x = pitch;
-    headGroup.rotation.z = Math.sin(t * 0.65) * 0.04; // confused wobble
+    headGroup.rotation.z = Math.sin(t * 0.65) * 0.04; // verwirrtes Wackeln
   }
 
-  // ── Blink ─────────────────────────────────────────────────────────────
+  // ── Blinzeln ─────────────────────────────────────────────────────────────
   if (!blinking) {
     blinkTimer -= dt;
     if (blinkTimer <= 0) {
@@ -225,7 +225,7 @@ function animate(): void {
     if (blinkT >= 1) blinking = false;
   }
 
-  // ── Scratch loop: play → wait → play → … ─────────────────────────────
+  // ── Kratzbewegung-Loop: spielen → warten → spielen → … ─────────────────────────────
   if (mixer) {
     mixer.update(dt);
 
@@ -233,7 +233,7 @@ function animate(): void {
       scratchTimer -= dt;
       if (scratchTimer <= 0) {
         scratchAction.reset().play();
-        scratchTimer = 4 + Math.random() * 6; // pause 4-10 s between scratches
+        scratchTimer = 4 + Math.random() * 6; // Pause von 4–10 s zwischen Kratzbewegungen
       }
     }
   }

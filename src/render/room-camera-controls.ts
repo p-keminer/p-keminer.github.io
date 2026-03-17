@@ -16,9 +16,9 @@ interface CreateRoomCameraControlsOptions {
   onPoseChange: (preset: CameraPreset) => void;
 }
 
-// Each scroll step multiplies radius by this factor (zoom-in = decrease)
+// Jeder Schritt mit dem Scrollrad multipliziert den Radius mit diesem Faktor (Zoom-In = verringert)
 const ZOOM_FACTOR_PER_STEP = 0.9;
-// Maximum zoom-in steps from the initial overview radius
+// Maximale Anzahl von Zoom-In-Schritten aus dem anfänglichen Übersichtsradius
 const MAX_ZOOM_STEPS = 3;
 const ENTRANCE_DURATION_MS = 700;
 const EXIT_DURATION_MS = 500;
@@ -32,7 +32,7 @@ export function createRoomCameraControls({
 
   let enabled = false;
   let portraitMode = false;
-  // baseRadius is the radius at the last setPose call — acts as the zoom-out ceiling
+  // baseRadius ist der Radius beim letzten setPose-Aufruf — dient als Zoom-Out-Obergrenze
   let baseRadius = spherical.radius;
   let minZoomRadius = baseRadius * Math.pow(ZOOM_FACTOR_PER_STEP, MAX_ZOOM_STEPS);
 
@@ -46,7 +46,7 @@ export function createRoomCameraControls({
   let exitStartRadius = baseRadius;
   let exitOnComplete: (() => void) | null = null;
 
-  // ── Touch pinch-to-zoom ──────────────────────────────────────────────
+  // ── Touch-Pinch-zum-Zoomen ──────────────────────────────────────────────
   const activeTouches = new Map<number, { x: number; y: number }>();
   let pinchStartDistance = 0;
   let pinchStartRadius = 0;
@@ -75,8 +75,8 @@ export function createRoomCameraControls({
       }
     },
     setPortraitMode: (portrait: boolean) => {
-      // Note: this does NOT trigger a re-render on its own.
-      // It is always called inside resize(), which follows up with a render() call.
+      // Hinweis: Dies löst kein erneutes Rendern aus sich selbst.
+      // Es wird immer in resize() aufgerufen, auf das ein render()-Aufruf folgt.
       portraitMode = portrait;
     },
     animateExit: (onComplete: () => void) => {
@@ -96,15 +96,15 @@ export function createRoomCameraControls({
       spherical.setFromVector3(offset);
       baseRadius = spherical.radius;
       minZoomRadius = baseRadius * Math.pow(ZOOM_FACTOR_PER_STEP, MAX_ZOOM_STEPS);
-      // Portrait: land at maximum zoom immediately. Desktop: one step in.
+      // Hochformat: sofort zum maximalen Zoom. Desktop: ein Schritt näher.
       spherical.radius = portraitMode ? minZoomRadius : baseRadius * ZOOM_FACTOR_PER_STEP;
     },
     startEntranceAnimation: () => {
       cancelAnimationFrame(entranceRafId);
-      // Begin from the unzoomed overview position and ease in.
+      // Beginnen von der nicht gezoomten Übersichtsposition und einblenden.
       spherical.radius = baseRadius;
       entranceStartRadius = baseRadius;
-      // Portrait: animate to max zoom. Desktop: one step in.
+      // Hochformat: zu maximalem Zoom animieren. Desktop: ein Schritt näher.
       entranceEndRadius = portraitMode ? minZoomRadius : baseRadius * ZOOM_FACTOR_PER_STEP;
       entranceStartTime = performance.now();
       animateEntrance();
@@ -114,7 +114,7 @@ export function createRoomCameraControls({
   function animateEntrance(): void {
     const elapsed = performance.now() - entranceStartTime;
     const t = Math.min(elapsed / ENTRANCE_DURATION_MS, 1);
-    const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+    const eased = 1 - Math.pow(1 - t, 3); // Ease-Out-Kubisch
     spherical.radius = entranceStartRadius + (entranceEndRadius - entranceStartRadius) * eased;
     onPoseChange(buildCurrentPose());
     if (t < 1) {
@@ -125,7 +125,7 @@ export function createRoomCameraControls({
   function animateExit(): void {
     const elapsed = performance.now() - exitStartTime;
     const t = Math.min(elapsed / EXIT_DURATION_MS, 1);
-    const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // ease-in-out quad
+    const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // Ease-In-Out-Quadratisch
     spherical.radius = exitStartRadius + (baseRadius - exitStartRadius) * eased;
     onPoseChange(buildCurrentPose());
     if (t < 1) {
@@ -153,13 +153,13 @@ export function createRoomCameraControls({
     event.preventDefault();
     cancelAnimationFrame(entranceRafId);
 
-    // Zoom in (deltaY < 0) or out (deltaY > 0), clamped between minZoomRadius and baseRadius
+    // Zoom-In (deltaY < 0) oder Zoom-Out (deltaY > 0), begrenzt zwischen minZoomRadius und baseRadius
     const zoomFactor = 1 + event.deltaY * 0.001;
     spherical.radius = clamp(spherical.radius * zoomFactor, minZoomRadius, baseRadius);
     onPoseChange(buildCurrentPose());
   }
 
-  // ── Touch pinch-to-zoom handlers ────────────────────────────────────────
+  // ── Touch-Pinch-zum-Zoomen-Handler ────────────────────────────────────────
 
   function getTouchDistance(): number {
     const pts = [...activeTouches.values()];

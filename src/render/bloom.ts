@@ -1,19 +1,19 @@
 /**
- * bloom.ts — simple HDR bloom post-process for WebGLRenderer (Three.js r183).
+ * bloom.ts — einfache HDR Bloom Post-Process für WebGLRenderer (Three.js r183).
  *
  * Pipeline:
- *   1. Render scene → HDR render target (tone-mapping OFF)
- *   2. Threshold pass  → extract bright pixels
- *   3. Horizontal blur → half-res blur target
- *   4. Vertical blur   → half-res blur target
- *   5. Composite       → screen (apply ACESFilmic + add bloom)
+ *   1. Szene rendern → HDR Render-Target (Tone-Mapping AUS)
+ *   2. Schwellen-Pass  → helle Pixel extrahieren
+ *   3. Horizontale Unschärfe → halb-auflösendes Unschärfe-Target
+ *   4. Vertikale Unschärfe   → halb-auflösendes Unschärfe-Target
+ *   5. Zusammensetzen       → Bildschirm (ACESFilmic anwenden + Bloom hinzufügen)
  *
- * No external dependencies — uses only core THREE primitives.
+ * Keine externen Abhängigkeiten — verwendet nur primitive THREE-Kern.
  */
 
 import * as THREE from 'three';
 
-// ─── Shared vertex shader ────────────────────────────────────────────────────
+// ─── Gemeinsamer Vertex-Shader ────────────────────────────────────────────────────
 const VERT = /* glsl */ `
 varying vec2 vUv;
 void main() {
@@ -21,7 +21,7 @@ void main() {
   gl_Position = vec4(position.xy, 0.0, 1.0);
 }`;
 
-// ─── Threshold: keep only pixels brighter than threshold ─────────────────────
+// ─── Schwelle: Nur Pixel heller als Schwelle behalten ─────────────────────
 const THRESHOLD_FRAG = /* glsl */ `
 uniform sampler2D tDiffuse;
 uniform float uThreshold;
@@ -33,7 +33,7 @@ void main() {
   gl_FragColor = vec4(c * weight, 1.0);
 }`;
 
-// ─── Separable Gaussian blur (7-tap) ─────────────────────────────────────────
+// ─── Separable Gaußsche Unschärfe (7-Tap) ─────────────────────────────────────────
 const BLUR_FRAG = /* glsl */ `
 uniform sampler2D tDiffuse;
 uniform vec2 uDir;
@@ -50,8 +50,8 @@ void main() {
   gl_FragColor = vec4(color, 1.0);
 }`;
 
-// ─── Composite: apply ACESFilmic tone-map to scene, then add bloom ────────────
-// ACESFilmic approximation (Krzysztof Narkowicz, 2015).
+// ─── Zusammensetzen: ACESFilmic Tone-Map auf Szene anwenden, dann Bloom hinzufügen ────────────
+// ACESFilmic Näherung (Krzysztof Narkowicz, 2015).
 const COMPOSITE_FRAG = /* glsl */ `
 uniform sampler2D tScene;
 uniform sampler2D tBloom;
@@ -70,27 +70,27 @@ void main() {
   vec3 hdr   = texture2D(tScene, vUv).rgb * uExposure;
   vec3 bloom = texture2D(tBloom, vUv).rgb;
   vec3 color = acesFilmic(hdr + bloom * uStrength);
-  // Gamma correct (sRGB output)
+  // Gamma-Korrektur (sRGB-Ausgabe)
   gl_FragColor = vec4(pow(color, vec3(1.0 / 2.2)), 1.0);
 }`;
 
-// ─── Public interface ────────────────────────────────────────────────────────
+// ─── Öffentliche Schnittstelle ────────────────────────────────────────────────────
 
 export interface BloomOptions {
-  /** HDR luminance threshold for bloom extraction (default 0.85). */
+  /** HDR-Leuchtdichte-Schwelle für Bloom-Extraktion (Standard 0,85). */
   threshold?: number;
-  /** Additive bloom strength in the composite pass (default 0.5). */
+  /** Additive Bloom-Stärke im Composite-Pass (Standard 0,5). */
   strength?: number;
-  /** Blur step scale — larger = wider glow (default 2.0 pixels at half-res). */
+  /** Unschärfe-Schrittskala — größer = breiterer Glanz (Standard 2,0 Pixel bei halber Auflösung). */
   blurScale?: number;
-  /** Exposure applied before ACESFilmic tone-mapping (default 1.2). */
+  /** Belichtung vor ACESFilmic Tone-Mapping angewendet (Standard 1,2). */
   exposure?: number;
 }
 
 export interface BloomEffect {
-  /** Replace renderer.render(scene, camera) with this. */
+  /** Ersetzen Sie renderer.render(scene, camera) damit. */
   render(scene: THREE.Scene, camera: THREE.Camera): void;
-  /** Call whenever the canvas is resized. */
+  /** Aufrufen, wenn die Canvas-Größe geändert wird. */
   setSize(width: number, height: number): void;
   dispose(): void;
 }
@@ -104,28 +104,28 @@ export function createBloomEffect(
   const blurScale = options.blurScale ?? 2.0;
   const exposure  = options.exposure  ?? 1.2;
 
-  // ── Render targets ──────────────────────────────────────────────────────
+  // ── Render-Targets ──────────────────────────────────────────────────────
   const rtOpts: THREE.RenderTargetOptions = {
     minFilter: THREE.LinearFilter,
     magFilter: THREE.LinearFilter,
     type: THREE.HalfFloatType,
     depthBuffer: false
   };
-  // Full-res scene target (with depth for actual rendering)
+  // Vollauflösendes Szenen-Target (mit Tiefe für tatsächliches Rendering)
   const sceneRT  = new THREE.WebGLRenderTarget(1, 1, { ...rtOpts, depthBuffer: true });
-  // Half-res targets for threshold + blur
+  // Halb-auflösende Targets für Schwelle + Unschärfe
   const brightRT = new THREE.WebGLRenderTarget(1, 1, rtOpts);
   const blurHRT  = new THREE.WebGLRenderTarget(1, 1, rtOpts);
   const blurVRT  = new THREE.WebGLRenderTarget(1, 1, rtOpts);
 
-  // ── Full-screen quad helpers ────────────────────────────────────────────
+  // ── Vollbild-Quad-Helfer ────────────────────────────────────────────
   const orthoCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   const quadGeo     = new THREE.PlaneGeometry(2, 2);
   const quadScene   = new THREE.Scene();
   const quadMesh    = new THREE.Mesh(quadGeo);
   quadScene.add(quadMesh);
 
-  // ── Materials ───────────────────────────────────────────────────────────
+  // ── Materialien ───────────────────────────────────────────────────────
   const thresholdMat = new THREE.ShaderMaterial({
     uniforms: {
       tDiffuse:   { value: null },
@@ -172,7 +172,7 @@ export function createBloomEffect(
     depthWrite: false
   });
 
-  // ── Size tracking ───────────────────────────────────────────────────────
+  // ── Größenverfolgung ───────────────────────────────────────────────────────
   let fullW = 1, fullH = 1, halfW = 1, halfH = 1;
 
   function setSize(width: number, height: number): void {
@@ -187,46 +187,45 @@ export function createBloomEffect(
     blurVRT .setSize(halfW, halfH);
   }
 
-  // ── Render pipeline ─────────────────────────────────────────────────────
+  // ── Render-Pipeline ─────────────────────────────────────────────────────
   function render(scene: THREE.Scene, camera: THREE.Camera): void {
-    // Save renderer state
+    // Renderer-Status speichern
     const prevToneMapping = renderer.toneMapping;
     const prevOutputCS    = renderer.outputColorSpace;
 
-    // 1. Render scene → HDR target.
-    //    NoToneMapping + LinearSRGBColorSpace so we keep raw HDR values in the RT.
+    // 1. Szene rendern → HDR-Target.
+    //    NoToneMapping + LinearSRGBColorSpace, damit wir rohe HDR-Werte im RT behalten.
     renderer.toneMapping      = THREE.NoToneMapping;
     renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
     renderer.setRenderTarget(sceneRT);
     renderer.clear();
     renderer.render(scene, camera);
 
-    // Post-process passes run in linear + no-tone space as well.
+    // Post-Process-Passes laufen auch in linearem + Nicht-Ton-Raum.
 
-    // 2. Threshold pass → half-res brightRT
+    // 2. Schwellen-Pass → halb-auflösendes brightRT
     thresholdMat.uniforms.tDiffuse.value = sceneRT.texture;
     quadMesh.material = thresholdMat;
     renderer.setRenderTarget(brightRT);
     renderer.render(quadScene, orthoCamera);
 
-    // 3. Horizontal blur
+    // 3. Horizontale Unschärfe
     blurHMat.uniforms.tDiffuse.value = brightRT.texture;
     blurHMat.uniforms.uDir.value.set(blurScale / halfW, 0);
     quadMesh.material = blurHMat;
     renderer.setRenderTarget(blurHRT);
     renderer.render(quadScene, orthoCamera);
 
-    // 4. Vertical blur
+    // 4. Vertikale Unschärfe
     blurVMat.uniforms.tDiffuse.value = blurHRT.texture;
     blurVMat.uniforms.uDir.value.set(0, blurScale / halfH);
     quadMesh.material = blurVMat;
     renderer.setRenderTarget(blurVRT);
     renderer.render(quadScene, orthoCamera);
 
-    // 5. Composite → screen.
-    //    The composite shader applies ACESFilmic + pow(1/2.2) gamma itself.
-    //    We use LinearSRGBColorSpace so the renderer does NOT apply a second
-    //    sRGB conversion on top of our already gamma-corrected output.
+    // 5. Zusammensetzen → Bildschirm.
+    //    Der Composite-Shader wendet ACESFilmic + pow(1/2.2) Gamma selbst an.
+    //    Wir verwenden LinearSRGBColorSpace, damit der Renderer KEINE zweite sRGB-Konvertierung auf unserer bereits Gamma-korrigierten Ausgabe anwendet.
     renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
     compositeMat.uniforms.tScene.value = sceneRT.texture;
     compositeMat.uniforms.tBloom.value = blurVRT.texture;
@@ -234,7 +233,7 @@ export function createBloomEffect(
     renderer.setRenderTarget(null);
     renderer.render(quadScene, orthoCamera);
 
-    // Restore original renderer state
+    // Ursprünglichen Renderer-Status wiederherstellen
     renderer.toneMapping      = prevToneMapping;
     renderer.outputColorSpace = prevOutputCS;
   }
