@@ -2,8 +2,7 @@
   color-scheme: light;
   font-family: Baskerville, "Palatino Linotype", "Book Antiqua", Georgia, serif;
   color: #22160d;
-  background:
-    radial-gradient(circle at top, rgba(250, 232, 200, 0.95) 0%, rgba(199, 151, 104, 0.8) 38%, rgba(66, 38, 23, 1) 100%);
+  background: #000;
 }
 
 * {
