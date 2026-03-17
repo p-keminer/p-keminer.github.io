@@ -39,6 +39,9 @@ jobs:
       - name: Build 3D shell
         run: npm run build
 
+      - name: Verify dist contents
+        run: ls -la dist/ && echo "---404 exists---" && test -f dist/404.html && echo "YES" || echo "NO"
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
