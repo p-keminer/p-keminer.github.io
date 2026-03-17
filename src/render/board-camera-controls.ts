@@ -24,12 +24,12 @@ interface CreateBoardCameraControlsOptions {
 const MIN_RADIUS = 7.2;
 const MAX_RADIUS = 16.5;
 const MIN_PHI = 0.58;
-const MAX_PHI = 1.3 - (5 * Math.PI) / 180; // last 5° at bottom locked
+const MAX_PHI = 1.3 - (5 * Math.PI) / 180; // letzte 5° am unteren Ende gesperrt
 const MAX_TARGET_OFFSET = 1.65;
 const MAX_TARGET_HEIGHT = 0.9;
-// Total horizontal rotation range: 170° to the LEFT from the default starting angle.
-// Prevents the camera from orbiting to the opponent's side of the board.
-const THETA_LEFT_RANGE = (170 * Math.PI) / 180; // 170° in radians
+// Gesamtbereich der horizontalen Drehung: 170° NACH LINKS vom Standard-Startwinkel.
+// Verhindert, dass die Kamera zur Gegnerseite des Brettes orbitet.
+const THETA_LEFT_RANGE = (170 * Math.PI) / 180; // 170° in Radianten
 
 export function createBoardCameraControls({
   domElement,
@@ -46,21 +46,21 @@ export function createBoardCameraControls({
     DEFAULT_CAMERA_PRESET.position.z - DEFAULT_CAMERA_PRESET.target.z
   );
   const spherical = new THREE.Spherical().setFromVector3(defaultOffset);
-  // Pre-computed default spherical angles — avoids two temporary Spherical allocations in reset().
+  // Vorberechnete Standard-Kugelwinkel — vermeidet zwei temporäre Spherical-Zuordnungen in reset().
   const defaultSpherical = new THREE.Spherical().setFromVector3(defaultOffset);
   const target = defaultTarget.clone();
-  // Theta clamp: from the default starting angle, only 170° to the right is allowed.
-  // Left of the starting position is always locked.
-  const minTheta = spherical.theta - THETA_LEFT_RANGE;   // 170° to the right
-  const maxTheta = spherical.theta;                       // no rotation to the left of start
+  // Theta-Begrenzung: vom Standard-Startwinkel sind nur 170° nach rechts erlaubt.
+  // Links der Ausgangsposition ist immer gesperrt.
+  const minTheta = spherical.theta - THETA_LEFT_RANGE;   // 170° nach rechts
+  const maxTheta = spherical.theta;                       // keine Drehung nach links vom Start
   let controlsLocked = false;
   let gestureMode: CameraGestureMode = 'idle';
   let activePointerId: number | null = null;
   let pointerCaptureActive = false;
 
-  // ── Touch support ──────────────────────────────────────────────────────
-  // Single-finger drag → orbit, two-finger pinch → zoom.
-  // We track active touches separately from the mouse/pointer gesture above.
+  // ── Touch-Unterstützung ────────────────────────────────────────────────
+  // Einfinger-Ziehen → Orbiten, Zweifinger-Pinch → Zoom.
+  // Wir verfolgen aktive Berührungen separat von der obigen Maus-/Zeiger-Geste.
   const activeTouches = new Map<number, { x: number; y: number }>();
   let touchGestureMode: 'idle' | 'orbit' | 'pinch' = 'idle';
   let pinchStartDistance = 0;
@@ -272,8 +272,8 @@ export function createBoardCameraControls({
     onPoseChange(buildCurrentPose());
   }
 
-  // ── Touch gesture handlers ─────────────────────────────────────────────
-  // Single finger = orbit, two fingers = pinch-to-zoom.
+  // ── Touch-Gesten-Handler ────────────────────────────────────────────────
+  // Ein Finger = Orbiten, zwei Finger = Pinch-Zoom.
 
   function getTouchDistance(touches: Map<number, { x: number; y: number }>): number {
     const pts = [...touches.values()];
@@ -292,12 +292,12 @@ export function createBoardCameraControls({
 
     if (activeTouches.size === 1) {
       touchGestureMode = 'orbit';
-      // Do NOT call preventDefault() here — that suppresses the synthetic click
-      // event the browser fires after a short tap, which breaks piece selection.
-      // handlePointerDown already ignores touch pointers (button === 0), so
-      // there is no double-processing risk for single-finger orbit.
+      // preventDefault() NICHT hier aufrufen — das unterdrückt den synthetischen Klick
+      // Ereignis, das der Browser nach einem kurzen Tap auslöst, das die Figurauswahl unterbricht.
+      // handlePointerDown ignoriert bereits Touch-Zeiger (button === 0), also
+      // es besteht kein Risiko einer Doppelverarbeitung beim Einfinger-Orbiten.
     } else if (activeTouches.size >= 2) {
-      // Switch from orbit to pinch when a second finger lands
+      // Wechsle vom Orbiten zum Pinch, wenn ein zweiter Finger landet
       touchGestureMode = 'pinch';
       pinchStartDistance = getTouchDistance(activeTouches);
       pinchStartRadius = spherical.radius;
@@ -308,7 +308,7 @@ export function createBoardCameraControls({
   function handleTouchMove(event: TouchEvent): void {
     if (controlsLocked || touchGestureMode === 'idle') return;
 
-    // Update stored positions
+    // Gespeicherte Positionen aktualisieren
     for (let i = 0; i < event.changedTouches.length; i++) {
       const t = event.changedTouches[i];
       const prev = activeTouches.get(t.identifier);
@@ -344,9 +344,9 @@ export function createBoardCameraControls({
     if (activeTouches.size === 0) {
       touchGestureMode = 'idle';
     } else if (activeTouches.size === 1) {
-      // Went from pinch back to one finger — switch to orbit.
-      // Re-snapshot the remaining finger's current position from targetTouches
-      // so the first orbit move doesn't compute a large stale delta.
+      // Von Pinch zurück zu einem Finger — wechsel zu Orbiten.
+      // Aktualisiere den aktuellen Status der verbleibenden Finger aus targetTouches
+      // damit die erste Orbitbewegung kein großes veraltetes Delta berechnet.
       touchGestureMode = 'orbit';
       for (let i = 0; i < event.targetTouches.length; i++) {
         const t = event.targetTouches[i];
