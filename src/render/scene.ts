@@ -554,6 +554,19 @@ export function createBoardPreviewScene({
     stage.interaction.setEnabled(startFlowMode === 'boardFocus');
   }
 
+  // Vector3-Pool für Look-Around: Reuse statt ständig neue zu allocaten
+  const _worldUp = new THREE.Vector3(0, 1, 0);
+  const _lookAroundScratch = {
+    pos: new THREE.Vector3(),
+    forward: new THREE.Vector3(),
+    right: new THREE.Vector3(),
+    rotated: new THREE.Vector3()
+  };
+
+  const LOOK_AROUND_TARGETS: ReadonlyArray<RoomFocusTargetId> = [
+    'overview', 'displayCase', 'pictureFrame', 'workbench'
+  ];
+
   function applyStartFlowCameraPose(): void {
     const preset = getStartFlowCameraPreset();
 
@@ -571,9 +584,6 @@ export function createBoardPreviewScene({
     // Deaktiviert in: webEmbed (iframe bedeckt die Ansicht), pictureFrameDetail
     // (Nahaufnahme), boardFocus (Board-Kamera übernimmt), menu/introTransition.
     // Muss vollständig am Ziel angekommen sein (nicht unter Transition).
-    const LOOK_AROUND_TARGETS: ReadonlyArray<RoomFocusTargetId> = [
-      'overview', 'displayCase', 'pictureFrame', 'workbench'
-    ];
     const isFixedView =
       startFlowMode === 'roomExplore' &&
       LOOK_AROUND_TARGETS.includes(startFlowFocusTarget) &&
@@ -584,23 +594,24 @@ export function createBoardPreviewScene({
     if (isFixedView) {
       const { yaw, pitch } = lookAround.getOffset();
       if (yaw !== 0 || pitch !== 0) {
-        const pos = stage.camera.position.clone();
+        _lookAroundScratch.pos.copy(stage.camera.position);
         // Basis-Blickrichtung: preset-Position → preset-Ziel
-        const forward = new THREE.Vector3(
+        _lookAroundScratch.forward.set(
           preset.target.x - preset.position.x,
           preset.target.y - preset.position.y,
           preset.target.z - preset.position.z
         ).normalize();
         // Rechts-Achse für Neigung (senkrecht zu Forward + World-Up)
-        const right = new THREE.Vector3()
-          .crossVectors(forward, new THREE.Vector3(0, 1, 0))
+        _lookAroundScratch.right
+          .crossVectors(_lookAroundScratch.forward, _worldUp)
           .normalize();
         // Yaw um World-Y anwenden, dann Pitch um Rechts-Vektor
-        forward
-          .applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw)
-          .applyAxisAngle(right, pitch)
+        _lookAroundScratch.rotated
+          .copy(_lookAroundScratch.forward)
+          .applyAxisAngle(_worldUp, yaw)
+          .applyAxisAngle(_lookAroundScratch.right, pitch)
           .normalize();
-        stage.camera.lookAt(pos.clone().add(forward));
+        stage.camera.lookAt(_lookAroundScratch.pos.clone().add(_lookAroundScratch.rotated));
       }
     }
   }

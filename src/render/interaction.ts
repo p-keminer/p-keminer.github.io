@@ -36,7 +36,7 @@ interface CreateBoardInteractionOptions {
   onChange?: (state: BoardInteractionState) => void;
   onSquareClick?: (square: BoardSquare) => void;
   scene: THREE.Scene;
-  /** World-space Y of the board surface.  Marker y-offsets are added on top of this. */
+  /** Welt-Raum Y der Boardfläche. Markierer-Y-Offsets werden oben drauf addiert. */
   surfaceY?: number;
 }
 
@@ -65,6 +65,19 @@ export function createBoardInteraction({
     selectedSquare: null
   };
   let enabled = true;
+  let cachedRect: DOMRect | null = null;
+
+  // Cache dom element rect — wird aktualisiert auf resize
+  const updateRectCache = (): void => {
+    cachedRect = domElement.getBoundingClientRect();
+  };
+
+  const resizeObserver = new ResizeObserver(() => {
+    updateRectCache();
+  });
+
+  updateRectCache();
+  resizeObserver.observe(domElement);
 
   const highlightGroup = new THREE.Group();
   highlightGroup.name = 'board-interaction-highlights';
@@ -174,7 +187,7 @@ export function createBoardInteraction({
   };
 
   const pickSquare = (clientX: number, clientY: number): BoardSquare | null => {
-    const rect = domElement.getBoundingClientRect();
+    const rect = cachedRect || domElement.getBoundingClientRect();
 
     pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
     pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
@@ -272,6 +285,7 @@ export function createBoardInteraction({
 
   return {
     dispose: () => {
+      resizeObserver.disconnect();
       domElement.removeEventListener('pointermove', handlePointerMove);
       domElement.removeEventListener('pointerleave', handlePointerLeave);
       domElement.removeEventListener('click', handleClick);

@@ -2,21 +2,22 @@ import * as THREE from 'three';
 
 const MESH_NAME = 'merged_mon_cctv_uv';
 
-// Resolution of the off-screen render — low enough to look lo-fi/surveillance-y.
-const RT_SIZE = 256;
+// Auflösung des Off-Screen-Render – niedrig genug, um lo-fi/Überwachungs-artig auszusehen.
+// Reduziert auf 128 für Performance (CCTV-Monitor ist klein, 256 unötig).
+const RT_SIZE = 128;
 
-// ── Safe angle range ──────────────────────────────────────────────────────
-// The board camera starts at Spherical theta ≈ 0.717 rad (position 6.8, _, 7.8)
-// and is allowed 170° to the right (decreasing theta).
+// ── Sicherer Winkelbereich ────────────────────────────────────────────────────────
+// Die Board-Kamera beginnt bei Kugelkoordinaten-Theta ≈ 0.717 rad (Position 6.8, _, 7.8)
+// und darf 170° nach rechts gehen (Theta abnehmen).
 //
-// In the CCTV convention (x = cos(a), z = sin(a)):
+// In der CCTV-Konvention (x = cos(a), z = sin(a)):
 //   cctv_angle = π/2 − spherical_theta
 //   board start  → 0.85 rad
-//   board end    → 0.85 + 2.97 = 3.82 rad  (170° further)
+//   board end    → 0.85 + 2.97 = 3.82 rad  (170° weiter)
 //
-// We use only the middle ~100° of that range with 20° margins on each side
-// so the camera never clips a wall.  The sweep is a sine-based ping-pong so
-// it can never drift outside the defined limits.
+// Wir verwenden nur die mittleren ~100° dieses Bereichs mit 20° Rändern auf jeder Seite
+// damit die Kamera nie eine Wand ausschneidet. Der Sweep ist sinusförmig hin und her, daher
+// kann er nie außerhalb der definierten Grenzen abdriften.
 const SWEEP_CENTER   = 0.85 + (2.97 / 2);   // ≈ 2.34 rad — midpoint of valid arc
 const SWEEP_HALF     = 0.87;                 // ≈ 50°  on each side of centre
 const SWEEP_SPEED    = 0.10;                 // rad/s — full cycle ≈ 63 s
@@ -26,13 +27,13 @@ const ORBIT_HEIGHT   = 9;
 const _target = new THREE.Vector3(0, 0.5, 0);
 
 export interface CCTVScreen {
-  /** Swap the material on the CCTV monitor mesh found in the room GLB. */
+  /** Das Material auf dem CCTV-Monitor-Mesh wechseln, das im Raum-GLB gefunden wird. */
   attach(roomRoot: THREE.Object3D): void;
-  /** Advance the CCTV camera position — call once per animation frame. */
+  /** Die CCTV-Kameraposition vorantreiben – einmal pro Animation-Frame aufrufen. */
   tick(elapsedMs: number): void;
   /**
-   * Render the scene from the CCTV camera into the render target.
-   * Call this BEFORE the main bloom render so the texture is up to date.
+   * Die Szene aus der CCTV-Kamera ins Render-Target rendern.
+   * BEVOR der Hauptbloom-Render aufrufen, damit die Textur aktuell ist.
    */
   renderToTarget(scene: THREE.Scene, renderer: THREE.WebGLRenderer): void;
   dispose(): void;
@@ -45,20 +46,20 @@ export function createCCTVScreen(): CCTVScreen {
     format: THREE.RGBAFormat,
     colorSpace: THREE.SRGBColorSpace
   });
-  // WebGL render targets have their origin at the bottom-left, while the mesh
-  // UV expects top-left — flip the texture vertically to correct the rotation.
+  // WebGL-Render-Targets haben ihren Ursprung unten links, während die Mesh-UV
+  // oben links erwartet – die Textur vertikal umkehren, um die Rotation zu korrigieren.
   renderTarget.texture.repeat.set(1, -1);
   renderTarget.texture.offset.set(0, 1);
 
-  // This camera belongs entirely to the CCTV system.
-  // It is never assigned to the renderer as the active camera for the main view.
+  // Diese Kamera gehört vollständig zum CCTV-System.
+  // Sie wird dem Renderer nie als aktive Kamera für die Hauptansicht zugewiesen.
   const cctvCamera = new THREE.PerspectiveCamera(52, 1, 0.1, 120);
   cctvCamera.position.set(ORBIT_RADIUS, ORBIT_HEIGHT, 0);
   cctvCamera.lookAt(_target);
 
   function tick(elapsedMs: number): void {
     const t = elapsedMs / 1000;
-    // Sine-based ping-pong — stays strictly within [SWEEP_CENTER ± SWEEP_HALF].
+    // Sinusförmiges Hin-und-Her – bleibt streng innerhalb von [SWEEP_CENTER ± SWEEP_HALF].
     const angle = SWEEP_CENTER + Math.sin(t * SWEEP_SPEED) * SWEEP_HALF;
     cctvCamera.position.set(
       Math.cos(angle) * ORBIT_RADIUS,

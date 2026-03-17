@@ -28,22 +28,23 @@ export function createSceneLights(): SceneLights {
   const plan = createLightingPlan();
   const group = new THREE.Group();
 
-  // Neutral-white ambient at low intensity — just enough to prevent
-  // unlit surfaces from going completely black.  The blue-cyber mood
-  // comes from the materials and the neon point lights, not fill light.
+  // Neutral-weißes Umgebungslicht mit niedriger Intensität – gerade genug, um
+  // unbeleuchteते Oberflächen davor zu bewahren, vollständig schwarz zu werden. Die blau-cyberpunk-Stimmung
+  // kommt von den Materialien und den Neon-Punktlichtern, nicht vom Füllicht.
   const ambient = new THREE.AmbientLight('#ffffff', plan.ambientIntensity);
 
-  // Hemisphere: subtle cool-blue sky above, dark floor below.
+  // Hemisphärenlichter: subtiles kühl-blaues Licht von oben, dunkles Licht von unten.
   const hemi = new THREE.HemisphereLight('#1a1a40', '#080808', 0.50);
 
-  // Cool-white overhead directional key — positioned at room-centre overhead.
-  // Room spans X −29..+11, Z −13..+31 in Three.js, centre ≈ (−9, 6, 9).
-  // Large shadow camera covers the entire room footprint.
+  // Kühl-weißes gerichtetes Hauptlicht oben – positioniert im Raumzentrum oben.
+  // Der Raum erstreckt sich in Three.js von X −29..+11, Z −13..+31, Mitte ≈ (−9, 6, 9).
+  // Die große Shadow-Kamera deckt die gesamte Raum-Grundfläche ab.
   const key = new THREE.DirectionalLight('#d0e8ff', plan.keyLightIntensity);
   key.position.set(-9, 22, 5);
-  key.target.position.set(-9, 0, 9);   // aim at room centre, not world origin
+  key.target.position.set(-9, 0, 9);   // ziele auf Raumzentrum, nicht Weltursprung
   key.castShadow = plan.castShadows;
-  key.shadow.mapSize.set(2048, 2048);
+  // Shadow Map 1024×1024 statt 2048 – für Innenraum ausreichend, halbe Auflösung = 4x schneller
+  key.shadow.mapSize.set(1024, 1024);
   key.shadow.camera.near = 0.5;
   key.shadow.camera.far = 70;
   key.shadow.camera.left = -35;
@@ -53,17 +54,16 @@ export function createSceneLights(): SceneLights {
   key.shadow.bias = -0.0008;
   key.shadow.normalBias = 0.02;
 
-  // Red neon point lights — simulate the Blender light_red_strat.* ceiling
-  // strips (rgb 1.0, 0.05, 0.02, 80 W each).  Two lights cover the strip
-  // length: one over the chess-board side, one over the workstation side.
-  // Positions derived from room centre Y ≈ 5.9 (ceiling level in Three.js).
+  // Rote Neon-Punktlichter – simulieren die Blender light_red_strat.* Deckenstreifen
+  // (rgb 1.0, 0.05, 0.02, 80 W je). Zwei Lichter decken die Streifenlänge ab: eins über der Schachbrett-Seite, eins über der Workstation-Seite.
+  // Positionen abgeleitet aus Raumzentrum Y ≈ 5.9 (Deckenhöhe in Three.js).
   const neonA = new THREE.PointLight('#ff0d05', 4.0, 22, 1.8);
   neonA.position.set(-4, 5.5, 6);
 
   const neonB = new THREE.PointLight('#ff0d05', 4.0, 22, 1.8);
   neonB.position.set(-18, 5.5, 14);
 
-  // Red directional rim — soft global fill from the neon direction.
+  // Rote direktionale Randlicht – weiches globales Füllicht aus der Neon-Richtung.
   const rim = new THREE.DirectionalLight('#ff0d05', 0.40);
   rim.position.set(-9, 8, 5);
 
