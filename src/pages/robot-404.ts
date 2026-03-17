@@ -112,7 +112,6 @@ const backBtn = document.querySelector('.back-btn') as HTMLElement;
 const MESSAGES = [
   'Orientierung verloren?',
   'Passiert mir auch manchmal...',
-  'Klicke einfach auf den Button unten!',
 ];
 const CHAR_MS  = 95;
 const HOLD_MS  = 1200;
