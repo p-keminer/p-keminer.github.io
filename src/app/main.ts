@@ -24,17 +24,11 @@ const NEON_BLUE = '#00d4ff';
 const NEON_RED  = '#ff2020';
 
 function createIntroOverlay(): () => void {
-  const overlay = document.createElement('div');
-  overlay.id = 'intro-overlay';
-  overlay.innerHTML = `
-    <div class="intro-text">
-      <p class="intro-loading-line">
-        <span class="intro-loading-label">loading</span><span class="intro-dot" id="idot1"> .</span><span class="intro-dot" id="idot2">.</span><span class="intro-dot" id="idot3">.</span>
-      </p>
-      <p class="intro-tagline">Scotty beamt dich hoch!</p>
-    </div>
-  `;
-  document.body.appendChild(overlay);
+  const overlay = document.getElementById('intro-overlay') as HTMLDivElement;
+
+  if (!overlay) {
+    throw new Error('Missing #intro-overlay element.');
+  }
 
   const dot1 = document.getElementById('idot1') as HTMLSpanElement;
   const dot2 = document.getElementById('idot2') as HTMLSpanElement;
@@ -58,7 +52,7 @@ function createIntroOverlay(): () => void {
   updateDots();
   const intervalId = setInterval(updateDots, 1000);
 
-  // Returns a cleanup function that fades out and removes the overlay.
+  // Ruft die Fade-out Animation auf und entfernt das Overlay.
   return function hideOverlay(): void {
     clearInterval(intervalId);
     overlay.classList.add('intro-hidden');
