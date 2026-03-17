@@ -1,38 +1,41 @@
 import * as THREE from 'three';
 
-// Maximum pan angle in each direction (±45°)
+// Maximaler Schwenkwinkel in jede Richtung (±45°)
 const MAX_ANGLE_RAD = THREE.MathUtils.degToRad(45);
 
 export interface LookAroundControls {
-  /** Current yaw/pitch offset in radians. Apply after setting camera to base preset. */
+  /** Aktueller Yaw-/Pitch-Versatz in Radiant. Nach dem Setzen der Kamera auf die Standardvorgabe anwenden. */
   getOffset(): { yaw: number; pitch: number };
-  /** Enable or disable the controller. Resets drag state. */
+  /** Controller aktivieren oder deaktivieren. Setzt den Ziehzustand zurück. */
   setEnabled(enabled: boolean): void;
-  /** Allow or lock vertical look-around (pitch). When locked, only yaw is applied. */
+  /** Vertikales Umschauen (Pitch) zulassen oder sperren. Wenn gesperrt, wird nur Yaw angewendet. */
   setAllowPitch(allow: boolean): void;
-  /** Set maximum yaw angle for looking left (positive yaw), in degrees. Default 45. */
+  /** Maximalen Yaw-Winkel zum Blick nach links (positives Yaw) in Grad festlegen. Standard 45. */
   setMaxYawLeft(degrees: number): void;
-  /** Reset yaw/pitch to zero (call when navigating to a new area). */
+  /** Yaw/Pitch auf Null zurücksetzen (aufrufen beim Navigieren zu einem neuen Bereich). */
   reset(): void;
-  /** Remove all event listeners. */
+  /** Alle Event-Listener entfernen. */
   dispose(): void;
 }
 
 /**
- * Look-around controller — touch-only.
- * Keeps camera position fixed but lets the user rotate the view direction
- * by dragging a finger. Limited to ±45° in both axes.
+ * Umschau-Controller — nur Touch.
+ * Hält die Kameraposition fest, aber lässt den Benutzer die Blickrichtung
+ * durch Ziehen mit einem Finger drehen. Begrenzt auf ±45° in beiden Achsen.
  *
- * Sensitivity is normalised to the DOM element size so a full-width swipe
- * covers the entire ±45° range regardless of screen size.
+ * Die Empfindlichkeit wird auf die DOM-Elementgröße normalisiert, sodass ein
+ * vollständiger Breitenwisch den gesamten ±45°-Bereich abdeckt, unabhängig
+ * von der Bildschirmgröße.
  *
- * Multi-touch is detected: when a second finger lands, dragging pauses so
- * pinch-to-zoom (handled elsewhere) doesn't cause wild camera jumps.
+ * Multi-Touch wird erkannt: Wenn ein zweiter Finger landet, wird das Ziehen
+ * unterbrochen, damit Pinch-to-Zoom (an anderer Stelle behandelt) keine wilden
+ * Kamerasprünge verursacht.
  *
- * @param domElement  Canvas element to attach to.
- * @param onChange    Called on every touch-move that changes the offset.
- *                    Use to keep DOM overlays (hotspots) in sync with the
- *                    rotated camera without waiting for the next state event.
+ * @param domElement  Canvas-Element zum Anhängen.
+ * @param onChange    Wird bei jedem Touch-Move aufgerufen, der den Versatz ändert.
+ *                    Verwenden Sie dies, um DOM-Overlays (Hotspots) mit der
+ *                    gedrehten Kamera synchron zu halten, ohne auf das nächste
+ *                    State-Event zu warten.
  */
 export function createLookAroundControls(
   domElement: HTMLElement,
@@ -40,29 +43,29 @@ export function createLookAroundControls(
 ): LookAroundControls {
   let enabled = false;
   let allowPitch = true;
-  let maxYawPositive = MAX_ANGLE_RAD; // positive yaw = look left
-  let yaw = 0;   // horizontal offset (radians)
-  let pitch = 0; // vertical offset (radians)
+  let maxYawPositive = MAX_ANGLE_RAD; // positives Yaw = nach links blicken
+  let yaw = 0;   // horizontaler Versatz (Radiant)
+  let pitch = 0; // vertikaler Versatz (Radiant)
 
-  // Track active touch pointers to detect multi-touch and ignore pinch gestures.
+  // Aktive Touch-Pointer verfolgen, um Multi-Touch zu erkennen und Pinch-Gesten zu ignorieren.
   let primaryPointerId: number | null = null;
   let lastX = 0;
   let lastY = 0;
   let activeTouchCount = 0;
-  // Snapshot of yaw/pitch when the first finger lands. If a second finger
-  // arrives (= pinch intent), we restore these to cancel any accidental
-  // look-around movement that happened between first and second finger.
+  // Snapshot von Yaw/Pitch, wenn der erste Finger landet. Wenn ein zweiter Finger
+  // ankommt (= Pinch-Absicht), stellen wir diese wieder her, um alle versehentlichen
+  // Umschau-Bewegungen zwischen dem ersten und zweiten Finger zu stornieren.
   let snapshotYaw = 0;
   let snapshotPitch = 0;
-  let gestureContaminated = false; // true once ≥2 fingers were seen in this gesture
+  let gestureContaminated = false; // true sobald ≥2 Finger in dieser Geste gesehen wurden
 
   function onPointerDown(e: PointerEvent): void {
-    // Touch only — desktop mouse drag is not handled here.
+    // Nur Touch — Maus-Ziehen auf dem Desktop wird hier nicht behandelt.
     if (!enabled || e.pointerType !== 'touch') return;
 
     activeTouchCount++;
 
-    // Only start dragging with the first finger
+    // Nur mit dem ersten Finger beginnen zu ziehen
     if (activeTouchCount === 1) {
       primaryPointerId = e.pointerId;
       lastX = e.clientX;
@@ -72,8 +75,8 @@ export function createLookAroundControls(
       gestureContaminated = false;
       domElement.setPointerCapture(e.pointerId);
     } else {
-      // Second+ finger arrived → this is a pinch, not a look-around.
-      // Revert any accidental offset accumulated since the first finger.
+      // Zweiter+ Finger angekommen → das ist ein Pinch, kein Umschauen.
+      // Machen Sie alle Versätze rückgängig, die seit dem ersten Finger angesammelt wurden.
       if (!gestureContaminated) {
         gestureContaminated = true;
         const changed = yaw !== snapshotYaw || pitch !== snapshotPitch;
@@ -86,8 +89,8 @@ export function createLookAroundControls(
 
   function onPointerMove(e: PointerEvent): void {
     if (!enabled || e.pointerType !== 'touch') return;
-    // Only process moves from the primary finger, only when exactly 1 touch
-    // is active, and only if the gesture was never a pinch.
+    // Nur Bewegungen vom primären Finger verarbeiten, nur wenn genau 1 Touch
+    // aktiv ist, und nur wenn die Geste nie ein Pinch war.
     if (e.pointerId !== primaryPointerId || activeTouchCount !== 1 || gestureContaminated) return;
 
     const dx = e.clientX - lastX;
@@ -95,7 +98,7 @@ export function createLookAroundControls(
     lastX = e.clientX;
     lastY = e.clientY;
 
-    // Normalise delta to DOM element size — full-width swipe = full ±MAX range
+    // Delta auf DOM-Elementgröße normalisieren — vollständiger Breitenwisch = vollständiger ±MAX-Bereich
     const w = Math.max(domElement.clientWidth, 1);
     const h = Math.max(domElement.clientHeight, 1);
 
