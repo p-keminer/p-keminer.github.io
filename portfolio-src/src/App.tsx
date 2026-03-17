@@ -236,7 +236,7 @@ function Header() {
           icon={<GithubIcon />}
         />
         <SocialBadge
-          href="#"
+          href="https://www.linkedin.com/in/philip-keminer/"
           label="LinkedIn"
           icon={<LinkedInIcon />}
         />
@@ -274,7 +274,7 @@ function Header() {
               icon={<GithubIcon color="#f3f6ff" />}
             />
             <SocialMenuLink
-              href="#"
+              href="https://www.linkedin.com/in/philip-keminer/"
               label="LinkedIn"
               icon={<LinkedInIcon />}
             />

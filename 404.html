@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 – Seite nicht gefunden</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    @keyframes spotlightPulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.72; }
+    }
+
+    body {
+      background:
+        radial-gradient(ellipse 45% 55% at var(--siren-x, 50%) 50%,
+          rgba(255,70,0,0.72) 0%,
+          rgba(255,30,0,0.28) 50%,
+          transparent 100%
+        ),
+        radial-gradient(ellipse at center, #3a0000 0%, #0d0000 100%);
+      animation: spotlightPulse 2.4s ease-in-out infinite;
+      color: #cfd8dc;
+      font-family: 'Courier New', Courier, monospace;
+      height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px
+      );
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .error-code {
+      font-size: clamp(52px, 12vw, 88px);
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      line-height: 1;
+      margin-bottom: 4px;
+      background: linear-gradient(180deg, #aaaaaa 0%, #1a1a1a 45%, #555555 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8));
+    }
+
+    .subtitle {
+      font-size: clamp(10px, 2.5vw, 13px);
+      color: #3a3a3a;
+      letter-spacing: 0.25em;
+      margin-bottom: 20px;
+      text-shadow: 0 1px 0 #666;
+    }
+
+    /* Robot + bubble sit side-by-side in a flex row */
+    .robot-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0px;
+      justify-content: center;
+      position: relative;
+      z-index: 11; /* above the scanline overlay (z-index: 10) */
+    }
+
+    #scene-wrap {
+      position: relative;
+      width: clamp(180px, 38vw, 260px);
+      height: clamp(180px, 38vw, 260px);
+      flex-shrink: 0;
+      margin-right: -20px;
+    }
+
+    #robot-canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .bubble {
+      width: clamp(160px, 30vw, 240px);
+      flex-shrink: 0;
+      align-self: flex-start;
+      margin-top: 65px;
+      font-size: clamp(14px, 3vw, 22px);
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      line-height: 1.4;
+      text-align: left;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      background: linear-gradient(180deg, #aaaaaa 0%, #1a1a1a 45%, #555555 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    @media (max-width: 560px) {
+      body {
+        justify-content: center;
+        padding-top: 0;
+        gap: 0;
+      }
+      .error-code {
+        font-size: 56px;
+        margin-bottom: 2px;
+        margin-top: -60px;
+      }
+      .subtitle {
+        font-size: 10px;
+        margin-bottom: 14px;
+        color: #3a3a3a;
+      }
+      .robot-row {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 0px;
+        justify-content: center;
+        margin-top: 40px;
+      }
+      #scene-wrap {
+        width: min(72vw, 240px);
+        height: min(72vw, 240px);
+        margin-right: -36px;
+        margin-top: -30px;
+      }
+      .bubble {
+        width: clamp(110px, 40vw, 170px);
+        align-self: flex-start;
+        margin-top: 48px;
+        font-size: 15px;
+        letter-spacing: 0.05em;
+        line-height: 1.35;
+        margin-left: -8px;
+      }
+      .back-btn {
+        margin-top: 56px;
+        padding: 7px 18px;
+        font-size: 10px;
+      }
+    }
+
+    .back-btn {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 10px 30px;
+      border: 1px solid #444;
+      color: #bbb;
+      text-decoration: none;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: clamp(11px, 2.5vw, 13px);
+      letter-spacing: 0.08em;
+      opacity: 0;
+      background: linear-gradient(180deg, #3a3a3a 0%, #111111 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 8px rgba(0,0,0,0.6);
+      transition: background 0.2s, box-shadow 0.2s, opacity 0.8s ease;
+    }
+    .back-btn:hover {
+      background: linear-gradient(180deg, #505050 0%, #1f1f1f 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 2px 14px rgba(0,0,0,0.8);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="error-code">404</div>
+  <div class="subtitle">ERROR</div>
+
+  <div class="robot-row">
+    <div id="scene-wrap">
+      <canvas id="robot-canvas"></canvas>
+    </div>
+    <div class="bubble" id="bubble"></div>
+  </div>
+
+  <a class="back-btn" href="/">← Zurück zur Startseite</a>
+
+  <script type="module" src="/src/pages/robot-404.ts"></script>
+</body>
+</html>
