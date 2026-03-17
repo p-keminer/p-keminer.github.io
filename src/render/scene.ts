@@ -198,48 +198,50 @@ interface StageScene {
   scene: THREE.Scene;
 }
 
-// ── Room import calibration ────────────────────────────────────────────────
-// raum.glb was exported with chess square step = 0.512 Blender units.
-// ROOM_SCALE converts Blender units to Three.js game units (1 game unit = 1 chess square).
-// ROOM_OFFSET positions the room so its chess board center aligns with the Three.js world
-// origin (0, 0, 0).
+// ── Raum-Kalibrierung beim Import ──────────────────────────────────────────
+// raum.glb wurde mit Schachfeld-Schrittweite 0.512 Blender-Units exportiert.
+// ROOM_SCALE konvertiert Blender-Units zu Three.js-Spielunits (1 Unit = 1 Feld).
+// ROOM_OFFSET positioniert den Raum so, dass die Schachfeld-Mitte mit dem
+// Three.js-Ursprung (0, 0, 0) übereinstimmt.
 //
-// To re-calibrate after a fresh Blender export:
-//   1. Open the new room.glb in Three.js (or use the debug overlay to inspect positions).
-//   2. Measure the side length of one board square in Blender world units = BLENDER_STEP.
-//   3. Set ROOM_SCALE = 1.0 / BLENDER_STEP.
-//   4. Find the chess board center in Blender world coords (x, y, z) = BC.
-//   5. Set ROOM_OFFSET = new THREE.Vector3(-BC.x * ROOM_SCALE, -BC.y * ROOM_SCALE, -BC.z * ROOM_SCALE).
-const ROOM_SCALE = 1 / 0.512; // one Blender chess square (0.512 m) → one Three.js unit
-// ROOM_OFFSET.z = 15.426: corrected so the actual board square centres align with
-// squareToWorld (sq_a1 → Z=+3.5, sq_a8 → Z=−3.5).  The original value 15.826 placed
-// board squares 0.4 units too far in +Z, causing hover/highlight X-Z misalignment.
+// Nach einem frischen Blender-Export neu kalibrieren:
+//   1. Öffnen Sie die neue room.glb in Three.js (oder nutzen das Debug-Overlay).
+//   2. Messen Sie die Seitenlänge eines Feldes in Blender-Units = BLENDER_STEP.
+//   3. Setzen Sie ROOM_SCALE = 1.0 / BLENDER_STEP.
+//   4. Finden Sie die Schachfeld-Mitte in Blender-Koordinaten (x, y, z) = BC.
+//   5. Setzen Sie ROOM_OFFSET = new THREE.Vector3(-BC.x * ROOM_SCALE, -BC.y * ROOM_SCALE, -BC.z * ROOM_SCALE).
+const ROOM_SCALE = 1 / 0.512; // ein Blender-Feld (0.512 m) → eine Three.js-Unit
+// ROOM_OFFSET.z = 15.426: korrigiert, sodass die aktuellen Feldmittel mit
+// squareToWorld ausgerichtet sind (sq_a1 → Z=+3.5, sq_a8 → Z=−3.5).
+// Der ursprüngliche Wert 15.826 verschob Felder 0.4 Units zu weit in +Z,
+// was zu X-Z-Fehlausrichtung bei Hover/Markierung führte.
 const ROOM_OFFSET = new THREE.Vector3(-11.123, -3.833, 15.426);
-// Actual playing surface Y — measured from board_base_plate top face in raum2.blend:
+// Tatsächliche Spieloberfläche Y — gemessen an der board_base_plate-Oberseite in raum2.blend:
 // Blender Z=2.4221 → Three.js Y=0.898.
-// Drives: board.group.position.y, piece anchor Y, and interaction surfaceY.
-// Re-measure after any Blender export that repositions the chess board.
+// Beeinflusst: board.group.position.y, Figuren-Anker Y und Interaktions-surfaceY.
+// Nach jedem Blender-Export, der das Schachfeld verschiebt, neu messen.
 const BOARD_SURFACE_Y = 0.898; // = 2.4221 * ROOM_SCALE + ROOM_OFFSET.y
 
-// ── Camera presets ─────────────────────────────────────────────────────────
-// Room bounds in Three.js (after ROOM_OFFSET.z correction):
-//   X −29.6..+10.8  Y −5.8..+16.1  Z −13.0..+31.1  (all Z values are 0.4 less than before)
-// Key areas:
-//   chess board   → Three.js (0, 0.93, 0)
-//   workbench     → monitors at X ≈ −26.3, Y = 3.22, Z = 12.0–24.0
-//   display case  → centre (−24.9, 2.7, −8.0)
-//   cert frames   → centre (−28.4, 4.7, 1.2)
+// ── Kamera-Presets ────────────────────────────────────────────────────────
+// Raum-Grenzen in Three.js (nach ROOM_OFFSET.z-Korrektur):
+//   X −29.6..+10.8  Y −5.8..+16.1  Z −13.0..+31.1  (alle Z-Werte sind 0.4 weniger)
+// Wichtige Bereiche:
+//   Schachfeld    → Three.js (0, 0.93, 0)
+//   Werkbank      → Monitore bei X ≈ −26.3, Y = 3.22, Z = 12.0–24.0
+//   Vitrine       → Mitte (−24.9, 2.7, −8.0)
+//   Zertifikats-  → Mitte (−28.4, 4.7, 1.2)
+//   rahmen
 //
-// MENU_CAMERA_PRESET and overview MUST remain identical — "Raum erkunden" skips
-// the introTransition so the camera is already at the overview position.
+// MENU_CAMERA_PRESET und overview müssen identisch bleiben — "Raum erkunden" überspringt
+// die introTransition und die Kamera ist bereits in der Übersicht-Position.
 const MENU_CAMERA_PRESET: CameraPreset = {
   position: { x: 1.8, y: 8.41, z: 66.99 },
   target: { x: -14.76, y: 6.0, z: 8.95 }
 };
 
-// Portrait menu: one zoom step closer (radius × 0.9) so the room feels
-// closer on narrow screens, but still 2 steps away from the max-zoom
-// overview position used in room explore.
+// Portrait-Menü: ein Zoom-Schritt näher (Radius × 0.9) sodass der Raum
+// auf schmalen Bildschirmen näher wirkt, aber immer noch 2 Schritte vom
+// maximalen Zoom entfernt ist (Übersicht in Raum-Erkunden).
 const PORTRAIT_MENU_CAMERA_PRESET: CameraPreset = (() => {
   const dx = MENU_CAMERA_PRESET.position.x - MENU_CAMERA_PRESET.target.x;
   const dy = MENU_CAMERA_PRESET.position.y - MENU_CAMERA_PRESET.target.y;
@@ -256,32 +258,32 @@ const PORTRAIT_MENU_CAMERA_PRESET: CameraPreset = (() => {
 })();
 
 const ROOM_FOCUS_TARGET_PRESETS: Record<Exclude<RoomFocusTargetId, 'board'>, CameraPreset> = {
-  // Display case — back-left of the room.
+  // Vitrine — hinten-links im Raum.
   displayCase: {
     position: { x: -20.5, y: 4.5, z: 9.0 },
     target: { x: -24.9, y: 2.7, z: -8.0 }
   },
-  // Full-room overview — same as MENU_CAMERA_PRESET (see above).
+  // Vollständige Raum-Übersicht — gleich wie MENU_CAMERA_PRESET (siehe oben).
   overview: {
     position: { x: 1.8, y: 8.41, z: 66.99 },
     target: { x: -14.76, y: 6.0, z: 8.95 }
   },
-  // Workbench monitor wall.
+  // Werkbank-Monitor-Wand.
   workbench: {
     position: { x: -9.5, y: 3.5, z: 18.0 },
     target: { x: -26.27, y: 3.22, z: 18.01 }
   },
-  // Certificate / picture frames — left wall.
+  // Zertifikate / Bilderrahmen — linke Wand.
   pictureFrame: {
     position: { x: -7.0, y: 3.5, z: 1.2 },
     target: { x: -28.4, y: 4.5, z: 1.2 }
   },
-  // Close-up of first certificate (top-left) — navigated to by clicking the frame.
+  // Nahaufnahme des ersten Zertifikats (oben-links) — navigiert durch Klick.
   pictureFrameDetail: {
     position: { x: -21.4, y: 7.0, z: 6.0 },
     target: { x: -28.4, y: 7.0, z: 6.0 }
   },
-  // Monitor close-up — camera zoomed fully into the workbench screen.
+  // Monitor-Nahaufnahme — Kamera vollständig hinein in den Werkbank-Bildschirm.
   webEmbed: {
     position: { x: -24.5, y: 3.22, z: 18.01 },
     target: { x: -26.27, y: 3.22, z: 18.01 }
@@ -320,20 +322,20 @@ const ROOM_HOTSPOT_DEFINITIONS: ReadonlyArray<{
   }
 ];
 
-// Interactive picture frames shown when focused on the pictureFrame target.
-// Each entry defines the world-space center of the frame for screen projection.
-// Horizontal step: -3.29 Z units per frame. Upper row Y=7.0, lower row Y=3.2.
+// Interaktive Bilderrahmen angezeigt wenn auf das pictureFrame-Ziel fokussiert.
+// Jeder Eintrag definiert die Welt-Koordinaten der Rahmenmitte für die Bildschirm-Projektion.
+// Horizontaler Schritt: -3.29 Z-Units pro Rahmen. Oben Y=7.0, unten Y=3.2.
 const PICTURE_FRAME_ANCHORS: ReadonlyArray<{ id: string; anchor: THREE.Vector3; label: string }> = [
-  // Upper row (left → right)
-  { id: 'frame0', anchor: new THREE.Vector3(-28.4, 7.0,  6.0),  label: 'Certificate' },
-  { id: 'frame2', anchor: new THREE.Vector3(-28.4, 7.0,  2.71), label: 'Certificate' },
-  { id: 'frame3', anchor: new THREE.Vector3(-28.4, 7.0, -0.76), label: 'Certificate' },
-  { id: 'frame4', anchor: new THREE.Vector3(-28.4, 7.0, -4.05), label: 'Certificate' },
-  // Lower row (left → right)
-  { id: 'frame1', anchor: new THREE.Vector3(-28.4, 3.2,  6.0),  label: 'Certificate' },
-  { id: 'frame5', anchor: new THREE.Vector3(-28.4, 3.2,  2.71), label: 'Certificate' },
-  { id: 'frame6', anchor: new THREE.Vector3(-28.4, 3.2, -0.76), label: 'Certificate' },
-  { id: 'frame7', anchor: new THREE.Vector3(-28.4, 3.2, -4.05), label: 'Certificate' }
+  // Obere Reihe (links → rechts)
+  { id: 'frame0', anchor: new THREE.Vector3(-28.4, 7.0,  6.0),  label: 'Zertifikat' },
+  { id: 'frame2', anchor: new THREE.Vector3(-28.4, 7.0,  2.71), label: 'Zertifikat' },
+  { id: 'frame3', anchor: new THREE.Vector3(-28.4, 7.0, -0.76), label: 'Zertifikat' },
+  { id: 'frame4', anchor: new THREE.Vector3(-28.4, 7.0, -4.05), label: 'Zertifikat' },
+  // Untere Reihe (links → rechts)
+  { id: 'frame1', anchor: new THREE.Vector3(-28.4, 3.2,  6.0),  label: 'Zertifikat' },
+  { id: 'frame5', anchor: new THREE.Vector3(-28.4, 3.2,  2.71), label: 'Zertifikat' },
+  { id: 'frame6', anchor: new THREE.Vector3(-28.4, 3.2, -0.76), label: 'Zertifikat' },
+  { id: 'frame7', anchor: new THREE.Vector3(-28.4, 3.2, -4.05), label: 'Zertifikat' }
 ];
 
 export function createBoardPreviewScene({
@@ -351,12 +353,12 @@ export function createBoardPreviewScene({
   const stage = createStageScene(container, onStateChange, onSquareClick, currentPieces);
   const lookAround: LookAroundControls = createLookAroundControls(
     stage.renderer.domElement,
-    // onChange — called on every touch-move. Always sync DOM so hotspot buttons
-    // (overview + pictureFrame) follow the rotated camera without a frame lag.
+    // onChange — wird bei jedem Touch-Move aufgerufen. DOM immer synchronisieren damit
+    // Hotspot-Buttons (Übersicht + Bilderrahmen) der rotierten Kamera ohne Frame-Lag folgen.
     () => { onStateChange?.(); }
   );
   const size = new THREE.Vector2();
-  // Reusable scratch vector — avoids per-frame Vector3 allocation in hotspot projection.
+  // Wiederverwendbarer Scratch-Vektor — vermeidet Pro-Frame-Vector3-Speicherung in Hotspot-Projektion.
   const _projScratch = new THREE.Vector3();
   const clockState = { elapsedMs: 0 };
   let presentationMode: BoardPresentationStateInput['mode'] = 'board';
@@ -394,7 +396,7 @@ export function createBoardPreviewScene({
     lookAround.setMaxYawLeft(isPortrait ? 13 : 45);
     render();
     // Hotspot-Positionen nach Resize neu berechnen — immer wenn roomExplore
-    // aktiv ist, da alle 3D-projizierten Buttons (overview + pictureFrame)
+    // aktiv ist, da alle 3D-projizierten Buttons (Übersicht + Bilderrahmen)
     // auf Canvas-Pixel-Koordinaten basieren und nach einem Resize falsch liegen.
     // requestAnimationFrame stellt sicher, dass onStateChange erst nach
     // vollständiger Initialisierung (preview-Rückgabe in game.ts) aufgerufen
@@ -424,9 +426,9 @@ export function createBoardPreviewScene({
     clockState.elapsedMs += deltaMs;
 
     const seconds = clockState.elapsedMs / 1000;
-    // Subtle overhead drift on the key light — keeps the board feeling alive
-    // without visible flicker on static geometry.  Only active in boardFocus;
-    // in room explore the moving shadow makes the floor look like it rotates.
+    // Subtile Überkopf-Drift des Key-Lichts — hält das Board lebedig
+    // ohne sichtbares Flimmern auf statischer Geometrie. Aktiv nur in boardFocus;
+    // in Raum-Erkunden würde der bewegte Schatten aussehen wie Bodendrehung.
     if (startFlowMode === 'boardFocus') {
       stage.lights.key.position.x = -9 + Math.sin(seconds * 0.18) * 1.5;
       stage.lights.key.position.z =  5 + Math.cos(seconds * 0.13) * 1.5;
@@ -444,8 +446,8 @@ export function createBoardPreviewScene({
   }
 
   function render(): void {
-    // Render the CCTV feed into its off-screen target before the main pass
-    // so the screen texture is up to date when bloom composites the scene.
+    // CCTV-Feed in sein Off-Screen-Ziel rendern VOR dem Hauptpass
+    // damit die Bildschirm-Textur aktuell ist wenn Bloom die Szene zusammenstellt.
     stage.cctvScreen.renderToTarget(stage.scene, stage.renderer);
     stage.bloom.render(stage.scene, stage.camera);
   }
@@ -562,13 +564,13 @@ export function createBoardPreviewScene({
 
     applyCameraPreset(stage.camera, preset);
 
-    // Look-around (touch only): rotate view direction ±45° while keeping
-    // camera position fixed. Active in the four user-facing areas:
-    //   overview (Raum erkunden), displayCase (Zertifikate),
-    //   pictureFrame (Leistungsnachweise), workbench (Portfolio)
-    // Disabled in: webEmbed (iframe covers the view), pictureFrameDetail
-    // (close-up), boardFocus (board camera takes over), menu/introTransition.
-    // Must be fully arrived at the target (not mid-transition).
+    // Look-Around (nur Touch): Blickrichtung ±45° drehen während Kamera-Position
+    // fix bleibt. Aktiv in vier Benutzer-Bereichen:
+    //   Übersicht (Raum erkunden), Vitrine (Zertifikate),
+    //   Bilderrahmen (Leistungsnachweise), Werkbank (Portfolio)
+    // Deaktiviert in: webEmbed (iframe bedeckt die Ansicht), pictureFrameDetail
+    // (Nahaufnahme), boardFocus (Board-Kamera übernimmt), menu/introTransition.
+    // Muss vollständig am Ziel angekommen sein (nicht unter Transition).
     const LOOK_AROUND_TARGETS: ReadonlyArray<RoomFocusTargetId> = [
       'overview', 'displayCase', 'pictureFrame', 'workbench'
     ];
@@ -583,17 +585,17 @@ export function createBoardPreviewScene({
       const { yaw, pitch } = lookAround.getOffset();
       if (yaw !== 0 || pitch !== 0) {
         const pos = stage.camera.position.clone();
-        // Base look direction: preset position → preset target
+        // Basis-Blickrichtung: preset-Position → preset-Ziel
         const forward = new THREE.Vector3(
           preset.target.x - preset.position.x,
           preset.target.y - preset.position.y,
           preset.target.z - preset.position.z
         ).normalize();
-        // Right axis for pitch (perpendicular to forward + world-up)
+        // Rechts-Achse für Neigung (senkrecht zu Forward + World-Up)
         const right = new THREE.Vector3()
           .crossVectors(forward, new THREE.Vector3(0, 1, 0))
           .normalize();
-        // Apply yaw around world Y, then pitch around right vector
+        // Yaw um World-Y anwenden, dann Pitch um Rechts-Vektor
         forward
           .applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw)
           .applyAxisAngle(right, pitch)
@@ -608,8 +610,8 @@ export function createBoardPreviewScene({
       return null;
     }
 
-    // Room free camera is active — return its live pose so applyStartFlowCameraPose
-    // applies it every frame, overriding any cameraController movement.
+    // Raum-Freikamera ist aktiv — rückgabe der Live-Position damit applyStartFlowCameraPose
+    // sie jeden Frame anwendet und Bewegungen der cameraController überschreibt.
     if (roomCameraFree) {
       return stage.roomCameraControls.getPose();
     }
@@ -630,11 +632,11 @@ export function createBoardPreviewScene({
     const fromPreset = (startFlowFocusFromTarget === 'overview' && freeCameraExitPreset !== null)
       ? freeCameraExitPreset
       : getRoomFocusTargetPreset(startFlowFocusFromTarget);
-    // When transitioning TO overview the free camera will activate at the
-    // zoomed-in resting position.  Use that as toPreset so the lerp ends
-    // exactly there and no jump occurs when the free camera takes over.
-    // Exception: when returning to menu we want to land at the exact menu
-    // camera position (baseRadius), not the zoomed-in variant.
+    // Wenn zum overview übergegangen wird aktiviert sich die Freikamera in der
+    // gezoomten Ruheposition. Das dient als toPreset damit die Interpolation
+    // genau dort endet und kein Sprung auftritt wenn die Freikamera übernimmt.
+    // Ausnahme: wenn zum Menü zurückgekehrt wird soll man genau in der Menü-
+    // Kamera-Position landen (baseRadius), nicht in der gezoomten Variante.
     const toPreset = startFlowFocusTarget === 'overview'
       ? (startFlowPendingMenuReturn
           ? getRoomFocusTargetPreset('overview')
@@ -784,14 +786,14 @@ export function createBoardPreviewScene({
         activePictureFrameDetailId = nextState.pictureFrameDetailId;
       }
 
-      // Pieces are only shown in boardFocus — they float visibly in room-explore
-      // otherwise.  The board group stays permanently hidden (room GLB provides
-      // the visual; raycasting via board.squares is unaffected by visibility).
+      // Figuren werden nur in boardFocus gezeigt — sie schweben sichtbar in Raum-Erkunden.
+      // Die Board-Gruppe bleibt permanent versteckt (Raum-GLB stellt die Grafik;
+      // Raycasting via board.squares ist von visibility nicht beeinflusst).
       const isBoardFocus = startFlowMode === 'boardFocus';
       stage.pieceLayer.group.visible = isBoardFocus;
 
-      // Hide the static GLB room pieces when boardFocus is active so they
-      // don't overlap the Three.js engine pieces.  Show them in all other modes.
+      // Statische GLB-Raum-Figuren verstecken wenn boardFocus aktiv ist damit sie
+      // nicht die Three.js-Engine-Figuren überlagern. In allen anderen Modi zeigen.
       const roomPiecesVisible = !isBoardFocus;
       for (const node of stage.roomPieceNodes) {
         if (node.visible !== roomPiecesVisible) {
@@ -799,10 +801,10 @@ export function createBoardPreviewScene({
         }
       }
 
-      // ── Room free camera ──────────────────────────────────────────────────
-      // Free-roam is active while in roomExplore at the overview target with
-      // no pending transition.  Any other target or in-flight transition hands
-      // control back to the preset lerp system.
+      // ── Freikamera des Raums ──────────────────────────────────────────────────
+      // Freie Bewegung ist aktiv wenn in roomExplore beim overview-Ziel ohne
+      // ausstehende Transition. Jedes andere Ziel oder aktive Transition gibt
+      // Kontrolle zurück an das Preset-Interpolationssystem.
       const shouldBeFree =
         startFlowMode === 'roomExplore' &&
         startFlowFocusTarget === 'overview' &&
@@ -810,13 +812,13 @@ export function createBoardPreviewScene({
         !startFlowPendingMenuReturn;
 
       if (shouldBeFree && !roomCameraFree) {
-        // Seed controls from the overview preset so the camera starts at the
-        // correct position.  The user can then orbit/pan freely from there.
+        // Steuerungen von der overview-Preset aus initialisieren damit die Kamera
+        // in der richtigen Position startet. Der Benutzer kann dann frei dahinter orbiten/scannen.
         stage.roomCameraControls.setPose(ROOM_FOCUS_TARGET_PRESETS.overview);
         freeCameraExitPreset = null;
-        // Only play the entrance zoom when first entering from the menu.
-        // When returning from a focus target the transition already moved the
-        // camera; we land at the zoomed-in position without a second animation.
+        // Nur den Eingangs-Zoom spielen wenn zum ersten Mal vom Menü eintritt.
+        // Wenn von einem Fokus-Ziel zurück kommt hat die Transition die Kamera
+        // bereits bewegt; wir landen in der gezoomten Position ohne zweite Animation.
         if (startFlowFocusFromTarget === 'overview') {
           stage.roomCameraControls.startEntranceAnimation();
         }
@@ -825,16 +827,16 @@ export function createBoardPreviewScene({
       } else if (!shouldBeFree && roomCameraFree) {
         stage.roomCameraControls.setEnabled(false);
         if (startFlowMode === 'menu') {
-          // Returning to menu: animate the zoom-out so the camera doesn't snap.
-          // syncStartFlowState won't be called again in a tight loop here, so
-          // the animateExit callback reliably fires.
+          // Zurück zum Menü: animiert das Zoom-Out damit die Kamera nicht springt.
+          // syncStartFlowState wird hier nicht wieder in enger Schleife aufgerufen,
+          // deshalb feuert der animateExit-Callback zuverlässig.
           stage.roomCameraControls.animateExit(() => {
             roomCameraFree = false;
           });
         } else {
-          // Navigating to a focus target: capture the live free-camera pose so
-          // the transition lerp starts from the actual zoomed position, not the
-          // fixed overview preset.
+          // Navigation zu Fokus-Ziel: erfasse die Live-Freikamera-Position damit
+          // die Transitions-Interpolation von der aktuellen gezoomten Position startet,
+          // nicht vom fixen overview-Preset.
           freeCameraExitPreset = stage.roomCameraControls.getPose();
           roomCameraFree = false;
         }
@@ -908,23 +910,23 @@ function createStageScene(
   pieces: ChessPieceState[]
 ): StageScene {
   const scene = new THREE.Scene();
-  // Fog calibrated for the overview camera at Z=68 looking at room centre Z≈9.
-  // Near=80 keeps everything within the room crisp (back wall is ~81 units away);
-  // far=150 lets geometry fade out gently beyond the far clip.
-  // Board focus uses much shorter camera distances so fog is invisible there.
+  // Fog kalibriert für overview-Kamera bei Z=68 schaut auf Raum-Mitte Z≈9.
+  // Near=80 hält alles im Raum scharf (Rückwand ist ~81 Units entfernt);
+  // far=150 lässt Geometrie sanft verblassen jenseits des Far-Clips.
+  // Board-Fokus nutzt viel kürzere Kamera-Abstände deshalb Fog ist unsichtbar dort.
   scene.fog = new THREE.Fog('#0d0d18', 80, 150);
 
-  // antialias: true gives MSAA on the intermediate passes inside BloomEffect;
-  // the final composite blit to screen also benefits from it.
+  // antialias: true gibt MSAA auf den Zwischendurchläufen in BloomEffect;
+  // die finale zusammengefügte Ausgabe zum Bildschirm profitiert auch davon.
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-  // outputColorSpace + toneMapping are handled inside BloomEffect's composite
-  // shader (ACESFilmic + sRGB gamma).  We set NoToneMapping on the renderer
-  // so it doesn't double-apply tone-mapping when rendering to the scene RT.
+  // outputColorSpace + toneMapping werden in BloomEffect's Composite
+  // Shader behandelt (ACESFilmic + sRGB Gamma). Wir setzen NoToneMapping auf dem Renderer
+  // deshalb wendet er keine doppelte Tone-Mapping an beim Rendern zum Scene RT.
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.shadowMap.enabled = true;
-  // PCFSoftShadowMap is deprecated in r183 — THREE falls back to PCFShadowMap.
+  // PCFSoftShadowMap ist veraltet in r183 — THREE fällt zurück auf PCFShadowMap.
   renderer.shadowMap.type = THREE.PCFShadowMap;
-  // Tone-mapping is applied in the BloomEffect composite shader.
+  // Tone-Mapping wird in BloomEffect Composite Shader angewendet.
   renderer.toneMapping = THREE.NoToneMapping;
   renderer.toneMappingExposure = 1.0;
   renderer.domElement.className = 'board-canvas';
@@ -932,9 +934,9 @@ function createStageScene(
   container.innerHTML = '';
   container.append(renderer.domElement);
 
-  // PMREM environment map — gives metallic/glossy GLB surfaces physically
-  // correct reflections.  RoomEnvironment generates a simple neutral studio
-  // probe; it's quick to compute and avoids an external HDRI asset.
+  // PMREM Umwelt-Kartierung — verleiht metallische/glänzende GLB-Oberflächen
+  // physikalisch korrekte Reflexionen. RoomEnvironment erzeugt eine einfache
+  // neutrale Studio-Sonde; es ist schnell zu berechnen und vermeidet ein externes HDRI-Asset.
   const pmrem = new THREE.PMREMGenerator(renderer);
   pmrem.compileEquirectangularShader();
 
@@ -958,8 +960,8 @@ function createStageScene(
   const roomCameraControls = createRoomCameraControls({
     domElement: renderer.domElement,
     onPoseChange: (preset) => {
-      // Apply immediately for responsive feedback; applyStartFlowCameraPose
-      // will also apply it every frame while roomCameraFree is true.
+      // Sofort anwenden für responsiven Feedback; applyStartFlowCameraPose
+      // wendet es auch jeden Frame an während roomCameraFree wahr ist.
       camera.position.set(preset.position.x, preset.position.y, preset.position.z);
       camera.lookAt(preset.target.x, preset.target.y, preset.target.z);
       bloom.render(scene, camera);
@@ -985,33 +987,34 @@ function createStageScene(
   scene.add(board.group);
   scene.add(pieceLayer.group);
 
-  // Apply PMREM environment map for metallic surface reflections.
-  // Low sigma (0.04) keeps sharp reflections on polished surfaces.
-  // environmentIntensity is kept low so reflections add sheen without
-  // washing out the dark cyber atmosphere.
+  // PMREM Umwelt-Kartierung auf metallische Oberflächen anwenden.
+  // Niedriges Sigma (0.04) behält scharfe Reflexionen auf polierten Oberflächen.
+  // environmentIntensity bleibt niedrig damit Reflexionen Glanz hinzufügen ohne
+  // die dunkle Cyber-Atmosphäre auszuwaschen.
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   scene.environmentIntensity = 0.12;
   pmrem.dispose();
 
-  // The room GLB occupies the same world position as the Three.js board, so
-  // we permanently hide the board's visual group.  The individual board.squares
-  // meshes are still raycasted directly by createBoardInteraction (Three.js
-  // does not check visible on objects passed to intersectObjects, so hit-
-  // testing is unaffected).  Pieces are hidden until boardFocus is entered.
+  // Das Raum-GLB besetzt die gleiche Welt-Position wie das Three.js-Board,
+  // deshalb verstecken wir permanent die Board-Visual-Gruppe. Die einzelnen
+  // board.squares-Meshes werden immer noch direkt durch createBoardInteraction
+  // raycasted (Three.js prüft nicht visible auf Objekte die zu intersectObjects
+  // übergeben werden, deshalb ist Hit-Testing unbeeinträchtigt).
+  // Figuren werden versteckt bis boardFocus eintritt.
   board.group.visible = false;
-  board.group.position.y = BOARD_SURFACE_Y; // align raycasting squares with room board surface
+  board.group.position.y = BOARD_SURFACE_Y; // Raycast-Quadrate mit Raum-Board-Oberfläche ausrichten
   pieceLayer.group.visible = false;
 
-  // Room GLB: scale + translate so the Blender chess board center aligns with
-  // the Three.js game origin (0, 0, 0).  ROOM_SCALE and ROOM_OFFSET are the
-  // calibration constants defined at the top of this file.
+  // Raum-GLB: skalieren + verschieben damit die Blender-Schachfeld-Mitte mit
+  // dem Three.js-Spiel-Ursprung (0, 0, 0) ausgerichtet ist. ROOM_SCALE und
+  // ROOM_OFFSET sind die Kalibrierungs-Konstanten oben in dieser Datei definiert.
   const roomGroup = new THREE.Group();
   roomGroup.scale.setScalar(ROOM_SCALE);
   roomGroup.position.copy(ROOM_OFFSET);
   scene.add(roomGroup);
 
-  // Static chess piece nodes from the room GLB — hidden when boardFocus is
-  // active (Three.js engine pieces take over) and shown otherwise.
+  // Statische Schachfiguren-Knoten aus dem Raum-GLB — versteckt wenn boardFocus
+  // aktiv (Three.js-Engine-Figuren übernehmen) und sichtbar ansonsten.
   const roomPieceNodes: THREE.Object3D[] = [];
   const ROOM_PIECE_PATTERN = /^[wb]_(bishop|rook|knight|queen|king|pawn)/i;
   const cctvScreen = createCCTVScreen();
@@ -1069,8 +1072,8 @@ function easeInOutCubic(value: number): number {
   return value < 0.5 ? 4 * value * value * value : 1 - Math.pow(-2 * value + 2, 3) / 2;
 }
 
-// Lerps between two presets with a parabolic Y arc on the camera position.
-// arcLift defines the maximum height added at t=0.5 (sin bell curve).
+// Interpoliert zwischen zwei Presets mit einem parabolischen Y-Bogen auf der Kamera-Position.
+// arcLift definiert die maximale Höhe die bei t=0.5 hinzugefügt wird (Sinus-Glockenkurve).
 function arcLerpCameraPreset(from: CameraPreset, to: CameraPreset, t: number, arcLift: number): CameraPreset {
   const base = lerpCameraPreset(from, to, t);
   const lift = arcLift * Math.sin(Math.PI * t);
