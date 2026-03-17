@@ -116,18 +116,18 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     selectedSquare: null
   };
 
-  // Intro overlay gate: resolves when room GLB is first loaded AND first piece
-  // asset set completes.  Both are required so the scene looks correct on entry.
+  // Intro-Overlay-Gate: wird aufgelöst wenn Raum-GLB zuerst geladen wurde UND erstes
+  // Figuren-Asset-Set abgeschlossen ist. Beide sind nötig damit die Szene beim Eintritt korrekt aussieht.
   let resolveRoomLoaded!: () => void;
   let resolvePiecesLoaded!: () => void;
   const assetsReady = Promise.all([
     new Promise<void>(r => { resolveRoomLoaded = r; }),
     new Promise<void>(r => { resolvePiecesLoaded = r; })
   ]).then(() => new Promise<void>(resolve => {
-    // GLBs are downloaded and parsed — but the GPU still needs to compile
-    // WebGL programs (shaders) and upload textures during the first render
-    // frames.  Count 60 rAF ticks, then wait an additional 2 s so all
-    // background tasks (shader compilation, texture uploads) fully settle.
+    // GLBs sind heruntergeladen und geparst — aber die GPU muss noch WebGL-Programme
+    // (Shader) kompilieren und Texturen während der ersten Render-Frames hochladen.
+    // Zähle 60 rAF-Ticks, dann warte 2 s mehr damit alle Background-Aufgaben
+    // (Shader-Kompilierung, Textur-Uploads) vollständig verteilt sind.
     let frames = 0;
     function tick(): void {
       if (++frames >= 60) {
@@ -317,8 +317,8 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   };
 
   const handleRoomHotspotClick = (event: Event): void => {
-    // Forward [data-control] clicks that live inside the hotspots layer
-    // (e.g. the web-embed-nav buttons) to the controls handler.
+    // [data-control]-Klicks die in der Hotspots-Schicht leben
+    // (z.B. web-embed-nav Buttons) an Controls-Handler weiterleiten.
     const target = event.target;
     if (target instanceof HTMLElement && target.closest('[data-control]')) {
       handleControlsClick(event);
@@ -336,7 +336,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     const hotspotButton = target.closest<HTMLButtonElement>('[data-room-hotspot]');
 
     if (!hotspotButton || hotspotButton.disabled) {
-      // Check for picture frame click
+      // Prüfe auf Bilderrahmen-Klick
       const frameDiv = target.closest<HTMLElement>('[data-frame-id]');
       if (frameDiv) {
         activePictureFrameDetailId = frameDiv.dataset.frameId ?? 'frame0';
@@ -407,7 +407,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
         ? renderRoomHotspots(snapshot, hoveredRoomHotspot, hoveredPictureFrameId)
         : '';
 
-    // Toggle body class so CSS can hide the 3D site-header/footer in webEmbed
+    // Body-Klasse umschalten damit CSS den 3D-Site-Header/Footer in webEmbed verstecken kann
     const isWebEmbed =
       !snapshot.startFlow.roomFocusTransitionActive &&
       snapshot.startFlow.currentRoomFocusTarget === 'webEmbed';
@@ -674,7 +674,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
 
       preview.applyBoardAsset(assets);
     } catch {
-      // Asset loading is optional; placeholders stay active on any failure.
+      // Asset-Laden ist optional; Platzhalter bleiben bei Fehlern aktiv.
     }
   }
 
@@ -696,7 +696,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
 
       preview.applyPieceAssets(assets);
     } catch {
-      // Piece asset loading is optional; existing GLBs or placeholders stay active on failure.
+      // Figuren-Asset-Laden ist optional; bestehende GLBs oder Platzhalter bleiben aktiv bei Fehler.
     } finally {
       if (!isDisposed && requestId === pieceAssetRequestId) {
         pieceAssetSetLoading = false;
@@ -708,10 +708,10 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   }
 
   function beginStartFlowTransition(): void {
-    // Skip introTransition — the menu camera already shows the overview, so we
-    // land directly in roomExplore at the overview position without any camera
-    // movement.  The introTransition state and advanceStartFlow path are kept
-    // for backwards compat but are no longer entered from here.
+    // Überspringe introTransition — die Menü-Kamera zeigt bereits die Übersicht,
+    // also landen wir direkt in roomExplore in der Übersicht-Position ohne
+    // Kamera-Bewegung. Der introTransition-Status und advanceStartFlow-Pfad
+    // werden aus Rückwärts-Compat behalten aber werden hier nicht mehr betreten.
     startFlowState = 'roomExplore';
     hoveredRoomHotspot = null;
     roomFocusFromTarget = 'overview';
@@ -722,10 +722,10 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   }
 
   function beginStartFlowTransitionToTarget(target: Exclude<RoomFocusTargetId, 'overview'>): void {
-    // Directly animate from overview (= menu camera) to the given target without
-    // stopping at the overview free-camera state first.  This avoids the
-    // entrance/exit animation conflict that occurs when beginStartFlowTransition
-    // activates roomCameraFree before focusRoomTarget deactivates it.
+    // Animiere direkt von Übersicht (= Menü-Kamera) zum gegebenen Ziel ohne
+    // zuerst bei der Übersicht-Freikamera-Status anzuhalten. Das vermeidet den
+    // Eingangs/Ausgangs-Animations-Konflikt der auftritt wenn beginStartFlowTransition
+    // roomCameraFree aktiviert bevor focusRoomTarget es deaktiviert.
     startFlowState = 'roomExplore';
     hoveredRoomHotspot = null;
     roomFocusFromTarget = 'overview';
@@ -736,7 +736,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   }
 
   function returnToMenu(): void {
-    // Menu camera matches the overview position, so no visible snap occurs.
+    // Menü-Ka mera passt zur Übersicht-Position, deshalb kein sichtbarer Sprung.
     startFlowState = 'menu';
     hoveredRoomHotspot = null;
     hoveredPictureFrameId = null;
@@ -749,8 +749,8 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   }
 
   function returnToMenuFromFocus(): void {
-    // Animate camera back to the overview/menu position first, then switch
-    // to menu state when the transition completes (via pendingMenuReturn).
+    // Animiere Kamera zurück zur Übersicht/Menü-Position zuerst, dann schalte
+    // zu Menü-Status wenn Transition abgeschlossen ist (via pendingMenuReturn).
     pendingMenuReturn = true;
     returnToRoomExplore();
   }
@@ -954,24 +954,24 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   }
 
   function returnToRoomExplore(): void {
-    // Derive the camera origin for the return move from whichever focus mode
-    // is currently active.  The scene's getRoomFocusTargetPreset() resolves
-    // 'board' to the live boardCameraControls pose and 'displayCase' to the
-    // fixed displayCase preset — so the existing lerpCameraPreset path handles
-    // the full transition without any new camera code.
+    // Leite Kamera-Ursprung für Rückkehr-Bewegung von welchem
+    // Fokus-Modus gerade aktiv ist. Szene getRoomFocusTargetPreset() löst
+    // 'board' zur Live-boardCameraControls-Position und 'displayCase' zur
+    // festen displayCase-Preset auf — deshalb existierender lerpCameraPreset-Pfad
+    // handhabt volle Transition ohne neuen Kamera-Code.
     const fromTarget: RoomFocusTargetId =
       startFlowState === 'boardFocus'       ? 'board'       :
       startFlowState === 'displayCaseFocus' ? 'displayCase' :
-      roomFocusTarget; // when already in roomExplore, start from the current target
+      roomFocusTarget; // wenn bereits in roomExplore, starten vom aktuellen Ziel
 
     startFlowState = 'roomExplore';
     hoveredRoomHotspot = null;
     roomFocusFromTarget = fromTarget;
     roomFocusTarget = 'overview';
-    // Start at t=0 so the transition animates rather than snapping.
+    // starten bei t=0 damit Transition animiert anstatt springt.
     roomFocusElapsedMs = 0;
     syncStartFlowToPreview();
-    // Keep the start-flow loop running until the camera reaches overview.
+    // Behalte Start-Flow-Loop laufend bis Kamera overview erreicht.
     ensureStartFlowLoop();
     syncPanels();
   }
@@ -1028,7 +1028,7 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
     return '<div class="room-hotspots-layer"></div>';
   }
 
-  // ── Hotspot buttons (overview only, not during transition) ───────────────
+  // ── Hotspot-Buttons (nur Übersicht, nicht während Transition) ───────────────
   const showHotspots =
     !snapshot.startFlow.roomFocusTransitionActive &&
     (snapshot.startFlow.currentRoomFocusTarget === 'overview' || snapshot.startFlow.currentRoomFocusTarget === null);
@@ -1044,7 +1044,7 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
           : '';
       const subtitle = ROOM_HOTSPOT_SUBTITLES[hotspot.id] ?? '';
 
-      // Clamp so the button never overflows the canvas edge.
+      // Beschränke damit Button nie über Leinwand-Kant überströmt.
       const padX = 70;
       const padY = 40;
       const cx = Math.max(padX, Math.min(hotspot.screenX, snapshot.renderer.width - padX));
@@ -1079,7 +1079,7 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
     `
     : '';
 
-  // ── Picture frame glow rings (pictureFrame focus only) ────────────────
+  // ── Bilderrahmen-Glanz-Ringe (nur pictureFrame Fokus) ────────────────
   const pictureFrameGlows =
     !snapshot.startFlow.roomFocusTransitionActive &&
     snapshot.startFlow.currentRoomFocusTarget === 'pictureFrame'
@@ -1100,8 +1100,8 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
           .join('')
       : '';
 
-  // ── Picture frame detail placeholder (pictureFrameDetail focus only) ──────
-  // Maps frame IDs to semester numbers (top-left → bottom-right order).
+  // ── Bilderrahmen-Detail-Platzhalter (nur pictureFrameDetail Fokus) ──────
+  // Ordnet Rahmen-IDs zu Semester-Nummern (oben-links → unten-rechts Reihenfolge).
   const FRAME_SEMESTER: Record<string, number> = {
     frame0: 1, frame2: 2, frame3: 3, frame4: 4,
     frame1: 5, frame5: 6, frame6: 7, frame7: 8
@@ -1122,7 +1122,7 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
         })()
       : '';
 
-  // ── Web embed overlay (webEmbed focus only) ──────────────────────────────
+  // ── Web-Embed-Overlay (nur webEmbed Fokus) ──────────────────────────────
   const webEmbedOverlay =
     !snapshot.startFlow.roomFocusTransitionActive &&
     snapshot.startFlow.currentRoomFocusTarget === 'webEmbed'
@@ -1151,7 +1151,7 @@ function renderStartFlowControls(
   currentRoomFocusTarget: RoomFocusTargetId | null,
   roomFocusTransitionActive: boolean
 ): string {
-  // ── Display Case focus: single back button ──────────────────────────────
+  // ── Vitrine-Fokus: einzelner Zurück-Button ──────────────────────────────
   if (startFlowState === 'displayCaseFocus') {
     return `
       <div class="control-group">
@@ -1165,14 +1165,14 @@ function renderStartFlowControls(
     `;
   }
 
-  // ── Room explore: only Zur Übersicht + contextual action ────────────────
+  // ── Raum erkunden: nur Zur Übersicht + kontextuelle Aktion ────────────────
   if (startFlowState === 'roomExplore') {
-    // webEmbed: buttons are rendered inside the web-embed-overlay div itself
+    // webEmbed: Buttons werden im web-embed-overlay div selbst gerendert
     if (!roomFocusTransitionActive && currentRoomFocusTarget === 'webEmbed') {
       return '';
     }
 
-    // pictureFrame: overview of all frames — offer back-to-menu
+    // pictureFrame: Überblick aller Rahmen — Zurück-zum-Menü anbieten
     if (!roomFocusTransitionActive && currentRoomFocusTarget === 'pictureFrame') {
       return `
         <div class="control-group">
@@ -1189,7 +1189,7 @@ function renderStartFlowControls(
       `;
     }
 
-    // pictureFrameDetail: only a back-to-pictureFrame button
+    // pictureFrameDetail: nur ein Zurück-zu-Bilderrahmen-Button
     if (!roomFocusTransitionActive && currentRoomFocusTarget === 'pictureFrameDetail') {
       return `
         <div class="control-group">
@@ -1246,7 +1246,7 @@ function renderStartFlowControls(
     `;
   }
 
-  // ── Menu / intro: three entry buttons ───────────────────────────────────
+  // ── Menü / Intro: drei Einstiegs-Buttons ───────────────────────────────────
   const buttonDisabled = startFlowState !== 'menu';
 
   return `
