@@ -9,6 +9,15 @@ export interface Project {
 
 export const projects: Project[] = [
   {
+    id: "future-robotics",
+    title: "IMU Robotic Arm",
+    description:
+      "5-DOF-Roboterarm gesteuert über IMU-Wearable mit BNO055-Sensoren, Flex-Sensor und ESP-NOW-Funkstrecke. Dokumentationsgetrieben entwickelt mit Security- und Safety-Framework.",
+    link: "https://github.com/p-keminer/remote-controlled-robot-arm",
+    coverVariant: "robotics",
+    tags: ["ESP32", "ESP-NOW", "IMU", "Robotik", "C++"],
+  },
+  {
     id: "iot-alarm",
     title: "IoT-Alarmsystem",
     description:
@@ -34,15 +43,6 @@ export const projects: Project[] = [
     link: "https://github.com/p-keminer/cs50x-26",
     coverVariant: "education",
     tags: ["CS50x", "Harvard", "Informatik"],
-  },
-  {
-    id: "future-robotics",
-    title: "Zukünftiges Robotikprojekt",
-    description:
-      "Geplantes Roboterarm-Projekt mit Fernsteuerung und möglicher KI-gestützter Bewegungserkennung.",
-    link: "https://github.com/p-keminer",
-    coverVariant: "robotics",
-    tags: ["Robotik", "KI", "Mechanik"],
   },
   {
     id: "portfolio-site",
