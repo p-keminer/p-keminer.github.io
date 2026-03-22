@@ -12,7 +12,7 @@ export const projects: Project[] = [
     id: "future-robotics",
     title: "IMU Robotic Arm",
     description:
-      "5-DOF-Roboterarm gesteuert über IMU-Wearable mit BNO055-Sensoren, Flex-Sensor und ESP-NOW-Funkstrecke. Dokumentationsgetrieben entwickelt mit Security- und Safety-Framework.",
+      "Armbewegungen in Echtzeit auf einen 5-DOF-Roboterarm übertragen. Wearable mit IMU-Sensoren, Flex-Sensor und ESP-NOW-Funkstrecke – vollständig dokumentiert mit Security- und Safety-Framework.",
     link: "https://github.com/p-keminer/remote-controlled-robot-arm",
     coverVariant: "robotics",
     tags: ["ESP32", "ESP-NOW", "IMU", "Robotik", "C++"],
