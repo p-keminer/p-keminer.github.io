@@ -616,7 +616,7 @@ function getPieceWorldPosition(piece: ChessPieceState): THREE.Vector3 {
 
 function getPieceWorldPositionFromSquare(square: BoardSquare): THREE.Vector3 {
   const world = squareToWorld(square);
-  // 0.898 = BOARD_SURFACE_Y: board_base_plate top in raum2.blend
+  // 0.898 = BOARD_SURFACE_Y: board_base_plate Oberseite in raum2.blend
   // (Blender Z=2.4221 → Three.js Y=0.898).
   return new THREE.Vector3(world.x, 0.898, world.z);
 }

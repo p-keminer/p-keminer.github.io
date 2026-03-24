@@ -102,7 +102,7 @@ export function createSoundController(): SoundController {
           gainNode.gain.setValueAtTime(Math.max(gainNode.gain.value, 0.0001), stopTime);
           gainNode.gain.exponentialRampToValueAtTime(0.0001, stopTime + 0.02);
         } catch {
-          // Ignore best-effort stop errors from browsers with stricter scheduling rules.
+          // Browser mit strengeren Planungsregeln ignorieren – Best-Effort-Stopfehler.
         }
       }
 
@@ -110,7 +110,7 @@ export function createSoundController(): SoundController {
         try {
           oscillator.stop(stopTime + 0.03);
         } catch {
-          // Oscillators may already be stopped.
+          // Oszillatoren können bereits gestoppt sein.
         }
       }
     }

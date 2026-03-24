@@ -25,11 +25,11 @@ export function applyCameraPreset(camera: THREE.PerspectiveCamera, preset: Camer
 
 export function resizeCamera(camera: THREE.PerspectiveCamera, width: number, height: number): void {
   camera.aspect = width / Math.max(height, 1);
-  // On portrait screens (aspect < 1) we treat BASE_FOV as the *horizontal*
-  // field of view we want to preserve, then back-calculate the vertical FOV
-  // the camera actually needs.  On a 9:16 device this yields ~57° vertical
-  // while keeping a ~34° horizontal slice — matching the desktop view width
-  // regardless of how tall the screen is.
+  // Auf Hochformat-Bildschirmen (aspect < 1) behandeln wir BASE_FOV als das *horizontale*
+  // Sichtfeld, das wir beibehalten möchten, und berechnen dann rückwärts das vertikale FOV,
+  // das die Kamera tatsächlich benötigt. Auf einem 9:16-Gerät ergibt dies ~57° vertikal
+  // während ein ~34° horizontales Slice beibehalten wird – was der Desktop-Ansichtsbreite
+  // entspricht, unabhängig davon, wie hoch der Bildschirm ist.
   if (camera.aspect < 1) {
     const baseRad = THREE.MathUtils.degToRad(BASE_FOV);
     const vFov = 2 * Math.atan(Math.tan(baseRad / 2) / camera.aspect);

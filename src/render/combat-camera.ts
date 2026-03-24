@@ -63,7 +63,7 @@ interface CreateCombatCameraControllerOptions {
 
 const TRANSITION_IN_MS = 400;
 const TRANSITION_OUT_MS = 300;
-// Look-at target Y during combat: board surface (0.898) + mid-piece offset (0.42).
+// Look-at Target Y während Combat: Boardfläche (0.898) + Mid-Piece-Offset (0.42).
 const COMBAT_TARGET_HEIGHT = 1.32;
 const COMBAT_CAMERA_HEIGHT = 1.8;
 const COMBAT_SIDE_DISTANCE = 5.5;
