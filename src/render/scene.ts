@@ -19,7 +19,6 @@ import { applyCameraPreset, createBoardCamera, type CameraPreset, resizeCamera }
 import { createBoardInteraction, type BoardInteractionLayer } from './interaction';
 import { createSceneLights, type SceneLights } from './lights';
 import { createBloomEffect, type BloomEffect } from './bloom';
-import { deviceTier } from './device-tier';
 import {
   DEFAULT_PIECE_ASSET_SET,
   loadRoomAsset,
@@ -939,8 +938,7 @@ function createStageScene(
 
   // antialias: true gibt MSAA auf den Zwischendurchläufen in BloomEffect;
   // die finale zusammengefügte Ausgabe zum Bildschirm profitiert auch davon.
-  // Auf Mobile (medium/low) deaktiviert — hohe DPR macht MSAA überflüssig.
-  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: deviceTier === 'high' });
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
   // outputColorSpace + toneMapping werden in BloomEffect's Composite
   // Shader behandelt (ACESFilmic + sRGB Gamma). Wir setzen NoToneMapping auf dem Renderer
   // deshalb wendet er keine doppelte Tone-Mapping an beim Rendern zum Scene RT.

@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { deviceTier } from './device-tier';
 
 export interface LightingPlan {
   ambientIntensity: number;
@@ -48,8 +47,7 @@ export function createSceneLights(): SceneLights {
   key.decay = 1.2;                     // physikalisch plausibles Abklingen
   key.distance = 40;                   // maximale Reichweite
   key.castShadow = plan.castShadows;
-  const shadowRes = deviceTier === 'high' ? 1024 : 512;
-  key.shadow.mapSize.set(shadowRes, shadowRes);
+  key.shadow.mapSize.set(1024, 1024);
   key.shadow.camera.near = 1;
   key.shadow.camera.far = 40;
   key.shadow.bias = -0.002;
