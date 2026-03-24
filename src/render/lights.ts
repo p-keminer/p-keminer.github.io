@@ -52,8 +52,8 @@ export function createSceneLights(): SceneLights {
   key.shadow.mapSize.set(shadowRes, shadowRes);
   key.shadow.camera.near = 1;
   key.shadow.camera.far = 40;
-  key.shadow.bias = -0.0008;
-  key.shadow.normalBias = 0.02;
+  key.shadow.bias = -0.002;
+  key.shadow.normalBias = 0.05;
 
   // Rote Neon-Punktlichter – simulieren die Blender light_red_strat.* Deckenstreifen
   // (rgb 1.0, 0.05, 0.02, 80 W je). Zwei Lichter decken die Streifenlänge ab: eins über der Schachbrett-Seite, eins über der Workstation-Seite.
