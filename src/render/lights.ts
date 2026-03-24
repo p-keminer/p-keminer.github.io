@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { deviceTier } from './device-tier';
 
 export interface LightingPlan {
   ambientIntensity: number;
@@ -39,7 +40,9 @@ export function createSceneLights(): SceneLights {
   // Kühl-weißes Spot-Hauptlicht oben – enger Kegel beleuchtet nur das
   // Schachbrett und nahe Umgebung, nicht den gesamten Raumboden.
   // Vorher DirectionalLight → grauen Schleier auf dem Boden erzeugt.
-  const key = new THREE.SpotLight('#d0e8ff', plan.keyLightIntensity);
+  // Auf Mobile etwas gedämpft damit der Spot nicht zu dominant wirkt.
+  const keyIntensity = deviceTier === 'high' ? plan.keyLightIntensity : plan.keyLightIntensity * 0.65;
+  const key = new THREE.SpotLight('#d0e8ff', keyIntensity);
   key.position.set(-9, 22, 5);
   key.target.position.set(0, 0, 0);    // ziele aufs Schachbrett-Zentrum
   key.angle = Math.PI / 6;             // 30° Kegelöffnung
