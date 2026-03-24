@@ -12,6 +12,8 @@ export interface LookAroundControls {
   setAllowPitch(allow: boolean): void;
   /** Maximalen Yaw-Winkel zum Blick nach links (positives Yaw) in Grad festlegen. Standard 45. */
   setMaxYawLeft(degrees: number): void;
+  /** Maximalen Yaw-Winkel zum Blick nach rechts (negatives Yaw) in Grad festlegen. Standard 45. */
+  setMaxYawRight(degrees: number): void;
   /** Yaw/Pitch auf Null zurücksetzen (aufrufen beim Navigieren zu einem neuen Bereich). */
   reset(): void;
   /** Alle Event-Listener entfernen. */
@@ -43,7 +45,8 @@ export function createLookAroundControls(
 ): LookAroundControls {
   let enabled = false;
   let allowPitch = true;
-  let maxYawPositive = MAX_ANGLE_RAD; // positives Yaw = nach links blicken
+  let maxYawPositive = MAX_ANGLE_RAD;  // positives Yaw = nach links blicken
+  let maxYawNegative = MAX_ANGLE_RAD;  // negatives Yaw = nach rechts blicken
   let yaw = 0;   // horizontaler Versatz (Radiant)
   let pitch = 0; // vertikaler Versatz (Radiant)
 
@@ -102,7 +105,7 @@ export function createLookAroundControls(
     const w = Math.max(domElement.clientWidth, 1);
     const h = Math.max(domElement.clientHeight, 1);
 
-    yaw   = THREE.MathUtils.clamp(yaw   - (dx / w) * MAX_ANGLE_RAD * 2, -MAX_ANGLE_RAD, maxYawPositive);
+    yaw   = THREE.MathUtils.clamp(yaw   - (dx / w) * MAX_ANGLE_RAD * 2, -maxYawNegative, maxYawPositive);
     if (allowPitch) {
       pitch = THREE.MathUtils.clamp(pitch - (dy / h) * MAX_ANGLE_RAD * 2, -MAX_ANGLE_RAD, MAX_ANGLE_RAD);
     }
@@ -147,6 +150,13 @@ export function createLookAroundControls(
       maxYawPositive = THREE.MathUtils.clamp(THREE.MathUtils.degToRad(degrees), 0, MAX_ANGLE_RAD);
       if (yaw > maxYawPositive) {
         yaw = maxYawPositive;
+      }
+    },
+
+    setMaxYawRight(degrees: number): void {
+      maxYawNegative = THREE.MathUtils.clamp(THREE.MathUtils.degToRad(degrees), 0, MAX_ANGLE_RAD);
+      if (yaw < -maxYawNegative) {
+        yaw = -maxYawNegative;
       }
     },
 
