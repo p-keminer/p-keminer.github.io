@@ -263,10 +263,10 @@ const ROOM_FOCUS_TARGET_PRESETS: Record<Exclude<RoomFocusTargetId, 'board'>, Cam
     position: { x: -20.5, y: 4.5, z: 9.0 },
     target: { x: -24.9, y: 2.7, z: -8.0 }
   },
-  // Rechtliche Wand — rechte Seite des Raums beim Eingang.
+  // Rechtliche Wand — rechte Seite des Raums, frontal (wie Workbench-Muster).
   legalWall: {
-    position: { x: -4.0, y: 4.5, z: 32.0 },
-    target: { x: 8.0, y: 3.0, z: 18.0 }
+    position: { x: -8.0, y: 3.5, z: 25.0 },
+    target: { x: 4.0, y: 3.5, z: 25.0 }
   },
   // Vollständige Raum-Übersicht — gleich wie MENU_CAMERA_PRESET (siehe oben).
   overview: {

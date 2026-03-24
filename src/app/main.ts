@@ -57,6 +57,11 @@ function createIntroOverlay(): () => void {
     clearInterval(intervalId);
     overlay.classList.add('intro-hidden');
     overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+
+    // Reveal header + footer now that the 3D scene is rendered.
+    // They start as visibility:hidden (inline CSS in index.html) to prevent flash on load.
+    document.getElementById('site-header')?.style.setProperty('visibility', 'visible');
+    document.getElementById('site-footer')?.style.setProperty('visibility', 'visible');
   };
 }
 

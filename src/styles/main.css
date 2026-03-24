@@ -559,7 +559,7 @@ select {
   transform: translateX(-50%);
   pointer-events: none;
   position: absolute;
-  z-index: 10;
+  z-index: 60;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -852,49 +852,41 @@ body.web-embed-active .web-embed-overlay {
 
 #legal-overlay {
   inset: 0;
+  bottom: 120px;
+  top: 80px;
   opacity: 0;
   pointer-events: none;
   position: fixed;
   transition: opacity 0.35s ease;
   z-index: 50;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  overflow-y: auto;
 }
 
 #legal-overlay.legal-overlay--visible {
   opacity: 1;
+  /* pointer-events bleibt none auf dem Container — nur .legal-overlay__inner fängt Klicks */
+}
+
+.legal-overlay--visible .legal-overlay__inner {
   pointer-events: auto;
 }
 
 .legal-overlay__inner {
-  background: rgba(0, 14, 8, 0.93);
-  border: 1px solid rgba(0, 255, 120, 0.18);
-  border-radius: 4px;
-  box-shadow:
-    0 0 60px rgba(0, 200, 80, 0.08),
-    inset 0 0 40px rgba(0, 0, 0, 0.6);
-  max-height: 70vh;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
   max-width: 560px;
   overflow: hidden;
   position: relative;
   width: 90vw;
-  /* Scan-Linien Projektor-Effekt */
-  background-image:
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 3px,
-      rgba(0, 0, 0, 0.18) 3px,
-      rgba(0, 0, 0, 0.18) 4px
-    ),
-    linear-gradient(rgba(0, 14, 8, 0.93), rgba(0, 14, 8, 0.93));
-  /* Leichte Perspektiv-Neigung für Wand-Eindruck */
-  transform: perspective(900px) rotateY(-4deg);
 }
 
 .legal-overlay__tabs {
-  border-bottom: 1px solid rgba(0, 255, 120, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   display: flex;
   gap: 0;
   padding: 0;
@@ -904,7 +896,7 @@ body.web-embed-active .web-embed-overlay {
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  color: rgba(100, 180, 130, 0.5);
+  color: rgba(255, 255, 255, 0.4);
   cursor: pointer;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.72rem;
@@ -915,28 +907,28 @@ body.web-embed-active .web-embed-overlay {
 }
 
 .legal-overlay__tab:hover {
-  color: rgba(100, 220, 150, 0.85);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .legal-overlay__tab--active {
-  border-bottom-color: rgba(0, 255, 120, 0.55);
-  color: rgba(140, 255, 180, 0.95);
+  border-bottom-color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .legal-overlay__content {
-  color: rgba(160, 220, 180, 0.8);
+  color: rgba(240, 245, 255, 0.85);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.72rem;
   line-height: 1.7;
   max-height: calc(70vh - 48px);
   overflow-y: auto;
   padding: 20px 24px;
-  scrollbar-color: rgba(0, 200, 80, 0.25) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
   scrollbar-width: thin;
 }
 
 .legal-overlay__content h2 {
-  color: rgba(140, 255, 180, 1);
+  color: rgba(255, 255, 255, 0.95);
   font-size: 0.9rem;
   letter-spacing: 0.1em;
   margin: 0 0 16px;
@@ -944,7 +936,7 @@ body.web-embed-active .web-embed-overlay {
 }
 
 .legal-overlay__content h3 {
-  color: rgba(120, 220, 155, 0.9);
+  color: rgba(255, 255, 255, 0.85);
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   margin: 18px 0 6px;
@@ -956,12 +948,12 @@ body.web-embed-active .web-embed-overlay {
 }
 
 .legal-overlay__content a {
-  color: rgba(100, 255, 160, 0.7);
+  color: rgba(200, 230, 255, 0.8);
   text-decoration: none;
 }
 
 .legal-overlay__content a:hover {
-  color: rgba(140, 255, 190, 1);
+  color: rgba(255, 255, 255, 1);
   text-decoration: underline;
 }
 
