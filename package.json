@@ -13,7 +13,8 @@
     "@types/three": "^0.183.1",
     "playwright": "^1.58.2",
     "typescript": "^5.9.3",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vite-plugin-compression2": "^2.5.3"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",

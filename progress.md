@@ -1194,3 +1194,48 @@ Dieser Slice schließt den Room-Explore-Layer vollständig ab: Navigation, Hotsp
 
 - `portfolio-src/node_modules/` ist per `.gitignore` (`node_modules/`) ausgeschlossen — einmalig `npm install` in `portfolio-src/` nötig nach einem frischen Clone.
 - Der Vite-Devserver der 3D-Shell läuft auf Port 5173; für Änderungen an der React-App muss nach `npm run build` der Dev-Server nicht neugestartet werden (Vite HMR greift für statische `public/`-Dateien nicht — manueller Reload nötig).
+
+---
+
+## Hardening Paket 3 — Performance-Optimierung (2026-03-24)
+
+### Umgesetzte Änderungen
+
+1. **Device-Tier-Erkennung** (`src/render/device-tier.ts` NEU)
+   - `high` (Desktop), `medium` (Mobile DPR>1.5), `low` (Mobile DPR≤1.5)
+   - Einmalig beim Import berechnet, als Konstante exportiert
+
+2. **Antialias conditional** (`src/render/scene.ts`)
+   - MSAA nur auf `high` (Desktop) — Mobile-DPR macht es überflüssig
+
+3. **Shadow-Map Fallback** (`src/render/lights.ts`)
+   - 1024×1024 auf Desktop, 512×512 auf Mobile
+
+4. **Bloom-Budget** (`src/render/bloom.ts`)
+   - Halbe Auflösung (Desktop), Viertel-Auflösung (Mobile)
+
+5. **Vite Build-Optimierung** (`vite.config.ts`)
+   - Three.js als separater Chunk (608KB → 128KB Brotli)
+   - Gzip + Brotli Kompression für alle JS/CSS Assets
+   - `vite-plugin-compression2` als devDependency
+
+### Lighthouse-Ergebnisse (Desktop)
+
+| Metrik | Vorher | Nachher | Änderung |
+|---|---|---|---|
+| Performance Score | 15 | 45 | +200% |
+| LCP | 16.6s | 1.0s | -94% |
+| TBT | 3,450ms | 1,530ms | -56% |
+| Speed Index | 8.3s | 2.0s | -76% |
+| TTI | 16.6s | 7.5s | -55% |
+
+### Rote Linien eingehalten
+
+- Desktop-Darstellung visuell unverändert (gleiche Bloom/Shadow-Werte)
+- Keine Eingriffe in Schachlogik, Kamera-Transitions, Material-System, UI-Overlays
+
+### Offene Punkte
+
+- CLS 0.433 unverändert — hängt mit dem Intro-Overlay-Flow zusammen, nicht mit Rendering
+- TBT 1,530ms noch hoch — hauptsächlich Three.js Parse-/Compile-Zeit, schwer reduzierbar
+- Mobile Lighthouse im headless Modus unzuverlässig (WebGL-Last) — am echten Gerät testen

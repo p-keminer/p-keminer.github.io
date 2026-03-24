@@ -12,6 +12,7 @@
  */
 
 import * as THREE from 'three';
+import { deviceTier } from './device-tier';
 
 // ─── Gemeinsamer Vertex-Shader ────────────────────────────────────────────────────
 const VERT = /* glsl */ `
@@ -178,8 +179,10 @@ export function createBloomEffect(
   function setSize(width: number, height: number): void {
     fullW = width;
     fullH = height;
-    halfW = Math.max(1, Math.floor(width / 2));
-    halfH = Math.max(1, Math.floor(height / 2));
+    // Bloom-Auflösung: halbe Res auf Desktop, Viertel auf Mobile (low/medium).
+    const bloomDiv = deviceTier === 'high' ? 2 : 4;
+    halfW = Math.max(1, Math.floor(width / bloomDiv));
+    halfH = Math.max(1, Math.floor(height / bloomDiv));
 
     sceneRT .setSize(fullW, fullH);
     brightRT.setSize(halfW, halfH);

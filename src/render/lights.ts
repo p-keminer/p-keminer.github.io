@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { deviceTier } from './device-tier';
 
 export interface LightingPlan {
   ambientIntensity: number;
@@ -43,8 +44,9 @@ export function createSceneLights(): SceneLights {
   key.position.set(-9, 22, 5);
   key.target.position.set(-9, 0, 9);   // ziele auf Raumzentrum, nicht Weltursprung
   key.castShadow = plan.castShadows;
-  // Shadow Map 1024×1024 statt 2048 – für Innenraum ausreichend, halbe Auflösung = 4x schneller
-  key.shadow.mapSize.set(1024, 1024);
+  // Shadow Map: 1024 Desktop, 512 Mobile — auf kleinen Screens kaum sichtbar.
+  const shadowRes = deviceTier === 'high' ? 1024 : 512;
+  key.shadow.mapSize.set(shadowRes, shadowRes);
   key.shadow.camera.near = 0.5;
   key.shadow.camera.far = 70;
   key.shadow.camera.left = -35;
