@@ -17,6 +17,7 @@ import {
   type StartFlowMode
 } from '../render/scene';
 import { renderControls } from '../ui/controls';
+import { hideLegalOverlay, showLegalOverlay } from '../ui/legal-overlay';
 
 export interface MountedGame {
   advanceTime: (ms: number) => void;
@@ -111,6 +112,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   let hoveredPictureFrameId: string | null = null;
   let activePictureFrameDetailId = 'frame0';
   let pendingMenuReturn = false;
+  let legalWallTab: 'impressum' | 'datenschutz' = 'impressum';
   const controllerState: GameInteractionControllerState = {
     legalTargetSquares: [],
     selectedSquare: null
@@ -232,6 +234,32 @@ export function mountGame(root: HTMLDivElement): MountedGame {
         focusRoomTarget('webEmbed');
       }
 
+      return;
+    }
+
+    if (action === 'legal-impressum' || action === 'legal-datenschutz') {
+      if (startFlowState === 'menu' || startFlowState === 'roomExplore') {
+        legalWallTab = action === 'legal-impressum' ? 'impressum' : 'datenschutz';
+        if (startFlowState === 'menu') {
+          beginStartFlowTransitionToTarget('legalWall');
+        } else {
+          focusRoomTarget('legalWall');
+        }
+      }
+      return;
+    }
+
+    if (action === 'legal-to-overview') {
+      if (startFlowState === 'roomExplore' && roomFocusTarget === 'legalWall') {
+        focusRoomTarget('overview');
+      }
+      return;
+    }
+
+    if (action === 'legal-to-menu') {
+      if (startFlowState === 'roomExplore' && roomFocusTarget === 'legalWall') {
+        returnToMenuFromFocus();
+      }
       return;
     }
 
@@ -379,6 +407,26 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   roomHotspotsRoot.addEventListener('pointerleave', handleRoomHotspotPointerLeave);
   roomHotspotsRoot.addEventListener('pointerover', handleRoomHotspotPointerOver);
 
+  const handleGlobalLegalClick = (event: Event): void => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const btn = target.closest<HTMLButtonElement>('[data-legal-tab]');
+    if (!btn || btn.disabled) return;
+    const tab = btn.dataset.legalTab as 'impressum' | 'datenschutz';
+    if (tab !== 'impressum' && tab !== 'datenschutz') return;
+    legalWallTab = tab;
+    if (startFlowState === 'menu' || startFlowState === 'roomExplore') {
+      if (startFlowState === 'menu') {
+        beginStartFlowTransitionToTarget('legalWall');
+      } else {
+        focusRoomTarget('legalWall');
+      }
+      syncPanels();
+    }
+  };
+
+  document.addEventListener('click', handleGlobalLegalClick);
+
   const syncPanels = (): void => {
     if (startFlowState !== 'roomExplore') {
       hoveredRoomHotspot = null;
@@ -412,6 +460,23 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       !snapshot.startFlow.roomFocusTransitionActive &&
       snapshot.startFlow.currentRoomFocusTarget === 'webEmbed';
     document.body.classList.toggle('web-embed-active', isWebEmbed);
+
+    // Legal Overlay ein-/ausblenden wenn legalWall Transition abgeschlossen
+    const isAtLegalWall =
+      !snapshot.startFlow.roomFocusTransitionActive &&
+      snapshot.startFlow.currentRoomFocusTarget === 'legalWall';
+    if (isAtLegalWall) {
+      showLegalOverlay(legalWallTab);
+    } else {
+      hideLegalOverlay();
+    }
+
+    // Footer-Buttons aktiv/inaktiv je nach Zustand
+    const legalFooterActive =
+      snapshot.startFlow.state === 'menu' || snapshot.startFlow.state === 'roomExplore';
+    document.querySelectorAll<HTMLButtonElement>('[data-legal-tab]').forEach(btn => {
+      btn.disabled = !legalFooterActive;
+    });
   };
 
   const preview = createBoardPreviewScene({
@@ -538,6 +603,8 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       roomHotspotsRoot.removeEventListener('click', handleRoomHotspotClick);
       roomHotspotsRoot.removeEventListener('pointerleave', handleRoomHotspotPointerLeave);
       roomHotspotsRoot.removeEventListener('pointerover', handleRoomHotspotPointerOver);
+      document.removeEventListener('click', handleGlobalLegalClick);
+      hideLegalOverlay();
       preview.dispose();
       root.innerHTML = '';
     },
@@ -1172,6 +1239,23 @@ function renderStartFlowControls(
       return '';
     }
 
+    // legalWall: Impressum / Datenschutz — Zur Übersicht + Zum Hauptmenü
+    if (!roomFocusTransitionActive && currentRoomFocusTarget === 'legalWall') {
+      return `
+        <div class="control-group">
+          <p class="control-label">Rechtliches</p>
+          <div class="control-row">
+            <button class="control-button control-button--secondary" data-control="legal-to-overview" type="button">
+              Zur Übersicht
+            </button>
+            <button class="control-button control-button--secondary" data-control="legal-to-menu" type="button">
+              Zum Hauptmenü
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
     // pictureFrame: Überblick aller Rahmen — Zurück-zum-Menü anbieten
     if (!roomFocusTransitionActive && currentRoomFocusTarget === 'pictureFrame') {
       return `
@@ -1272,7 +1356,7 @@ function renderStartFlowControls(
 }
 
 function isRoomFocusTargetId(value: string | undefined): value is RoomFocusTargetId {
-  return value === 'board' || value === 'displayCase' || value === 'overview' || value === 'workbench' || value === 'pictureFrame' || value === 'pictureFrameDetail' || value === 'webEmbed';
+  return value === 'board' || value === 'displayCase' || value === 'legalWall' || value === 'overview' || value === 'workbench' || value === 'pictureFrame' || value === 'pictureFrameDetail' || value === 'webEmbed';
 }
 
 function isRoomHotspotId(value: string | undefined): value is Exclude<RoomFocusTargetId, 'overview'> {

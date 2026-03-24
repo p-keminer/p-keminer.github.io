@@ -820,6 +820,162 @@ body.web-embed-active .web-embed-overlay {
   font-size: 0.60rem;
 }
 
+.site-footer__legal {
+  display: flex;
+  gap: 12px;
+  margin-left: 8px;
+  pointer-events: auto;
+}
+
+.footer-legal-link {
+  background: none;
+  border: none;
+  color: rgba(95, 111, 134, 0.55);
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  padding: 0;
+  transition: color 200ms ease;
+}
+
+.footer-legal-link:hover:not(:disabled) {
+  color: rgba(139, 231, 255, 0.75);
+}
+
+.footer-legal-link:disabled {
+  cursor: default;
+  opacity: 0.25;
+}
+
+/* ──── Legal Overlay (Impressum / Datenschutz) ───────────────────────────── */
+
+#legal-overlay {
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: fixed;
+  transition: opacity 0.35s ease;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#legal-overlay.legal-overlay--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.legal-overlay__inner {
+  background: rgba(0, 14, 8, 0.93);
+  border: 1px solid rgba(0, 255, 120, 0.18);
+  border-radius: 4px;
+  box-shadow:
+    0 0 60px rgba(0, 200, 80, 0.08),
+    inset 0 0 40px rgba(0, 0, 0, 0.6);
+  max-height: 70vh;
+  max-width: 560px;
+  overflow: hidden;
+  position: relative;
+  width: 90vw;
+  /* Scan-Linien Projektor-Effekt */
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 0, 0, 0.18) 3px,
+      rgba(0, 0, 0, 0.18) 4px
+    ),
+    linear-gradient(rgba(0, 14, 8, 0.93), rgba(0, 14, 8, 0.93));
+  /* Leichte Perspektiv-Neigung für Wand-Eindruck */
+  transform: perspective(900px) rotateY(-4deg);
+}
+
+.legal-overlay__tabs {
+  border-bottom: 1px solid rgba(0, 255, 120, 0.12);
+  display: flex;
+  gap: 0;
+  padding: 0;
+}
+
+.legal-overlay__tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: rgba(100, 180, 130, 0.5);
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  padding: 10px 18px;
+  text-transform: uppercase;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+
+.legal-overlay__tab:hover {
+  color: rgba(100, 220, 150, 0.85);
+}
+
+.legal-overlay__tab--active {
+  border-bottom-color: rgba(0, 255, 120, 0.55);
+  color: rgba(140, 255, 180, 0.95);
+}
+
+.legal-overlay__content {
+  color: rgba(160, 220, 180, 0.8);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  line-height: 1.7;
+  max-height: calc(70vh - 48px);
+  overflow-y: auto;
+  padding: 20px 24px;
+  scrollbar-color: rgba(0, 200, 80, 0.25) transparent;
+  scrollbar-width: thin;
+}
+
+.legal-overlay__content h2 {
+  color: rgba(140, 255, 180, 1);
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  margin: 0 0 16px;
+  text-transform: uppercase;
+}
+
+.legal-overlay__content h3 {
+  color: rgba(120, 220, 155, 0.9);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  margin: 18px 0 6px;
+  text-transform: uppercase;
+}
+
+.legal-overlay__content p {
+  margin: 0 0 10px;
+}
+
+.legal-overlay__content a {
+  color: rgba(100, 255, 160, 0.7);
+  text-decoration: none;
+}
+
+.legal-overlay__content a:hover {
+  color: rgba(140, 255, 190, 1);
+  text-decoration: underline;
+}
+
+@media (max-width: 560px) {
+  .legal-overlay__inner {
+    max-height: 80vh;
+    transform: none;
+    width: 95vw;
+  }
+  .site-footer__legal {
+    gap: 8px;
+  }
+}
+
 /* Mobile menu button */
 .site-header__mobile-menu {
   display: none;

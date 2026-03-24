@@ -44,7 +44,7 @@ export interface BoardPresentationStateInput extends CombatPresentationStateInpu
   combatRemainingMs: CombatCameraStateInput['combatRemainingMs'];
 }
 
-export type RoomFocusTargetId = 'board' | 'displayCase' | 'overview' | 'pictureFrame' | 'pictureFrameDetail' | 'webEmbed' | 'workbench';
+export type RoomFocusTargetId = 'board' | 'displayCase' | 'legalWall' | 'overview' | 'pictureFrame' | 'pictureFrameDetail' | 'webEmbed' | 'workbench';
 
 export type StartFlowMode = 'boardFocus' | 'displayCaseFocus' | 'introTransition' | 'menu' | 'roomExplore';
 
@@ -262,6 +262,11 @@ const ROOM_FOCUS_TARGET_PRESETS: Record<Exclude<RoomFocusTargetId, 'board'>, Cam
   displayCase: {
     position: { x: -20.5, y: 4.5, z: 9.0 },
     target: { x: -24.9, y: 2.7, z: -8.0 }
+  },
+  // Rechtliche Wand — rechte Seite des Raums beim Eingang.
+  legalWall: {
+    position: { x: -4.0, y: 4.5, z: 32.0 },
+    target: { x: 8.0, y: 3.0, z: 18.0 }
   },
   // Vollständige Raum-Übersicht — gleich wie MENU_CAMERA_PRESET (siehe oben).
   overview: {
@@ -661,9 +666,13 @@ export function createBoardPreviewScene({
     const t = easeInOutCubic(startFlowFocusProgress);
     const isDisplayCaseTransition =
       startFlowFocusTarget === 'displayCase' || startFlowFocusFromTarget === 'displayCase';
-    return isDisplayCaseTransition
-      ? arcLerpCameraPreset(fromPreset, toPreset, t, 4.0)
-      : lerpCameraPreset(fromPreset, toPreset, t);
+    const isLegalWallTransition =
+      startFlowFocusTarget === 'legalWall' || startFlowFocusFromTarget === 'legalWall';
+    return isLegalWallTransition
+      ? swingLerpCameraPreset(fromPreset, toPreset, t)
+      : isDisplayCaseTransition
+        ? arcLerpCameraPreset(fromPreset, toPreset, t, 4.0)
+        : lerpCameraPreset(fromPreset, toPreset, t);
   }
 
   function getRoomHotspotSnapshots(): BoardPreviewSnapshot['roomExplore']['hotspots'] {
@@ -1091,6 +1100,30 @@ function arcLerpCameraPreset(from: CameraPreset, to: CameraPreset, t: number, ar
   return {
     position: { x: base.position.x, y: base.position.y + lift, z: base.position.z },
     target: base.target
+  };
+}
+
+// Quadratische Bézier-Kameraschwenk für einen kinematischen Bogenschwenk.
+// Der Kontrollpunkt liegt seitlich und leicht erhöht zwischen Start und Ziel.
+function swingLerpCameraPreset(from: CameraPreset, to: CameraPreset, t: number): CameraPreset {
+  const progress = THREE.MathUtils.clamp(t, 0, 1);
+  const midX = (from.position.x + to.position.x) / 2 + 7;
+  const midY = (from.position.y + to.position.y) / 2 + 2.5;
+  const midZ = (from.position.z + to.position.z) / 2 - 5;
+  const b0 = (1 - progress) * (1 - progress);
+  const b1 = 2 * (1 - progress) * progress;
+  const b2 = progress * progress;
+  return {
+    position: {
+      x: b0 * from.position.x + b1 * midX + b2 * to.position.x,
+      y: b0 * from.position.y + b1 * midY + b2 * to.position.y,
+      z: b0 * from.position.z + b1 * midZ + b2 * to.position.z
+    },
+    target: {
+      x: THREE.MathUtils.lerp(from.target.x, to.target.x, progress),
+      y: THREE.MathUtils.lerp(from.target.y, to.target.y, progress),
+      z: THREE.MathUtils.lerp(from.target.z, to.target.z, progress)
+    }
   };
 }
 
