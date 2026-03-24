@@ -179,8 +179,7 @@ export function createBloomEffect(
   function setSize(width: number, height: number): void {
     fullW = width;
     fullH = height;
-    // Bloom-Auflösung: halbe Res auf Desktop, Viertel auf Mobile (low/medium).
-    const bloomDiv = deviceTier === 'high' ? 2 : 4;
+    const bloomDiv = 2;
     halfW = Math.max(1, Math.floor(width / bloomDiv));
     halfH = Math.max(1, Math.floor(height / bloomDiv));
 
