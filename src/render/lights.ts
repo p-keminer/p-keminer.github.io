@@ -11,7 +11,7 @@ export interface SceneLights {
   ambient: THREE.AmbientLight;
   group: THREE.Group;
   hemi: THREE.HemisphereLight;
-  key: THREE.DirectionalLight;
+  key: THREE.SpotLight;
   neonA: THREE.PointLight;
   neonB: THREE.PointLight;
   rim: THREE.DirectionalLight;
@@ -37,22 +37,21 @@ export function createSceneLights(): SceneLights {
   // Hemisphärenlichter: subtiles kühl-blaues Licht von oben, dunkles Licht von unten.
   const hemi = new THREE.HemisphereLight('#1a1a40', '#080808', 0.50);
 
-  // Kühl-weißes gerichtetes Hauptlicht oben – positioniert im Raumzentrum oben.
-  // Der Raum erstreckt sich in Three.js von X −29..+11, Z −13..+31, Mitte ≈ (−9, 6, 9).
-  // Die große Shadow-Kamera deckt die gesamte Raum-Grundfläche ab.
-  const key = new THREE.DirectionalLight('#d0e8ff', plan.keyLightIntensity);
+  // Kühl-weißes Spot-Hauptlicht oben – enger Kegel beleuchtet nur das
+  // Schachbrett und nahe Umgebung, nicht den gesamten Raumboden.
+  // Vorher DirectionalLight → grauen Schleier auf dem Boden erzeugt.
+  const key = new THREE.SpotLight('#d0e8ff', plan.keyLightIntensity);
   key.position.set(-9, 22, 5);
-  key.target.position.set(-9, 0, 9);   // ziele auf Raumzentrum, nicht Weltursprung
+  key.target.position.set(0, 0, 0);    // ziele aufs Schachbrett-Zentrum
+  key.angle = Math.PI / 6;             // 30° Kegelöffnung
+  key.penumbra = 0.6;                  // weicher Randabfall
+  key.decay = 1.2;                     // physikalisch plausibles Abklingen
+  key.distance = 40;                   // maximale Reichweite
   key.castShadow = plan.castShadows;
-  // Shadow Map: 1024 Desktop, 512 Mobile — auf kleinen Screens kaum sichtbar.
   const shadowRes = deviceTier === 'high' ? 1024 : 512;
   key.shadow.mapSize.set(shadowRes, shadowRes);
-  key.shadow.camera.near = 0.5;
-  key.shadow.camera.far = 70;
-  key.shadow.camera.left = -35;
-  key.shadow.camera.right = 20;
-  key.shadow.camera.top = 25;
-  key.shadow.camera.bottom = -15;
+  key.shadow.camera.near = 1;
+  key.shadow.camera.far = 40;
   key.shadow.bias = -0.0008;
   key.shadow.normalBias = 0.02;
 

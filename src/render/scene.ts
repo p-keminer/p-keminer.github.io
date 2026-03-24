@@ -432,9 +432,9 @@ export function createBoardPreviewScene({
     clockState.elapsedMs += deltaMs;
 
     const seconds = clockState.elapsedMs / 1000;
-    // Subtile Überkopf-Drift des Key-Lichts — hält das Board lebedig
+    // Subtile Überkopf-Drift des Key-Lichts — hält das Board lebendig
     // ohne sichtbares Flimmern auf statischer Geometrie. Aktiv nur in boardFocus;
-    // in Raum-Erkunden würde der bewegte Schatten aussehen wie Bodendrehung.
+    // in Raum-Erkunden würde der bewegte Schatten irritieren.
     if (startFlowMode === 'boardFocus') {
       stage.lights.key.position.x = -9 + Math.sin(seconds * 0.18) * 1.5;
       stage.lights.key.position.z =  5 + Math.cos(seconds * 0.13) * 1.5;
