@@ -1059,7 +1059,10 @@ function createStageScene(
 
   // antialias: true gibt MSAA auf den Zwischendurchläufen in BloomEffect;
   // die finale zusammengefügte Ausgabe zum Bildschirm profitiert auch davon.
-  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
+  // Tablets: MSAA deaktivieren — die 5-Pass Bloom-Pipeline multipliziert den
+  // Fill-Rate-Overhead pro Sample. Auf Tablet-Displays (DPR 1.5+) ist die
+  // Pixeldichte hoch genug dass fehlende MSAA kaum auffällt.
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: !isTabletDevice, powerPreference: 'high-performance' });
   // outputColorSpace + toneMapping werden in BloomEffect's Composite
   // Shader behandelt (ACESFilmic + sRGB Gamma). Wir setzen NoToneMapping auf dem Renderer
   // deshalb wendet er keine doppelte Tone-Mapping an beim Rendern zum Scene RT.
