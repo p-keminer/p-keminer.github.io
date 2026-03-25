@@ -117,17 +117,12 @@ export function createLookAroundControls(
     lastX = e.clientX;
     lastY = e.clientY;
 
-    // Auf Tablets im Portrait-Modus ist die Bildschirmbreite viel größer als
-    // auf Phones, dadurch fühlt sich die gleiche Fingerbewegung träge an.
-    // Sensitivity-Multiplikator hochsetzen damit es sich gleich anfühlt.
     const w = Math.max(domElement.clientWidth, 1);
     const h = Math.max(domElement.clientHeight, 1);
-    const isTabletPortrait = h > w && w >= 600;
-    const sens = isTabletPortrait ? 2.5 : 1;
 
-    yaw   = THREE.MathUtils.clamp(yaw   - (dx / w) * MAX_ANGLE_RAD * 2 * sens, -maxYawNegative, maxYawPositive);
+    yaw   = THREE.MathUtils.clamp(yaw   - (dx / w) * MAX_ANGLE_RAD * 2, -maxYawNegative, maxYawPositive);
     if (allowPitch) {
-      pitch = THREE.MathUtils.clamp(pitch - (dy / h) * MAX_ANGLE_RAD * 2 * sens, -MAX_ANGLE_RAD, MAX_ANGLE_RAD);
+      pitch = THREE.MathUtils.clamp(pitch - (dy / h) * MAX_ANGLE_RAD * 2, -MAX_ANGLE_RAD, MAX_ANGLE_RAD);
     }
 
     onChange?.();
