@@ -192,19 +192,9 @@ Jeder Schritt wird einzeln umgesetzt und manuell verifiziert, bevor der nächste
 
 ---
 
-## Paket 6 – Kamerafahrt Ladesequenz → Raum erkunden
+## Paket 6 – Kamerafahrt Ladesequenz → Raum erkunden ✅
 
-**Status: Offen**
-
-**Aufgaben:**
-- [ ] Ist-Zustand dokumentieren: Start-Flow Kamera-Preset-Übergänge kartieren
-- [ ] Timing + Easing-Kurve anpassen (Smooth-Damp oder kubische Bezier)
-- [ ] Startposition und Orientierungspunkt prüfen
-- [ ] Intro-Overlay-Fade nahtlos gestalten
-- [ ] Mobile: Kamerafahrt auf kleinen Viewports testen
-
-**Dateien:** `src/render/scene.ts`, `src/render/camera.ts`, `src/app/main.ts`, `src/app/game.ts`
-**Abhängigkeiten:** Paket 3 (Performance), Paket 7 (Room-Geometrie)
+**Status: Erledigt**
 
 ---
 

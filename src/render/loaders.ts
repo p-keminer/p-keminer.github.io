@@ -256,6 +256,14 @@ export function createBoardAssetInstance(boardTemplate: THREE.Group): THREE.Grou
   return clone;
 }
 
+// Cache für geteilte Materialien/Geometrien pro Typ+Farbe.
+// Erster Klon erstellt eigene Ressourcen + Palette, alle weiteren teilen sie.
+const pieceAssetCache = new Map<string, THREE.Group>();
+
+export function clearPieceAssetCache(): void {
+  pieceAssetCache.clear();
+}
+
 export function createPieceAssetInstance(
   pieceTemplates: PieceAssetTemplates,
   type: ChessPieceType,
@@ -267,10 +275,21 @@ export function createPieceAssetInstance(
     return null;
   }
 
-  const clone = cloneSceneWithOwnResources(template);
-  clone.name = `${type}-${color}-asset-instance`;
-  applyPiecePalette(clone, color);
-  return clone;
+  const cacheKey = `${type}-${color}`;
+  let canonical = pieceAssetCache.get(cacheKey);
+
+  if (!canonical) {
+    // Erster Klon: eigene Geometrie + Material + Palette
+    canonical = cloneSceneWithOwnResources(template);
+    canonical.name = `${cacheKey}-canonical`;
+    applyPiecePalette(canonical, color);
+    pieceAssetCache.set(cacheKey, canonical);
+  }
+
+  // Weitere Klone: teilen Geometrie, klonen Material für individuelle Opacity
+  const instance = cloneSceneWithSharedGeometry(canonical);
+  instance.name = `${type}-${color}-asset-instance`;
+  return instance;
 }
 
 export function modelPath(fileName: string): string {
@@ -424,6 +443,29 @@ function preparePieceTemplate(root: THREE.Group, type: ChessPieceType, sourceFil
   root.updateMatrixWorld(true);
 
   return root;
+}
+
+function cloneSceneWithSharedGeometry(template: THREE.Group): THREE.Group {
+  const clone = template.clone(true);
+
+  clone.traverse((node) => {
+    if (!(node instanceof THREE.Mesh)) {
+      return;
+    }
+
+    node.castShadow = true;
+    node.receiveShadow = true;
+    // Geometrie wird geteilt (großer Speicher-Gewinn).
+    // Material wird geklont damit Opacity/Visibility pro Figur individuell bleibt.
+    if (Array.isArray(node.material)) {
+      node.material = node.material.map((material) => material.clone());
+      return;
+    }
+
+    node.material = node.material.clone();
+  });
+
+  return clone;
 }
 
 function cloneSceneWithOwnResources(template: THREE.Group): THREE.Group {

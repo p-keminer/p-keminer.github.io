@@ -17,6 +17,7 @@ import {
   getCaptureAnimationDurationMs
 } from './capture-animations';
 import {
+  clearPieceAssetCache,
   createPieceAssetInstance,
   getPieceAssetMode,
   type PieceAssetMode,
@@ -35,6 +36,7 @@ interface RenderResources {
 
 interface RenderedPiece extends RenderResources {
   boardAnchor: THREE.Group;
+  ownsGeometry: boolean;
   presentation: PieceVisualPresentationSettings;
   visualRoot: THREE.Group;
 }
@@ -245,6 +247,7 @@ export function createPieceLayer(initialPieces: ChessPieceState[] = []): ChessPi
     group,
     setPieceAssets: (nextPieceTemplates, pieces) => {
       pieceTemplates = { ...nextPieceTemplates };
+      clearPieceAssetCache();
       combatFeedbackController.clear();
       combatPresentationController.clear();
       clearExitingPieces();
@@ -388,11 +391,20 @@ export function createPieceLayer(initialPieces: ChessPieceState[] = []): ChessPi
         continue;
       }
 
+      // Nur Hovering-Pieces (Springer) brauchen jeden Frame ein Update.
+      if (!renderedPiece.presentation.isHoveringVisual) {
+        continue;
+      }
+
       applyIdlePiecePresentation(renderedPiece, presentationElapsedMs);
     }
 
     for (const [pieceId, renderedPiece] of exitingPieces.entries()) {
       if (activeCapturePieceIds.has(pieceId) || activeCombatPieceIds.has(pieceId)) {
+        continue;
+      }
+
+      if (!renderedPiece.presentation.isHoveringVisual) {
         continue;
       }
 
@@ -420,7 +432,8 @@ function createRenderedPiece(piece: ChessPieceState, pieceTemplates: PieceAssetT
   const assetGroup = createPieceAssetInstance(pieceTemplates, piece.type, piece.color);
 
   if (assetGroup) {
-    return createRenderedPieceContainer(piece, assetGroup);
+    // Asset-Pieces teilen Geometrie über Cache → ownsGeometry = false
+    return createRenderedPieceContainer(piece, assetGroup, undefined, false);
   }
 
   return createPlaceholderRenderedPiece(piece);
@@ -505,13 +518,14 @@ function createPlaceholderRenderedPiece(piece: ChessPieceState): RenderedPiece {
   return createRenderedPieceContainer(piece, modelGroup, {
     geometries,
     materials: [materials.body, materials.trim, materials.accent]
-  });
+  }, true /* ownsGeometry — Placeholder erstellt eigene Geometrie */);
 }
 
 function createRenderedPieceContainer(
   piece: ChessPieceState,
   modelGroup: THREE.Group,
-  resources: RenderResources = collectRenderResources(modelGroup)
+  resources: RenderResources = collectRenderResources(modelGroup),
+  ownsGeometry = true
 ): RenderedPiece {
   const boardAnchor = new THREE.Group();
   boardAnchor.name = `piece-${piece.id}-board-anchor`;
@@ -524,6 +538,7 @@ function createRenderedPieceContainer(
     boardAnchor,
     geometries: resources.geometries,
     materials: resources.materials,
+    ownsGeometry,
     presentation: createPieceVisualPresentationSettings(piece),
     visualRoot
   };
@@ -581,10 +596,15 @@ function didPieceModelChange(boardAnchor: THREE.Group, piece: ChessPieceState): 
 }
 
 function disposeRenderedPiece(renderedPiece: RenderedPiece): void {
-  for (const geometry of renderedPiece.geometries) {
-    geometry.dispose();
+  // Geometrie nur disposen wenn sie der Figur gehört (Placeholder).
+  // Asset-Pieces teilen Geometrie über den Cache.
+  if (renderedPiece.ownsGeometry) {
+    for (const geometry of renderedPiece.geometries) {
+      geometry.dispose();
+    }
   }
 
+  // Materialien werden immer pro Figur geklont → immer disposen.
   for (const material of renderedPiece.materials) {
     material.dispose();
   }

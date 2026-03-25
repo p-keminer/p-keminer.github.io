@@ -66,6 +66,7 @@ export function createBoardInteraction({
   };
   let enabled = true;
   let cachedRect: DOMRect | null = null;
+  let pointerMoveScheduled = false;
 
   // Cache dom element rect — wird aktualisiert auf resize
   const updateRectCache = (): void => {
@@ -205,7 +206,18 @@ export function createBoardInteraction({
       return;
     }
 
-    setHoveredSquare(pickSquare(event.clientX, event.clientY));
+    if (pointerMoveScheduled) {
+      return;
+    }
+
+    pointerMoveScheduled = true;
+    const clientX = event.clientX;
+    const clientY = event.clientY;
+
+    requestAnimationFrame(() => {
+      pointerMoveScheduled = false;
+      setHoveredSquare(pickSquare(clientX, clientY));
+    });
   };
 
   const handlePointerLeave = (): void => {
@@ -266,10 +278,16 @@ export function createBoardInteraction({
   }
 
   function syncLegalTargetMarkers(squares: BoardSquare[]): void {
-    legalTargetMarkers.forEach((marker, index) => {
-      const square = squares[index] ?? null;
-      syncMarker(marker, square);
-    });
+    for (let index = 0; index < legalTargetMarkers.length; index++) {
+      const marker = legalTargetMarkers[index];
+      if (index < squares.length) {
+        syncMarker(marker, squares[index]);
+      } else if (marker.mesh.visible) {
+        marker.mesh.visible = false;
+      } else {
+        break;
+      }
+    }
   }
 
   function syncMarker(marker: HighlightMarker, square: BoardSquare | null): void {

@@ -27,6 +27,9 @@ export function createChessEngine(): ChessEngineAdapter {
   const chess = new Chess();
   const pieceIdsBySquare = new Map<BoardSquare, string>();
   const pieceIdCounters = new Map<string, number>();
+  let cachedMoveHistory: ChessMove[] | null = null;
+  let cachedSnapshot: ChessGameSnapshot | null = null;
+  const legalMovesCache = new Map<string, BoardSquare[]>();
 
   reseedPieceIds();
 
@@ -47,11 +50,15 @@ export function createChessEngine(): ChessEngineAdapter {
     getFen: () => chess.fen(),
     getLegalTargetSquares,
     getSnapshot: () => {
+      if (cachedSnapshot) {
+        return cachedSnapshot;
+      }
+
       const moveHistory = getMoveHistory();
       const gameResult = getGameResult();
       const checkedKingSquare = getCheckedKingSquare();
 
-      return {
+      cachedSnapshot = {
         activeColor: getTurn(),
         capturedPieces: getCapturedPieces(moveHistory),
         checkedKingSquare,
@@ -67,10 +74,14 @@ export function createChessEngine(): ChessEngineAdapter {
         status: getStatus(),
         undoAvailable: moveHistory.length > 0
       };
+      return cachedSnapshot;
     },
     getTurn,
     restart: () => {
       chess.reset();
+      cachedMoveHistory = null;
+      cachedSnapshot = null;
+      legalMovesCache.clear();
       reseedPieceIds();
     },
     tryMove: (from, to) => {
@@ -102,6 +113,9 @@ export function createChessEngine(): ChessEngineAdapter {
         return false;
       }
 
+      cachedMoveHistory = null;
+      cachedSnapshot = null;
+      legalMovesCache.clear();
       syncPieceIdsAfterMove(move.from as BoardSquare, move.to as BoardSquare, movingPieceId, move.flags, move.color);
       return true;
     },
@@ -112,6 +126,9 @@ export function createChessEngine(): ChessEngineAdapter {
         return false;
       }
 
+      cachedMoveHistory = null;
+      cachedSnapshot = null;
+      legalMovesCache.clear();
       reseedPieceIds();
       return true;
     }
@@ -232,10 +249,15 @@ export function createChessEngine(): ChessEngineAdapter {
   }
 
   function getMoveHistory(): ChessMove[] {
-    return chess.history({ verbose: true }).flatMap((move) => {
+    if (cachedMoveHistory) {
+      return cachedMoveHistory;
+    }
+
+    cachedMoveHistory = chess.history({ verbose: true }).flatMap((move) => {
       const mappedMove = mapMove(move);
       return mappedMove ? [mappedMove] : [];
     });
+    return cachedMoveHistory;
   }
 
   function getPieces(): ChessPieceState[] {
@@ -267,9 +289,16 @@ export function createChessEngine(): ChessEngineAdapter {
       return [];
     }
 
-    return chess
+    const cached = legalMovesCache.get(square);
+    if (cached) {
+      return cached;
+    }
+
+    const moves = chess
       .moves({ square: square as Square, verbose: true })
       .map((move) => move.to as BoardSquare);
+    legalMovesCache.set(square, moves);
+    return moves;
   }
 
   function getOrCreatePieceId(square: BoardSquare, color: Color, type: PieceSymbol): string {
