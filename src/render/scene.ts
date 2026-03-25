@@ -573,6 +573,46 @@ export function createBoardPreviewScene({
     'overview', 'displayCase', 'pictureFrame', 'workbench'
   ];
 
+  // Speichert das Preset mit eingerechnetem Look-Around-Offset beim Verlassen
+  // eines Fokus-Ziels, damit die Transition von der geschwenkten Position startet.
+  let lookAroundExitPreset: CameraPreset | null = null;
+
+  /**
+   * Rechnet den aktuellen Look-Around-Offset in ein CameraPreset ein.
+   * Gibt null zurück wenn kein Offset aktiv ist (yaw=0, pitch=0).
+   */
+  function computeLookAroundPreset(basePreset: CameraPreset): CameraPreset | null {
+    const { yaw, pitch } = lookAround.getOffset();
+    if (yaw === 0 && pitch === 0) {
+      return null;
+    }
+
+    const forward = _lookAroundScratch.forward.set(
+      basePreset.target.x - basePreset.position.x,
+      basePreset.target.y - basePreset.position.y,
+      basePreset.target.z - basePreset.position.z
+    ).normalize();
+
+    const right = _lookAroundScratch.right
+      .crossVectors(forward, _worldUp)
+      .normalize();
+
+    const rotated = _lookAroundScratch.rotated
+      .copy(forward)
+      .applyAxisAngle(_worldUp, yaw)
+      .applyAxisAngle(right, pitch)
+      .normalize();
+
+    return {
+      position: { ...basePreset.position },
+      target: {
+        x: basePreset.position.x + rotated.x,
+        y: basePreset.position.y + rotated.y,
+        z: basePreset.position.z + rotated.z
+      }
+    };
+  }
+
   function applyStartFlowCameraPose(): void {
     const preset = getStartFlowCameraPreset();
 
@@ -646,9 +686,13 @@ export function createBoardPreviewScene({
       return lerpCameraPreset(menuPreset, getRoomFocusTargetPreset('overview'), easeInOutCubic(startFlowProgress));
     }
 
+    // Startpunkt der Transition: Freikamera-Position, Look-Around-Offset,
+    // oder normales Preset — in dieser Priorität.
     const fromPreset = (startFlowFocusFromTarget === 'overview' && freeCameraExitPreset !== null)
       ? freeCameraExitPreset
-      : getRoomFocusTargetPreset(startFlowFocusFromTarget);
+      : lookAroundExitPreset !== null
+        ? lookAroundExitPreset
+        : getRoomFocusTargetPreset(startFlowFocusFromTarget);
     // Wenn zum overview übergegangen wird aktiviert sich die Freikamera in der
     // gezoomten Ruheposition. Das dient als toPreset damit die Interpolation
     // genau dort endet und kein Sprung auftritt wenn die Freikamera übernimmt.
@@ -661,6 +705,8 @@ export function createBoardPreviewScene({
       : getRoomFocusTargetPreset(startFlowFocusTarget);
 
     if (startFlowFocusFromTarget === startFlowFocusTarget || startFlowFocusProgress >= 1) {
+      // Transition abgeschlossen — Exit-Presets verbraucht.
+      lookAroundExitPreset = null;
       return toPreset;
     }
 
@@ -794,9 +840,12 @@ export function createBoardPreviewScene({
     syncStartFlowState: (nextState) => {
       startFlowFocusFromTarget = nextState.focusFromTarget;
       startFlowFocusProgress = THREE.MathUtils.clamp(nextState.focusProgress, 0, 1);
-      // Reset look-around when navigating to a new area so each fixed view
-      // starts from the default look direction.
+      // Beim Verlassen eines Fokus-Ziels: Look-Around-Offset ins Exit-Preset
+      // einrechnen, damit die Kamera-Transition von der geschwenkten Position
+      // startet statt erst zur Frontalansicht zurückzuspringen.
       if (startFlowFocusTarget !== nextState.focusTarget) {
+        const currentBasePreset = getRoomFocusTargetPreset(startFlowFocusTarget);
+        lookAroundExitPreset = computeLookAroundPreset(currentBasePreset);
         lookAround.reset();
       }
       startFlowFocusTarget = nextState.focusTarget;
