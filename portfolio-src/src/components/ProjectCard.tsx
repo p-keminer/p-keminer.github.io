@@ -158,7 +158,7 @@ function RoboticsCover() {
         <line x1="255" y1="88" x2="266" y2="95" stroke="#89fff4" strokeWidth="3" strokeLinecap="round" />
       </g>
       <rect width="400" height="30" fill="rgba(6,30,30,0.24)" />
-      <text x="18" y="20" fontFamily="JetBrains Mono, monospace" fontSize="10" fill="#c8fff9" letterSpacing="2">ZUKÜNFTIGE ROBOTIK</text>
+      <text x="18" y="20" fontFamily="JetBrains Mono, monospace" fontSize="10" fill="#c8fff9" letterSpacing="2">FERNGESTEUERTER ROBOTERARM</text>
     </svg>
   );
 }
@@ -426,7 +426,7 @@ export default function ProjectCard({ project, isActive, isHovered }: ProjectCar
           0 0 24px var(--glow-color),
           0 0 55px var(--glow-soft)
         `,
-        cursor: "grab",
+        cursor: "inherit",
         userSelect: "none",
         WebkitUserSelect: "none",
         transition: "box-shadow 0.4s ease",
@@ -486,9 +486,8 @@ export default function ProjectCard({ project, isActive, isHovered }: ProjectCar
           <div style={{
             width: "100%",
             height: "100%",
-            transform: isHovered ? "scale(1.04)" : "scale(1)",
+            transform: "scale(1.04)",
             transformOrigin: "center center",
-            transition: "transform 0.5s cubic-bezier(0.22, 1, 0.36, 1)",
           }}>
             <CoverComponent />
           </div>
@@ -557,6 +556,7 @@ export default function ProjectCard({ project, isActive, isHovered }: ProjectCar
               </span>
             ))}
           </div>
+
         </div>
       </div>
 

@@ -231,7 +231,7 @@ function Header() {
 
       <div className="desktop-socials" style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", justifyContent: "flex-end" }}>
         <SocialBadge
-          href="https://github.com/"
+          href="https://github.com/p-keminer"
           label="GitHub"
           icon={<GithubIcon />}
         />
@@ -269,7 +269,7 @@ function Header() {
         {isMobileMenuOpen && (
           <div className="mobile-social-panel">
             <SocialMenuLink
-              href="https://github.com/"
+              href="https://github.com/p-keminer"
               label="GitHub"
               icon={<GithubIcon color="#f3f6ff" />}
             />

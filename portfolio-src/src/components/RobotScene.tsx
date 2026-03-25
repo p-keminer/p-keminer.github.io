@@ -649,35 +649,41 @@ function RobotShooter({
   const lx2 = ix(ROBOT_POS.victim.c, ROBOT_POS.victim.r) + 5;
   const ly2 = iy(ROBOT_POS.victim.c, ROBOT_POS.victim.r, 15);
   return (
-    <g
-      onClick={onClick}
-      onMouseEnter={onHover}
-      onMouseLeave={onHoverEnd}
-      style={{ cursor: onClick ? "pointer" : undefined }}
-    >
-      <IsoBox c={c - 0} r={r - 0} cw={1.8} cd={1.8} ch={30}
-        top="#3c1a1a" left="#281010" right="#321414" opacity={1} />
-      {/* Laser charge glow */}
-      <circle cx={lx1} cy={ly1} r={3} fill="#16a3c6" opacity={1.0}
-        style={{ animation: "laser-charge-glow 24s linear infinite" }} />
-      {/* Laser beam */}
-      <line x1={lx1} y1={ly1} x2={lx2} y2={ly2}
-        stroke="#16a3c6" strokeWidth={3} strokeLinecap="round"
-        style={{ animation: "laser-beam 24s linear infinite" }}
-        filter={PERF_REDUCED ? undefined : "url(#laserGlow)"} />
-      <IsoBot sx={sx} sy={sy}
-        bodyColor="#e03020" headColor="#a82010" eyeColor="#ff6644" accentColor="#ff6644"
-        animStyle={{ animation: "robot-b-victory 24s linear infinite" }}
-        scale={scale}
-        glowColor="rgba(255, 102, 68, 0.22)"
+    <g>
+      {/* Platform — not clickable */}
+      <g style={{ pointerEvents: "none" }}>
+        <IsoBox c={c - 0} r={r - 0} cw={1.8} cd={1.8} ch={30}
+          top="#3c1a1a" left="#281010" right="#321414" opacity={1} />
+      </g>
+      {/* Robot + laser — clickable */}
+      <g
+        onClick={onClick}
+        onMouseEnter={onHover}
+        onMouseLeave={onHoverEnd}
+        style={{ cursor: onClick ? "pointer" : undefined }}
       >
-        {/* Raised gun arm */}
-        <g style={{ transformOrigin: "-16px 4px", animation: "laser-arm-raise 24s linear infinite" }}>
-          <rect x={-20} y={2} width={8} height={20} rx={3} fill="#a82010" />
-          <rect x={-26} y={18} width={16} height={5} rx={2} fill="#555" />
-          <rect x={-28} y={19} width={4} height={3} rx={1} fill="#888" />
-        </g>
-      </IsoBot>
+        {/* Laser charge glow */}
+        <circle cx={lx1} cy={ly1} r={3} fill="#16a3c6" opacity={1.0}
+          style={{ animation: "laser-charge-glow 24s linear infinite" }} />
+        {/* Laser beam */}
+        <line x1={lx1} y1={ly1} x2={lx2} y2={ly2}
+          stroke="#16a3c6" strokeWidth={3} strokeLinecap="round"
+          style={{ animation: "laser-beam 24s linear infinite" }}
+          filter={PERF_REDUCED ? undefined : "url(#laserGlow)"} />
+        <IsoBot sx={sx} sy={sy}
+          bodyColor="#e03020" headColor="#a82010" eyeColor="#ff6644" accentColor="#ff6644"
+          animStyle={{ animation: "robot-b-victory 24s linear infinite" }}
+          scale={scale}
+          glowColor="rgba(255, 102, 68, 0.22)"
+        >
+          {/* Raised gun arm */}
+          <g style={{ transformOrigin: "-16px 4px", animation: "laser-arm-raise 24s linear infinite" }}>
+            <rect x={-20} y={2} width={8} height={20} rx={3} fill="#a82010" />
+            <rect x={-26} y={18} width={16} height={5} rx={2} fill="#555" />
+            <rect x={-28} y={19} width={4} height={3} rx={1} fill="#888" />
+          </g>
+        </IsoBot>
+      </g>
     </g>
   );
 }

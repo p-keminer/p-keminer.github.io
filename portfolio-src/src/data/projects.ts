@@ -10,9 +10,9 @@ export interface Project {
 export const projects: Project[] = [
   {
     id: "future-robotics",
-    title: "IMU Robotic Arm",
+    title: "Ferngesteuerter Roboterarm",
     description:
-      "Armbewegungen in Echtzeit auf einen 5-DOF-Roboterarm übertragen. Wearable mit IMU-Sensoren, Flex-Sensor und ESP-NOW-Funkstrecke – vollständig dokumentiert mit Security- und Safety-Framework.",
+      "IMU-gesteuerter 5-DOF-Roboterarm mit ESP32-Wearable, ESP-NOW-Funkstrecke und geplanter KI-Bewegungserkennung.",
     link: "https://github.com/p-keminer/remote-controlled-robot-arm",
     coverVariant: "robotics",
     tags: ["ESP32", "ESP-NOW", "IMU", "Robotik", "C++"],
@@ -48,18 +48,9 @@ export const projects: Project[] = [
     id: "portfolio-site",
     title: "3D Portfolio",
     description:
-      "Vorgeschaltetes 3D-Erlebnis in Three.js – begehbarer Raum mit Schachspiel als Einstiegspunkt. Dahinter eingebettet: React-Portfolio mit Projektkarussell und Framer Motion-Animationen. Deployed via GitHub Pages.",
+      "Interaktive 3D-Portfolio-Website mit begehbarem Cyberpunk-Raum, spielbarem Schachspiel und eingebetteter React-App.",
     link: "https://github.com/p-keminer/p-keminer.github.io",
     coverVariant: "portfolio",
     tags: ["Three.js", "React", "TypeScript", "Vite", "Framer Motion"],
-  },
-  {
-    id: "github-profile",
-    title: "GitHub-Profil",
-    description:
-      "Überblick über meine Repositories, Projekte und meinen technischen Lernweg.",
-    link: "https://github.com/p-keminer",
-    coverVariant: "github",
-    tags: ["Open Source", "Projekte", "Lernen"],
   },
 ];
