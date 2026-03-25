@@ -1104,6 +1104,12 @@ body.web-embed-active .web-embed-overlay {
   }
 }
 
+/* Mobile Landscape: Buttons tiefer setzen */
+@media (max-width: 900px) and (orientation: landscape) {
+  .canvas-hud-controls {
+    bottom: 2rem;
+  }
+}
 
 /* ───────────────────────────────────────────────────────────────────────── */
 
