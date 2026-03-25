@@ -358,11 +358,20 @@ export function createBoardPreviewScene({
   let pieceAssetFiles: PieceAssetFileMap = {};
   let pieceAssetSet: PieceAssetSet = DEFAULT_PIECE_ASSET_SET;
   const stage = createStageScene(container, onStateChange, onSquareClick, currentPieces);
+  // onChange-Throttle: Touch-Move feuert bei jedem Pixel — wir coalesce auf
+  // den nächsten Animation-Frame damit syncPanels max. 1× pro Frame läuft.
+  let lookAroundStateChangePending = false;
   const lookAround: LookAroundControls = createLookAroundControls(
     stage.renderer.domElement,
-    // onChange — wird bei jedem Touch-Move aufgerufen. DOM immer synchronisieren damit
-    // Hotspot-Buttons (Übersicht + Bilderrahmen) der rotierten Kamera ohne Frame-Lag folgen.
-    () => { onStateChange?.(); }
+    () => {
+      if (!lookAroundStateChangePending) {
+        lookAroundStateChangePending = true;
+        requestAnimationFrame(() => {
+          lookAroundStateChangePending = false;
+          onStateChange?.();
+        });
+      }
+    }
   );
   const size = new THREE.Vector2();
   // Wiederverwendbarer Scratch-Vektor — vermeidet Pro-Frame-Vector3-Speicherung in Hotspot-Projektion.
@@ -444,9 +453,18 @@ export function createBoardPreviewScene({
     // Subtile Überkopf-Drift des Key-Lichts — hält das Board lebendig
     // ohne sichtbares Flimmern auf statischer Geometrie. Aktiv nur in boardFocus;
     // in Raum-Erkunden würde der bewegte Schatten irritieren.
+    // Drift nur alle ~200ms (~5 Hz) aktualisieren statt 60 Hz —
+    // visuell identisch aber verhindert ständige Shadow-Map-Neuberechnung.
     if (startFlowMode === 'boardFocus') {
-      stage.lights.key.position.x = -9 + Math.sin(seconds * 0.18) * 1.5;
-      stage.lights.key.position.z =  5 + Math.cos(seconds * 0.13) * 1.5;
+      const newKX = -9 + Math.sin(seconds * 0.18) * 1.5;
+      const newKZ =  5 + Math.cos(seconds * 0.13) * 1.5;
+      const driftThreshold = 0.02;
+      if (Math.abs(stage.lights.key.position.x - newKX) > driftThreshold ||
+          Math.abs(stage.lights.key.position.z - newKZ) > driftThreshold) {
+        stage.lights.key.position.x = newKX;
+        stage.lights.key.position.z = newKZ;
+        stage.renderer.shadowMap.needsUpdate = true;
+      }
     } else {
       stage.lights.key.position.x = -9;
       stage.lights.key.position.z =  5;
@@ -575,7 +593,8 @@ export function createBoardPreviewScene({
     pos: new THREE.Vector3(),
     forward: new THREE.Vector3(),
     right: new THREE.Vector3(),
-    rotated: new THREE.Vector3()
+    rotated: new THREE.Vector3(),
+    lookTarget: new THREE.Vector3()
   };
 
   const LOOK_AROUND_TARGETS: ReadonlyArray<RoomFocusTargetId> = [
@@ -647,7 +666,7 @@ export function createBoardPreviewScene({
           .applyAxisAngle(_worldUp, yaw)
           .applyAxisAngle(_lookAroundScratch.right, pitch)
           .normalize();
-        stage.camera.lookAt(_lookAroundScratch.pos.clone().add(_lookAroundScratch.rotated));
+        stage.camera.lookAt(_lookAroundScratch.lookTarget.copy(_lookAroundScratch.pos).add(_lookAroundScratch.rotated));
       }
     }
   }
@@ -932,6 +951,8 @@ export function createBoardPreviewScene({
 
       syncCameraControlLock();
       syncStartFlowInteractionLock();
+      // Shadow-Map bei Modus-Wechsel aktualisieren (Szenengeometrie hat sich verändert).
+      stage.renderer.shadowMap.needsUpdate = true;
       if (startFlowMode === 'boardFocus') {
         applyCameraPreset(stage.camera, stage.boardCameraControls.getPose());
       } else {
@@ -967,6 +988,7 @@ export function createBoardPreviewScene({
     syncPieces: (piecesToRender, options) => {
       currentPieces = piecesToRender.map((piece) => ({ ...piece }));
       stage.pieceLayer.syncPieces(currentPieces, options);
+      stage.renderer.shadowMap.needsUpdate = true;
       render();
       onStateChange?.();
     }
@@ -1014,6 +1036,10 @@ function createStageScene(
   renderer.shadowMap.enabled = true;
   // PCFSoftShadowMap ist veraltet in r183 — THREE fällt zurück auf PCFShadowMap.
   renderer.shadowMap.type = THREE.PCFShadowMap;
+  // Shadow-Map nicht jeden Frame neu berechnen — nur bei explizitem needsUpdate = true.
+  // Das spart erheblich GPU-Zeit wenn sich die Lichtposition nicht ändert.
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;  // initiale Berechnung
   // Tone-Mapping wird in BloomEffect Composite Shader angewendet.
   renderer.toneMapping = THREE.NoToneMapping;
   renderer.toneMappingExposure = 1.0;
