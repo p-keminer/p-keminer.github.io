@@ -160,9 +160,20 @@ Jeder Schritt wird einzeln umgesetzt und manuell verifiziert, bevor der nächste
 
 ---
 
-## Paket 4 – Schachspiel-Optimierung
+## Paket 4 – Schachspiel-Optimierung ✅
 
-**Status: Offen**
+**Status: Erledigt**
+
+**Was umgesetzt wurde:**
+- [x] Pointermove auf RAF gedrosselt (~60Hz statt pro Pixel-Event)
+- [x] Legal-Marker Early-Break (nur aktive Marker aktualisiert)
+- [x] Legal-Moves per Square gecacht (invalidiert bei move/undo/restart)
+- [x] Move-History gecacht (kein redundantes flatMap bei getSnapshot)
+- [x] Snapshot dirty-flag (getSnapshot nur bei echten Zustandsänderungen neu berechnet)
+- [x] Piece-Asset-Geometrie über Cache geteilt (Material pro Figur, Geometrie shared)
+- [x] Idle-Presentation Skip (nur Springer jeden Frame aktualisiert)
+
+**Dateien:** `src/chess/engine.ts`, `src/render/pieces.ts`, `src/render/interaction.ts`, `src/render/loaders.ts`
 
 **Aufgaben:**
 - [ ] **Interaktions-Latenz messen:** Raycasting-Frequenz ggf. auf `pointermove` throttlen
@@ -227,25 +238,20 @@ Jeder Schritt wird einzeln umgesetzt und manuell verifiziert, bevor der nächste
 
 ---
 
-## Paket 9 – Kamera-Fallback (Zustandsbasierte Rücknavigation)
+## Paket 9 – Kamera-Fallback (Zustandsbasierte Rücknavigation) ✅
 
-**⚠️ HINWEIS: Vor Umsetzung Rückfragen stellen! Nicht eigenständig implementieren.**
+**Status: Erledigt**
 
-**Status: Offen**
+**Was umgesetzt wurde:**
+- [x] Kamera-Transitionen starten vom aktuellen Orbit-/Schwenk-Zustand (kein Snap zum Preset)
+- [x] Camera-Exit-Snapshot: Position + Blickrichtung werden beim Verlassen eines Fokus-Ziels gesichert
+- [x] Target-Distanz-Normalisierung für lineare Kamerafahrten (keine verzerrten Winkel)
+- [x] Look-Around `animateReset(onComplete)`: sanftes Zurückschwenken (400ms ease-out) vor Menü-Rückkehr
+- [x] Board-Orbit bei Undo/Restart bewahrt (nur explizites "Kamera zentrieren" resettet)
+- [x] Buttons während Kamerafahrten ausgeblendet, erst am Fokusziel sichtbar
+- [x] "Zur Übersicht" Button in der Übersicht selbst entfernt (redundant)
 
-**Problem:** Wenn man auf Mobile die Kamera manuell schwenkt (links/rechts) und dann einen Viewpoint anklickt oder auf einen anderen Zustand zurücknavigiert, fährt die Kamera zuerst über den Standard-Ausgangspunkt (z.B. Overview-Preset) statt vom aktuellen Kamera-Standort aus zu starten. Das erzeugt einen unnatürlichen Sprung.
-
-**Gewünschtes Verhalten:**
-- Kamera-Transitionen sollen immer vom **aktuellen Kamera-Zustand** ausgehen (Position + LookAt), nicht vom gespeicherten Preset des vorherigen Zustands.
-- Bei Rücknavigation (z.B. legalWall → overview, boardFocus → roomExplore) soll die Kamera auf den **letzten tatsächlichen Kamera-Zustand** zurückfallen, nicht auf ein festes Preset.
-- Mobile Schwenk-Offsets (Touch-Rotation) müssen als aktueller Zustand in die Transition einfließen.
-
-**Betrifft:** `src/render/scene.ts` (Kamera-Presets, Transition-Logik), ggf. `src/app/game.ts` (Zustandswechsel)
-
-**Offene Fragen (vor Umsetzung klären):**
-- Soll der manuelle Schwenk-Offset nach einer Transition zurückgesetzt werden?
-- Soll die Rückkehr-Animation ebenfalls Bézier-geschwenkt sein oder reicht lineares Lerp?
-- Wie verhält sich das bei verschachtelten Zuständen (z.B. legalWall → overview → menu)?
+**Dateien:** `src/render/scene.ts`, `src/render/look-around-controls.ts`, `src/app/game.ts`
 
 ---
 
