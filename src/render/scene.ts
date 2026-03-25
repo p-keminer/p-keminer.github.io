@@ -830,7 +830,8 @@ export function createBoardPreviewScene({
     resetPresentationState: () => {
       presentationMode = 'board';
       stage.pieceLayer.clearCombatPresentation();
-      stage.boardCameraControls.reset();
+      // Board-Orbit-Position bewahren — nur Combat-Kamera zurücksetzen.
+      // boardCameraControls.reset() wird NUR bei explizitem "Kamera zentrieren" aufgerufen.
       stage.cameraController.reset();
       syncCameraControlLock();
       render();
