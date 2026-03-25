@@ -108,6 +108,10 @@ export function createLookAroundControls(
     // aktiv ist, und nur wenn die Geste nie ein Pinch war.
     if (e.pointerId !== primaryPointerId || activeTouchCount !== 1 || gestureContaminated) return;
 
+    // Browser-Standard (Scroll/Pan) unterdrücken damit die Geste nicht
+    // nach wenigen Pixeln vom Browser übernommen wird.
+    e.preventDefault();
+
     const dx = e.clientX - lastX;
     const dy = e.clientY - lastY;
     lastX = e.clientX;
