@@ -206,6 +206,12 @@ export function createBoardInteraction({
       return;
     }
 
+    // Touch-Events sollen keinen Hover-Marker zeigen — der blitzt sonst
+    // kurz auf bevor der Click verarbeitet wird (sichtbar auf Tablets).
+    if (event.pointerType === 'touch') {
+      return;
+    }
+
     if (pointerMoveScheduled) {
       return;
     }
