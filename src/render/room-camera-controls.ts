@@ -53,6 +53,18 @@ export function createRoomCameraControls({
   let pinchStartDistance = 0;
   let pinchStartRadius = 0;
 
+  // rAF-Coalescing: Wheel/Pinch-Events feuern öfter als der Bildschirm
+  // aktualisieren kann (besonders auf 120Hz Tablets). Wir bündeln auf max 1× pro Frame.
+  let poseUpdateScheduled = false;
+  function schedulePoseUpdate(): void {
+    if (poseUpdateScheduled) return;
+    poseUpdateScheduled = true;
+    requestAnimationFrame(() => {
+      poseUpdateScheduled = false;
+      onPoseChange(buildCurrentPose());
+    });
+  }
+
   domElement.addEventListener('wheel', handleWheel, { passive: false });
   domElement.addEventListener('touchstart', handleTouchStart, { passive: false });
   domElement.addEventListener('touchmove', handleTouchMove, { passive: false });
@@ -165,7 +177,7 @@ export function createRoomCameraControls({
     // Zoom-In (deltaY < 0) oder Zoom-Out (deltaY > 0), begrenzt zwischen minZoomRadius und baseRadius
     const zoomFactor = 1 + event.deltaY * 0.001;
     spherical.radius = clamp(spherical.radius * zoomFactor, minZoomRadius, baseRadius);
-    onPoseChange(buildCurrentPose());
+    schedulePoseUpdate();
   }
 
   // ── Touch-Pinch-zum-Zoomen-Handler ────────────────────────────────────────
@@ -208,7 +220,7 @@ export function createRoomCameraControls({
     const currentDistance = getTouchDistance();
     const scale = pinchStartDistance / Math.max(currentDistance, 1);
     spherical.radius = clamp(pinchStartRadius * scale, minZoomRadius, baseRadius);
-    onPoseChange(buildCurrentPose());
+    schedulePoseUpdate();
     event.preventDefault();
   }
 
