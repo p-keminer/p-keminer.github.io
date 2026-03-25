@@ -16,6 +16,7 @@ import {
 } from './combat-camera';
 import type { CombatPresentationStateInput } from './combat-presentation';
 import { applyCameraPreset, createBoardCamera, type CameraPreset, resizeCamera } from './camera';
+import { isMobileDevice } from './device-tier';
 import { createBoardInteraction, type BoardInteractionLayer } from './interaction';
 import { createSceneLights, type SceneLights } from './lights';
 import { createBloomEffect, type BloomEffect } from './bloom';
@@ -396,10 +397,13 @@ export function createBoardPreviewScene({
     );
     resizeCamera(stage.camera, width, height);
     isPortrait = stage.camera.aspect < 1;
+    const isMobileLandscape = isMobileDevice && !isPortrait;
     stage.roomCameraControls.setPortraitMode(isPortrait);
-    lookAround.setAllowPitch(!isPortrait);
-    lookAround.setMaxYawLeft(isPortrait ? 13 : 45);
-    lookAround.setMaxYawRight(isPortrait ? 12 : 17);
+    stage.roomCameraControls.setLandscapeLock(isMobileLandscape);
+    // Mobile Landscape: Look-Around sperren (Yaw-Limits auf 0) — wie Desktop.
+    lookAround.setAllowPitch(!isPortrait && !isMobileLandscape);
+    lookAround.setMaxYawLeft(isPortrait ? 13 : isMobileLandscape ? 0 : 45);
+    lookAround.setMaxYawRight(isPortrait ? 12 : isMobileLandscape ? 0 : 17);
     render();
     // Hotspot-Positionen nach Resize neu berechnen — immer wenn roomExplore
     // aktiv ist, da alle 3D-projizierten Buttons (Übersicht + Bilderrahmen)

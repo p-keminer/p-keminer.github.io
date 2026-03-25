@@ -6,6 +6,7 @@ export interface RoomCameraControls {
   dispose: () => void;
   getPose: () => CameraPreset;
   setEnabled: (enabled: boolean) => void;
+  setLandscapeLock: (locked: boolean) => void;
   setPortraitMode: (portrait: boolean) => void;
   setPose: (preset: CameraPreset) => void;
   startEntranceAnimation: () => void;
@@ -32,6 +33,7 @@ export function createRoomCameraControls({
 
   let enabled = false;
   let portraitMode = false;
+  let landscapeLocked = false;
   // baseRadius ist der Radius beim letzten setPose-Aufruf — dient als Zoom-Out-Obergrenze
   let baseRadius = spherical.radius;
   let minZoomRadius = baseRadius * Math.pow(ZOOM_FACTOR_PER_STEP, MAX_ZOOM_STEPS);
@@ -74,6 +76,9 @@ export function createRoomCameraControls({
         cancelAnimationFrame(entranceRafId);
       }
     },
+    setLandscapeLock: (locked: boolean) => {
+      landscapeLocked = locked;
+    },
     setPortraitMode: (portrait: boolean) => {
       // Hinweis: Dies löst kein erneutes Rendern aus sich selbst.
       // Es wird immer in resize() aufgerufen, auf das ein render()-Aufruf folgt.
@@ -96,16 +101,20 @@ export function createRoomCameraControls({
       spherical.setFromVector3(offset);
       baseRadius = spherical.radius;
       minZoomRadius = baseRadius * Math.pow(ZOOM_FACTOR_PER_STEP, MAX_ZOOM_STEPS);
-      // Hochformat: sofort zum maximalen Zoom. Desktop: ein Schritt näher.
-      spherical.radius = portraitMode ? minZoomRadius : baseRadius * ZOOM_FACTOR_PER_STEP;
+      // Hochformat: sofort zum maximalen Zoom. Landscape-Mobile: zwei Schritte näher. Desktop: ein Schritt näher.
+      spherical.radius = portraitMode ? minZoomRadius
+        : landscapeLocked ? baseRadius * Math.pow(ZOOM_FACTOR_PER_STEP, 2)
+        : baseRadius * ZOOM_FACTOR_PER_STEP;
     },
     startEntranceAnimation: () => {
       cancelAnimationFrame(entranceRafId);
       // Beginnen von der nicht gezoomten Übersichtsposition und einblenden.
       spherical.radius = baseRadius;
       entranceStartRadius = baseRadius;
-      // Hochformat: zu maximalem Zoom animieren. Desktop: ein Schritt näher.
-      entranceEndRadius = portraitMode ? minZoomRadius : baseRadius * ZOOM_FACTOR_PER_STEP;
+      // Hochformat: zu maximalem Zoom animieren. Landscape-Mobile: zwei Schritte. Desktop: ein Schritt.
+      entranceEndRadius = portraitMode ? minZoomRadius
+        : landscapeLocked ? baseRadius * Math.pow(ZOOM_FACTOR_PER_STEP, 2)
+        : baseRadius * ZOOM_FACTOR_PER_STEP;
       entranceStartTime = performance.now();
       animateEntrance();
     }
@@ -146,7 +155,7 @@ export function createRoomCameraControls({
   }
 
   function handleWheel(event: WheelEvent): void {
-    if (!enabled || portraitMode) {
+    if (!enabled || portraitMode || landscapeLocked) {
       return;
     }
 
@@ -169,7 +178,7 @@ export function createRoomCameraControls({
   }
 
   function handleTouchStart(event: TouchEvent): void {
-    if (!enabled || portraitMode) return;
+    if (!enabled || portraitMode || landscapeLocked) return;
 
     for (let i = 0; i < event.changedTouches.length; i++) {
       const t = event.changedTouches[i];
@@ -185,7 +194,7 @@ export function createRoomCameraControls({
   }
 
   function handleTouchMove(event: TouchEvent): void {
-    if (!enabled || portraitMode || activeTouches.size < 2) return;
+    if (!enabled || portraitMode || landscapeLocked || activeTouches.size < 2) return;
 
     for (let i = 0; i < event.changedTouches.length; i++) {
       const t = event.changedTouches[i];

@@ -10,6 +10,9 @@ export type DeviceTier = 'low' | 'medium' | 'high';
 /** Ergebnis wird beim ersten Import berechnet und gecacht. */
 export const deviceTier: DeviceTier = detectTier();
 
+/** True wenn das Gerät ein Mobilgerät ist (Touch-fähig, unabhängig von Orientation). */
+export const isMobileDevice: boolean = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
 function detectTier(): DeviceTier {
   // Server-Side / Worker — sicherheitshalber high
   if (typeof navigator === 'undefined') return 'high';
