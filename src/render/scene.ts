@@ -357,13 +357,14 @@ export function createBoardPreviewScene({
   let pieceAssetFallbacks: PieceAssetFallbackMap = {};
   let pieceAssetFiles: PieceAssetFileMap = {};
   let pieceAssetSet: PieceAssetSet = DEFAULT_PIECE_ASSET_SET;
-  const stage = createStageScene(container, onStateChange, onSquareClick, currentPieces);
+  const stage = createStageScene(container, onStateChange, onSquareClick, currentPieces, markDirty);
   // onChange-Throttle: Touch-Move feuert bei jedem Pixel — wir coalesce auf
   // den nächsten Animation-Frame damit syncPanels max. 1× pro Frame läuft.
   let lookAroundStateChangePending = false;
   const lookAround: LookAroundControls = createLookAroundControls(
     stage.renderer.domElement,
     () => {
+      markDirty();
       if (!lookAroundStateChangePending) {
         lookAroundStateChangePending = true;
         requestAnimationFrame(() => {
@@ -388,6 +389,13 @@ export function createBoardPreviewScene({
   let startFlowPendingMenuReturn = false;
   let frameHandle = 0;
   let lastFrameTime = performance.now();
+
+  // ── On-Demand Rendering ────────────────────────────────────────────────
+  // Dirty-Flag verhindert dass die 5-Pass Bloom-Pipeline jeden Frame läuft
+  // wenn sich nichts geändert hat. markDirty() wird von allen State-Änderungen
+  // aufgerufen; step() rendert nur wenn dirty === true.
+  let dirty = true;
+  function markDirty(): void { dirty = true; }
 
   let isPortrait = false;
 
@@ -418,6 +426,7 @@ export function createBoardPreviewScene({
     lookAround.setAllowPitch(!isPortrait && !isMobileLandscape);
     lookAround.setMaxYawLeft(isMobileLandscape ? 0 : isTabletPortrait ? 30 : isPortrait ? 13 : 45);
     lookAround.setMaxYawRight(isMobileLandscape ? 0 : isTabletPortrait ? 25 : isPortrait ? 12 : 17);
+    markDirty();
     render();
     // Hotspot-Positionen nach Resize neu berechnen — immer wenn roomExplore
     // aktiv ist, da alle 3D-projizierten Buttons (Übersicht + Bilderrahmen)
@@ -464,18 +473,29 @@ export function createBoardPreviewScene({
         stage.lights.key.position.x = newKX;
         stage.lights.key.position.z = newKZ;
         stage.renderer.shadowMap.needsUpdate = true;
+        markDirty();
       }
     } else {
       stage.lights.key.position.x = -9;
       stage.lights.key.position.z =  5;
     }
     stage.pieceLayer.step(deltaMs);
-    stage.cameraController.step(deltaMs);
+    // Aktive Figuren-Animationen (Zug, Capture, Combat, Hover) erfordern Render.
+    if (stage.pieceLayer.getAnimationState().isAnimating) {
+      markDirty();
+    }
+    // Combat-Kamera-Transitions melden true wenn sich die Pose geändert hat.
+    if (stage.cameraController.step(deltaMs)) {
+      markDirty();
+    }
     stage.cctvScreen.tick(clockState.elapsedMs);
     syncCameraControlLock();
     applyStartFlowCameraPose();
 
-    render();
+    if (dirty) {
+      render();
+      dirty = false;
+    }
   }
 
   function render(): void {
@@ -789,6 +809,7 @@ export function createBoardPreviewScene({
     applyBoardAsset: (assets) => {
       loadedBoardFile = assets.loadedBoardFile;
       stage.board.setVisualBoardAsset(assets.board);
+      markDirty();
       render();
       onStateChange?.();
     },
@@ -798,6 +819,7 @@ export function createBoardPreviewScene({
       pieceAssetFiles = { ...assets.pieceAssetFiles };
       pieceAssetSet = assets.pieceAssetSet;
       stage.pieceLayer.setPieceAssets(assets.pieceTemplates, currentPieces);
+      markDirty();
       render();
       onStateChange?.();
     },
@@ -809,6 +831,7 @@ export function createBoardPreviewScene({
       pieceAssetSet = assets.pieceAssetSet;
       stage.board.setVisualBoardAsset(assets.board);
       stage.pieceLayer.setPieceAssets(assets.pieceTemplates, currentPieces);
+      markDirty();
       render();
       onStateChange?.();
     },
@@ -831,6 +854,7 @@ export function createBoardPreviewScene({
       stage.boardCameraControls.reset();
       stage.cameraController.reset();
       syncCameraControlLock();
+      markDirty();
       render();
       onStateChange?.();
     },
@@ -840,6 +864,7 @@ export function createBoardPreviewScene({
         return;
       }
       lookAround.animateReset(() => {
+        markDirty();
         render();
         onComplete();
       });
@@ -851,6 +876,7 @@ export function createBoardPreviewScene({
       // boardCameraControls.reset() wird NUR bei explizitem "Kamera zentrieren" aufgerufen.
       stage.cameraController.reset();
       syncCameraControlLock();
+      markDirty();
       render();
       onStateChange?.();
     },
@@ -958,6 +984,7 @@ export function createBoardPreviewScene({
       } else {
         applyStartFlowCameraPose();
       }
+      markDirty();
       render();
       onStateChange?.();
     },
@@ -977,11 +1004,13 @@ export function createBoardPreviewScene({
       });
       syncCameraControlLock();
       stage.pieceLayer.syncCombatPresentation(nextState);
+      markDirty();
       render();
       onStateChange?.();
     },
     syncInteractionState: (nextState) => {
       stage.interaction.setHighlightState(nextState);
+      markDirty();
       render();
       onStateChange?.();
     },
@@ -989,6 +1018,7 @@ export function createBoardPreviewScene({
       currentPieces = piecesToRender.map((piece) => ({ ...piece }));
       stage.pieceLayer.syncPieces(currentPieces, options);
       stage.renderer.shadowMap.needsUpdate = true;
+      markDirty();
       render();
       onStateChange?.();
     }
@@ -1017,7 +1047,8 @@ function createStageScene(
   container: HTMLDivElement,
   onStateChange: (() => void) | undefined,
   onSquareClick: ((square: BoardSquare) => void) | undefined,
-  pieces: ChessPieceState[]
+  pieces: ChessPieceState[],
+  onDirty?: () => void
 ): StageScene {
   const scene = new THREE.Scene();
   // Fog kalibriert für overview-Kamera bei Z=68 schaut auf Raum-Mitte Z≈9.
@@ -1028,7 +1059,7 @@ function createStageScene(
 
   // antialias: true gibt MSAA auf den Zwischendurchläufen in BloomEffect;
   // die finale zusammengefügte Ausgabe zum Bildschirm profitiert auch davon.
-  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
   // outputColorSpace + toneMapping werden in BloomEffect's Composite
   // Shader behandelt (ACESFilmic + sRGB Gamma). Wir setzen NoToneMapping auf dem Renderer
   // deshalb wendet er keine doppelte Tone-Mapping an beim Rendern zum Scene RT.
@@ -1063,12 +1094,17 @@ function createStageScene(
     blurScale: 1.5,   // engerer Glow-Radius
     exposure:  1.25
   });
+  // Pose-/Interaction-Änderungen markieren die Szene als dirty statt direkt zu rendern.
+  // Der nächste rAF-Frame in step() erledigt den Render.
+  function onPoseChangeDirty(): void {
+    onDirty?.();
+    onStateChange?.();
+  }
   const boardCameraControls = createBoardCameraControls({
     domElement: renderer.domElement,
     onPoseChange: (preset) => {
       cameraController.setInspectPose(preset);
-      bloom.render(scene, camera);
-      onStateChange?.();
+      onPoseChangeDirty();
     }
   });
   const roomCameraControls = createRoomCameraControls({
@@ -1078,8 +1114,7 @@ function createStageScene(
       // wendet es auch jeden Frame an während roomCameraFree wahr ist.
       camera.position.set(preset.position.x, preset.position.y, preset.position.z);
       camera.lookAt(preset.target.x, preset.target.y, preset.target.z);
-      bloom.render(scene, camera);
-      onStateChange?.();
+      onPoseChangeDirty();
     }
   });
   const board = createChessboard();
@@ -1089,8 +1124,7 @@ function createStageScene(
     camera,
     domElement: renderer.domElement,
     onChange: () => {
-      bloom.render(scene, camera);
-      onStateChange?.();
+      onPoseChangeDirty();
     },
     onSquareClick,
     scene,
@@ -1145,6 +1179,8 @@ function createStageScene(
         }
       });
       cctvScreen.attach(roomGroup);
+      renderer.shadowMap.needsUpdate = true;
+      onDirty?.();
       onStateChange?.();
     }
   });

@@ -50,7 +50,8 @@ export function createSceneLights(): SceneLights {
   key.decay = 1.2;                     // physikalisch plausibles Abklingen
   key.distance = 40;                   // maximale Reichweite
   key.castShadow = plan.castShadows;
-  key.shadow.mapSize.set(1024, 1024);
+  const shadowSize = deviceTier === 'high' ? 1024 : 512;
+  key.shadow.mapSize.set(shadowSize, shadowSize);
   key.shadow.camera.near = 1;
   key.shadow.camera.far = 40;
   key.shadow.bias = -0.002;
