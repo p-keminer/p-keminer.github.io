@@ -179,16 +179,16 @@ Jeder Schritt wird einzeln umgesetzt und manuell verifiziert, bevor der nächste
 
 ## Paket 5 – 404-Seite Redesign
 
-**Status: Offen**
+**Status: Entwurf erstellt**
 
 **Aufgaben:**
-- [ ] **Stil-Abgleich:** Schriften, Farben, Header/Footer von Hauptseite übernehmen
-- [ ] **Layout vereinfachen:** Spotlight-Hintergrund entfernen oder sehr subtil halten
-- [ ] **Roboter:** entfernen ODER als kleines, nicht-animiertes Dekorationselement behalten
-- [ ] **Button:** „Zurück zur Startseite" im gleichen Style wie Hauptseiten-Buttons
-- [ ] **Mobile-Layout** sicherstellen
+- [x] **Stil-Abgleich:** Schriften, Farben, Header/Footer von Hauptseite übernommen
+- [x] **Layout vereinfachen:** Roboter + Spotlight + Scanlines entfernt, schlichte Seite
+- [x] **Button:** „Zur Startseite" im gleichen Badge-Style wie Hauptseiten-Buttons
+- [x] **Mobile-Layout** responsive mit 560px Breakpoint
+- [ ] **Review durch Nutzer** — Entwurf prüfen, ggf. Anpassungen
 
-**Dateien:** `404.html`, `src/pages/robot-404.ts`, `src/styles/main.css`
+**Dateien:** `404.html` (komplett neu, kein JS/GLB mehr)
 
 ---
 
@@ -208,37 +208,32 @@ Jeder Schritt wird einzeln umgesetzt und manuell verifiziert, bevor der nächste
 
 ---
 
-## Paket 7 – Blender Raum überarbeiten
+## Paket 7 – Blender Raum überarbeiten ✅
 
-**Status: Offen**
+**Status: Erledigt**
 
-**Aufgaben:**
-- [ ] Objekt-Inventur in Blender, Entscheidungsliste mit Nutzer abgleichen
-- [ ] Objekte entfernen, Lücken prüfen
-- [ ] Beleuchtung nachkorrigieren
-- [ ] Material-Check: verwaiste Materialien bereinigen
-- [ ] Export: neues `room.glb` (Draco, korrekte Pivot/Scale)
-- [ ] `public/models/README.md` aktualisieren
+**Was umgesetzt wurde:**
+- [x] Überlappende Geometrie in Blender bereinigt (Ursache für Shadow-Artefakte / grauen Schleier)
+- [x] Einzelne Objekte separiert (merged wall panel, merged accent teal)
+- [x] Unnötige Elemente entfernt
+- [x] Neuer Export als `room.glb` (Draco-komprimiert aus Blender)
 
-**Dateien:** `room.glb` (Blender), `public/models/room.glb`, `public/models/README.md`
-**Abhängigkeiten:** Paket 6 (Kamerafahrt), Paket 3 (GLB-Größe)
+**Dateien:** `public/models/room.glb`
 
 ---
 
-## Paket 8 – Kamera-Rotation Mobil / Boden-Clipping
+## Paket 8 – Kamera-Rotation Mobil / Boden-Clipping ✅
 
-**Status: Offen**
+**Status: Erledigt**
 
-**Aufgaben:**
-- [ ] Ursache analysieren: vertikale Rotationsgrenzen in room-camera-controls / look-around-controls
-- [ ] Polar-Angle-Clamp einschränken (Boden nie aus Sichtfeld)
-- [ ] Boden-Mesh prüfen (ggf. größer skalieren)
-- [ ] Touch-Gesten auf Mobil prüfen
-- [ ] Querformat-Test
-- [ ] Reset-Button erwägen
+**Was umgesetzt wurde:**
+- [x] Key-Light von DirectionalLight auf SpotLight umgebaut (kein grauer Schleier mehr auf Boden)
+- [x] SpotLight shadow.bias und normalBias angepasst (keine Shadow-Acne Artefakte)
+- [x] Mobile SpotLight-Intensität reduziert (weniger aufdringlich)
+- [x] Rechter Yaw-Limit im Raum-Erkunden weiter eingeschränkt (leerer Bereich nicht sichtbar)
+- [x] Licht-Animation auf statische Position gesetzt (kein Dreh-Effekt)
 
-**Dateien:** `src/render/room-camera-controls.ts`, `src/render/look-around-controls.ts`, `src/render/camera.ts`
-**Abhängigkeiten:** Paket 2 (Responsive), Paket 7 (Room-Geometrie)
+**Dateien:** `src/render/lights.ts`, `src/render/scene.ts`, `src/render/room-camera-controls.ts`
 
 ---
 

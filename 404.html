@@ -4,188 +4,258 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>404 – Seite nicht gefunden</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-    @keyframes spotlightPulse {
-      0%, 100% { opacity: 1; }
-      50%      { opacity: 0.72; }
-    }
-
     body {
-      background:
-        radial-gradient(ellipse 45% 55% at var(--siren-x, 50%) 50%,
-          rgba(255,70,0,0.72) 0%,
-          rgba(255,30,0,0.28) 50%,
-          transparent 100%
-        ),
-        radial-gradient(ellipse at center, #3a0000 0%, #0d0000 100%);
-      animation: spotlightPulse 2.4s ease-in-out infinite;
-      color: #cfd8dc;
-      font-family: 'Courier New', Courier, monospace;
-      height: 100dvh;
-      overflow: hidden;
+      background: #000;
+      color: #5f6f86;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      height: 100dvh;
+      overflow: hidden;
     }
 
-    body::after {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background: repeating-linear-gradient(
-        0deg, transparent, transparent 2px,
-        rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px
-      );
-      pointer-events: none;
-      z-index: 10;
+    /* ── Header (identisch zur Hauptseite) ─────────────────────────────── */
+    .header {
+      align-items: center;
+      background: rgba(2, 4, 10, 0.72);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(180, 229, 255, 0.08);
+      display: flex;
+      flex-shrink: 0;
+      height: 70px;
+      justify-content: space-between;
+      padding: 0 40px;
+    }
+
+    .header__left {
+      align-items: center;
+      display: flex;
+      gap: 14px;
+    }
+
+    .header__avatar {
+      align-items: center;
+      background: linear-gradient(135deg, #1a4a8a 0%, #0e2d5c 100%);
+      border-radius: 10px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.12), 0 4px 12px rgba(58, 142, 255, 0.3);
+      color: #fff;
+      display: flex;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      font-weight: 700;
+      height: 36px;
+      justify-content: center;
+      letter-spacing: -0.02em;
+      width: 36px;
+    }
+
+    .header__info {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .header__name {
+      background: linear-gradient(90deg, #a8d4ff 0%, #70c3ff 50%, #b8a4ff 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header__status {
+      align-items: center;
+      color: #5f6f86;
+      display: flex;
+      font-size: 0.60rem;
+      gap: 5px;
+      letter-spacing: 0.06em;
+    }
+
+    .header__dot {
+      background: #4ade80;
+      border-radius: 50%;
+      box-shadow: 0 0 6px rgba(74, 222, 128, 0.7);
+      display: inline-block;
+      height: 5px;
+      width: 5px;
+    }
+
+    .header__socials {
+      align-items: center;
+      display: flex;
+      gap: 8px;
+    }
+
+    .header__badge {
+      align-items: center;
+      background: rgba(12, 18, 32, 0.72);
+      border: 1px solid rgba(180, 229, 255, 0.12);
+      border-radius: 8px;
+      color: #91a5c7;
+      display: flex;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.68rem;
+      font-weight: 500;
+      gap: 5px;
+      letter-spacing: 0.04em;
+      padding: 4px 10px;
+      text-decoration: none;
+      transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+    }
+
+    .header__badge:hover {
+      background: rgba(20, 30, 52, 0.88);
+      border-color: rgba(112, 195, 255, 0.30);
+      color: #c8dff5;
+    }
+
+    /* ── Content ────────────────────────────────────────────────────────── */
+    .content {
+      align-items: center;
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0 24px;
     }
 
     .error-code {
-      font-size: clamp(52px, 12vw, 88px);
-      font-weight: 900;
-      letter-spacing: 0.15em;
-      line-height: 1;
-      margin-bottom: 4px;
-      background: linear-gradient(180deg, #aaaaaa 0%, #1a1a1a 45%, #555555 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8));
-    }
-
-    .subtitle {
-      font-size: clamp(10px, 2.5vw, 13px);
-      color: #3a3a3a;
-      letter-spacing: 0.25em;
-      margin-bottom: 20px;
-      text-shadow: 0 1px 0 #666;
-    }
-
-    /* Robot + bubble sit side-by-side in a flex row */
-    .robot-row {
-      display: flex;
-      align-items: flex-start;
-      gap: 0px;
-      justify-content: center;
-      position: relative;
-      z-index: 11; /* above the scanline overlay (z-index: 10) */
-    }
-
-    #scene-wrap {
-      position: relative;
-      width: clamp(180px, 38vw, 260px);
-      height: clamp(180px, 38vw, 260px);
-      flex-shrink: 0;
-      margin-right: -20px;
-    }
-
-    #robot-canvas {
-      display: block;
-      width: 100% !important;
-      height: 100% !important;
-    }
-
-    .bubble {
-      width: clamp(160px, 30vw, 240px);
-      flex-shrink: 0;
-      align-self: flex-start;
-      margin-top: 65px;
-      font-size: clamp(14px, 3vw, 22px);
-      font-weight: 900;
+      font-size: clamp(80px, 18vw, 160px);
+      font-weight: 700;
       letter-spacing: 0.08em;
-      line-height: 1.4;
-      text-align: left;
-      opacity: 0;
-      transition: opacity 0.5s ease;
-      background: linear-gradient(180deg, #aaaaaa 0%, #1a1a1a 45%, #555555 100%);
+      line-height: 1;
+      background: linear-gradient(180deg, rgba(168, 212, 255, 0.15) 0%, rgba(168, 212, 255, 0.03) 100%);
       -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
       background-clip: text;
+      -webkit-text-fill-color: transparent;
+      user-select: none;
     }
 
-    @media (max-width: 560px) {
-      body {
-        justify-content: center;
-        padding-top: 0;
-        gap: 0;
-      }
-      .error-code {
-        font-size: 56px;
-        margin-bottom: 2px;
-        margin-top: -60px;
-      }
-      .subtitle {
-        font-size: 10px;
-        margin-bottom: 14px;
-        color: #3a3a3a;
-      }
-      .robot-row {
-        flex-direction: row;
-        align-items: flex-start;
-        gap: 0px;
-        justify-content: center;
-        margin-top: 40px;
-      }
-      #scene-wrap {
-        width: min(72vw, 240px);
-        height: min(72vw, 240px);
-        margin-right: -36px;
-        margin-top: -30px;
-      }
-      .bubble {
-        width: clamp(110px, 40vw, 170px);
-        align-self: flex-start;
-        margin-top: 48px;
-        font-size: 15px;
-        letter-spacing: 0.05em;
-        line-height: 1.35;
-        margin-left: -8px;
-      }
-      .back-btn {
-        margin-top: 56px;
-        padding: 7px 18px;
-        font-size: 10px;
-      }
+    .message {
+      color: #5f6f86;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      margin-top: 12px;
+      text-align: center;
     }
 
     .back-btn {
-      display: inline-block;
-      margin-top: 20px;
-      padding: 10px 30px;
-      border: 1px solid #444;
-      color: #bbb;
+      align-items: center;
+      background: rgba(18, 5, 5, 0.82);
+      border: 1px solid rgba(220, 60, 60, 0.42);
+      border-radius: 9px;
+      color: #ffd4d4;
+      display: inline-flex;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      font-weight: 600;
+      gap: 6px;
+      letter-spacing: 0.07em;
+      margin-top: 32px;
+      padding: 8px 20px;
       text-decoration: none;
-      border-radius: 4px;
-      font-family: inherit;
-      font-size: clamp(11px, 2.5vw, 13px);
-      letter-spacing: 0.08em;
-      opacity: 0;
-      background: linear-gradient(180deg, #3a3a3a 0%, #111111 100%);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 8px rgba(0,0,0,0.6);
-      transition: background 0.2s, box-shadow 0.2s, opacity 0.8s ease;
+      transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
     }
+
     .back-btn:hover {
-      background: linear-gradient(180deg, #505050 0%, #1f1f1f 100%);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 2px 14px rgba(0,0,0,0.8);
+      background: rgba(35, 8, 8, 0.94);
+      border-color: rgba(255, 90, 90, 0.72);
+      box-shadow: 0 0 14px rgba(220, 60, 60, 0.22);
+    }
+
+    /* ── Footer (identisch zur Hauptseite) ─────────────────────────────── */
+    .footer {
+      align-items: center;
+      background: rgba(2, 4, 10, 0.55);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-top: 1px solid rgba(180, 229, 255, 0.07);
+      color: #5f6f86;
+      display: flex;
+      flex-shrink: 0;
+      font-size: 0.70rem;
+      gap: 16px;
+      height: 40px;
+      justify-content: center;
+      letter-spacing: 0.04em;
+      padding: 0 16px;
+      white-space: nowrap;
+    }
+
+    .footer__diamond {
+      color: rgba(112, 195, 255, 0.25);
+      font-size: 0.45rem;
+    }
+
+    /* ── Mobile ─────────────────────────────────────────────────────────── */
+    @media (max-width: 560px) {
+      .header {
+        height: 56px;
+        padding: 0 16px;
+      }
+      .header__socials {
+        display: none;
+      }
+      .error-code {
+        font-size: 72px;
+      }
+      .message {
+        font-size: 0.65rem;
+      }
+      .footer {
+        font-size: 0.55rem;
+        gap: 8px;
+      }
     }
   </style>
 </head>
 <body>
 
-  <div class="error-code">404</div>
-
-  <div class="robot-row">
-    <div id="scene-wrap">
-      <canvas id="robot-canvas"></canvas>
+  <header class="header">
+    <div class="header__left">
+      <div class="header__avatar">pk</div>
+      <div class="header__info">
+        <span class="header__name">p-keminer</span>
+        <span class="header__status">
+          <span class="header__dot"></span>
+          cs, robotics, ki &amp; iot | tech career changer
+        </span>
+      </div>
     </div>
-    <div class="bubble" id="bubble"></div>
-  </div>
+    <div class="header__socials">
+      <a class="header__badge" href="https://github.com/p-keminer" target="_blank" rel="noopener noreferrer">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0 1 12 7.07a9.573 9.573 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/></svg>
+        GitHub
+      </a>
+      <a class="header__badge" href="https://www.linkedin.com/in/philip-keminer/" target="_blank" rel="noopener noreferrer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="4" fill="#0A66C2"/><path d="M7 10v7" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="7" cy="7.5" r="1.2" fill="#fff"/><path d="M11 17v-4c0-1.1.9-2 2-2s2 .9 2 2v4" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M11 13v4" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+        LinkedIn
+      </a>
+    </div>
+  </header>
 
-  <a class="back-btn" href="/">← Zurück zur Startseite</a>
+  <main class="content">
+    <div class="error-code">404</div>
+    <p class="message">Seite nicht gefunden</p>
+    <a class="back-btn" href="/">← Zur Startseite</a>
+  </main>
 
-  <script type="module" src="/src/pages/robot-404.ts"></script>
+  <footer class="footer">
+    <span>p-keminer</span>
+    <span class="footer__diamond">&#9670;</span>
+    <span>built with Three.js + Vite</span>
+  </footer>
+
 </body>
 </html>
