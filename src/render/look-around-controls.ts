@@ -16,6 +16,10 @@ export interface LookAroundControls {
   setMaxYawRight(degrees: number): void;
   /** Yaw/Pitch auf Null zurücksetzen (aufrufen beim Navigieren zu einem neuen Bereich). */
   reset(): void;
+  /** Yaw/Pitch sanft auf Null animieren. Callback wenn fertig. */
+  animateReset(onComplete: () => void): void;
+  /** Prüft ob gerade eine Reset-Animation läuft. */
+  isAnimatingReset(): boolean;
   /** Alle Event-Listener entfernen. */
   dispose(): void;
 }
@@ -61,6 +65,14 @@ export function createLookAroundControls(
   let snapshotYaw = 0;
   let snapshotPitch = 0;
   let gestureContaminated = false; // true sobald ≥2 Finger in dieser Geste gesehen wurden
+
+  // Reset-Animation
+  const RESET_DURATION_MS = 400;
+  let resetRafId = 0;
+  let resetStartTime = 0;
+  let resetStartYaw = 0;
+  let resetStartPitch = 0;
+  let resetOnComplete: (() => void) | null = null;
 
   function onPointerDown(e: PointerEvent): void {
     // Nur Touch — Maus-Ziehen auf dem Desktop wird hier nicht behandelt.
@@ -161,17 +173,59 @@ export function createLookAroundControls(
     },
 
     reset(): void {
+      cancelAnimationFrame(resetRafId);
+      resetOnComplete = null;
       yaw = 0;
       pitch = 0;
       primaryPointerId = null;
       activeTouchCount = 0;
     },
 
+    animateReset(onComplete: () => void): void {
+      // Schon bei 0 → sofort fertig
+      if (Math.abs(yaw) < 0.001 && Math.abs(pitch) < 0.001) {
+        yaw = 0;
+        pitch = 0;
+        onComplete();
+        return;
+      }
+      cancelAnimationFrame(resetRafId);
+      resetStartYaw = yaw;
+      resetStartPitch = pitch;
+      resetStartTime = performance.now();
+      resetOnComplete = onComplete;
+      tickResetAnimation();
+    },
+
+    isAnimatingReset(): boolean {
+      return resetOnComplete !== null;
+    },
+
     dispose(): void {
+      cancelAnimationFrame(resetRafId);
       domElement.removeEventListener('pointerdown',   onPointerDown);
       domElement.removeEventListener('pointermove',   onPointerMove);
       domElement.removeEventListener('pointerup',     onPointerUp);
       domElement.removeEventListener('pointercancel', onPointerUp);
     }
   };
+
+  function tickResetAnimation(): void {
+    const elapsed = performance.now() - resetStartTime;
+    const t = Math.min(elapsed / RESET_DURATION_MS, 1);
+    // Ease-Out-Kubisch für natürliches Ausschwingen
+    const eased = 1 - Math.pow(1 - t, 3);
+    yaw = resetStartYaw * (1 - eased);
+    pitch = resetStartPitch * (1 - eased);
+    onChange?.();
+    if (t < 1) {
+      resetRafId = requestAnimationFrame(tickResetAnimation);
+    } else {
+      yaw = 0;
+      pitch = 0;
+      const cb = resetOnComplete;
+      resetOnComplete = null;
+      cb?.();
+    }
+  }
 }

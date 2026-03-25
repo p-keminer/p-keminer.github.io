@@ -273,7 +273,10 @@ export function mountGame(root: HTMLDivElement): MountedGame {
 
     if (action === 'return-to-menu') {
       if (startFlowState === 'roomExplore' && roomFocusTarget === 'overview' && !isRoomFocusTransitionActive()) {
-        returnToMenu();
+        // Erst Look-Around sanft zurückschwenken, dann Menü-Transition starten.
+        preview.requestLookAroundReset(() => {
+          returnToMenu();
+        });
       }
 
       return;

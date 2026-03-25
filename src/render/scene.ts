@@ -154,6 +154,7 @@ export interface BoardPreviewApp {
   dispose: () => void;
   getSnapshot: () => BoardPreviewSnapshot;
   resetCameraState: () => void;
+  requestLookAroundReset: (onComplete: () => void) => void;
   resetPresentationState: () => void;
   renderGameToText: () => string;
   syncStartFlowState: (state: StartFlowStateInput) => void;
@@ -804,6 +805,16 @@ export function createBoardPreviewScene({
       syncCameraControlLock();
       render();
       onStateChange?.();
+    },
+    requestLookAroundReset: (onComplete: () => void) => {
+      if (lookAround.getOffset().yaw === 0 && lookAround.getOffset().pitch === 0) {
+        onComplete();
+        return;
+      }
+      lookAround.animateReset(() => {
+        render();
+        onComplete();
+      });
     },
     resetPresentationState: () => {
       presentationMode = 'board';
