@@ -1409,7 +1409,7 @@ const PORTFOLIO_LANDSCAPE_CSS = `
   }
   /* Carousel-Bereich: kleiner skalieren */
   main {
-    transform: scale(0.55) !important;
+    transform: scale(0.35) !important;
     transform-origin: center center !important;
     padding: 0 !important;
     margin-top: -10px !important;
