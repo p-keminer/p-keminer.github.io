@@ -16,7 +16,7 @@ import {
 } from './combat-camera';
 import type { CombatPresentationStateInput } from './combat-presentation';
 import { applyCameraPreset, createBoardCamera, type CameraPreset, resizeCamera } from './camera';
-import { isMobileDevice } from './device-tier';
+import { isMobileDevice, isTabletDevice } from './device-tier';
 import { createBoardInteraction, type BoardInteractionLayer } from './interaction';
 import { createSceneLights, type SceneLights } from './lights';
 import { createBloomEffect, type BloomEffect } from './bloom';
@@ -389,11 +389,14 @@ export function createBoardPreviewScene({
     const width = Math.max(container.clientWidth, 1);
     const height = Math.max(container.clientHeight, 1);
 
-    stage.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    // Tablets: pixelRatio auf 1.5 cappen — großes Display + hohe DPR = extrem viele Pixel.
+    const maxDpr = isTabletDevice ? 1.5 : 2;
+    const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+    stage.renderer.setPixelRatio(dpr);
     stage.renderer.setSize(width, height, false);
     stage.bloom.setSize(
-      Math.floor(width * Math.min(window.devicePixelRatio || 1, 2)),
-      Math.floor(height * Math.min(window.devicePixelRatio || 1, 2))
+      Math.floor(width * dpr),
+      Math.floor(height * dpr)
     );
     resizeCamera(stage.camera, width, height);
     isPortrait = stage.camera.aspect < 1;
@@ -401,9 +404,11 @@ export function createBoardPreviewScene({
     stage.roomCameraControls.setPortraitMode(isPortrait);
     stage.roomCameraControls.setLandscapeLock(isMobileLandscape);
     // Mobile Landscape: Look-Around sperren (Yaw-Limits auf 0) — wie Desktop.
+    // Tablet Portrait (≥600px breit): breitere Yaw-Limits als Phone Portrait.
+    const isTabletPortrait = isPortrait && width >= 600;
     lookAround.setAllowPitch(!isPortrait && !isMobileLandscape);
-    lookAround.setMaxYawLeft(isPortrait ? 13 : isMobileLandscape ? 0 : 45);
-    lookAround.setMaxYawRight(isPortrait ? 12 : isMobileLandscape ? 0 : 17);
+    lookAround.setMaxYawLeft(isMobileLandscape ? 0 : isTabletPortrait ? 30 : isPortrait ? 13 : 45);
+    lookAround.setMaxYawRight(isMobileLandscape ? 0 : isTabletPortrait ? 25 : isPortrait ? 12 : 17);
     render();
     // Hotspot-Positionen nach Resize neu berechnen — immer wenn roomExplore
     // aktiv ist, da alle 3D-projizierten Buttons (Übersicht + Bilderrahmen)

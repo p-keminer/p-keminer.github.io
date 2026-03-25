@@ -13,6 +13,9 @@ export const deviceTier: DeviceTier = detectTier();
 /** True wenn das Gerät ein Mobilgerät ist (Touch-fähig, unabhängig von Orientation). */
 export const isMobileDevice: boolean = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
+/** True wenn das Gerät ein Tablet ist (Touch, breiter Viewport). */
+export const isTabletDevice: boolean = isMobileDevice && typeof window !== 'undefined' && Math.min(window.screen.width, window.screen.height) >= 600;
+
 function detectTier(): DeviceTier {
   // Server-Side / Worker — sicherheitshalber high
   if (typeof navigator === 'undefined') return 'high';
