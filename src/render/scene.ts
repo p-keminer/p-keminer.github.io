@@ -828,13 +828,23 @@ export function createBoardPreviewScene({
       const modeChanged = startFlowMode !== nextState.mode;
       const isMenuReturnFromFreeCamera = roomCameraFree && nextState.mode === 'menu';
       if ((focusTargetChanged || modeChanged) && !isMenuReturnFromFreeCamera) {
-        // Snapshot der aktuellen Kamera-Position + Blickrichtung
+        // Snapshot der aktuellen Kamera-Position + Blickrichtung.
+        // Target-Distanz vom Basis-Preset übernehmen damit die Lerp-Interpolation
+        // keine verzerrten Winkel erzeugt (sonst wäre der Snapshot-Target nur 1 Unit
+        // entfernt während das Ziel-Preset 10+ Units hat).
         const camPos = stage.camera.position;
         const camDir = new THREE.Vector3();
         stage.camera.getWorldDirection(camDir);
+        const basePreset = getRoomFocusTargetPreset(startFlowFocusTarget);
+        const baseDist = Math.sqrt(
+          (basePreset.target.x - basePreset.position.x) ** 2 +
+          (basePreset.target.y - basePreset.position.y) ** 2 +
+          (basePreset.target.z - basePreset.position.z) ** 2
+        );
+        const d = Math.max(baseDist, 1);
         cameraExitSnapshot = {
           position: { x: camPos.x, y: camPos.y, z: camPos.z },
-          target: { x: camPos.x + camDir.x, y: camPos.y + camDir.y, z: camPos.z + camDir.z }
+          target: { x: camPos.x + camDir.x * d, y: camPos.y + camDir.y * d, z: camPos.z + camDir.z * d }
         };
         lookAround.reset();
       }
