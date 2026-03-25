@@ -579,7 +579,7 @@ export function createBoardPreviewScene({
 
   // Fade-Out für Look-Around beim Zurück-zum-Menü: 0 = kein Fade, >0 = läuft.
   let lookAroundFadeStartMs = 0;
-  const LOOK_AROUND_FADE_DURATION_MS = 500; // gleich wie EXIT_DURATION_MS
+  const LOOK_AROUND_FADE_DURATION_MS = 900;
 
   /**
    * Rechnet den aktuellen Look-Around-Offset in ein CameraPreset ein.
