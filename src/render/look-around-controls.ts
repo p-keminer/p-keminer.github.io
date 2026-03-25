@@ -113,9 +113,14 @@ export function createLookAroundControls(
     lastX = e.clientX;
     lastY = e.clientY;
 
-    // Delta auf DOM-Elementgröße normalisieren — vollständiger Breitenwisch = vollständiger ±MAX-Bereich
-    const w = Math.max(domElement.clientWidth, 1);
-    const h = Math.max(domElement.clientHeight, 1);
+    // Auf Tablets im Portrait-Modus (breiter Bildschirm) ist die gleiche
+    // Fingerbewegung relativ zur Bildschirmbreite viel kleiner als auf Phones.
+    // Breite auf 400px cappen (≈ Phone-Portrait) damit die Sensitivity gleich bleibt.
+    const rawW = domElement.clientWidth;
+    const rawH = domElement.clientHeight;
+    const isTabletPortrait = rawH > rawW && rawW >= 600;
+    const w = Math.max(isTabletPortrait ? Math.min(rawW, 400) : rawW, 1);
+    const h = Math.max(isTabletPortrait ? Math.min(rawH, 700) : rawH, 1);
 
     yaw   = THREE.MathUtils.clamp(yaw   - (dx / w) * MAX_ANGLE_RAD * 2, -maxYawNegative, maxYawPositive);
     if (allowPitch) {
