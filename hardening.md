@@ -177,18 +177,18 @@ Jeder Schritt wird einzeln umgesetzt und manuell verifiziert, bevor der nächste
 
 ---
 
-## Paket 5 – 404-Seite Redesign
+## Paket 5 – 404-Seite Redesign ✅
 
-**Status: Entwurf erstellt**
+**Status: Erledigt**
 
-**Aufgaben:**
-- [x] **Stil-Abgleich:** Schriften, Farben, Header/Footer von Hauptseite übernommen
-- [x] **Layout vereinfachen:** Roboter + Spotlight + Scanlines entfernt, schlichte Seite
-- [x] **Button:** „Zur Startseite" im gleichen Badge-Style wie Hauptseiten-Buttons
-- [x] **Mobile-Layout** responsive mit 560px Breakpoint
-- [ ] **Review durch Nutzer** — Entwurf prüfen, ggf. Anpassungen
+**Was umgesetzt wurde:**
+- [x] Schriften, Farben, Header/Footer von Hauptseite übernommen
+- [x] Roboter + Spotlight + Scanlines entfernt, schlichte statische Seite
+- [x] Button im gleichen HUD-Stil (dunkelrot, #ffd4d4 Schrift)
+- [x] Mobile-Layout responsive mit 560px Breakpoint
+- [x] Kein JS/GLB mehr nötig
 
-**Dateien:** `404.html` (komplett neu, kein JS/GLB mehr)
+**Dateien:** `404.html`
 
 ---
 
