@@ -62,5 +62,8 @@ desktop.ini
 *.swp
 *.swo
 
+# ── Archived documentation (historical, not needed for active development) ────
+archive/
+
 # ── AI assistant local config (machine-specific launch / settings) ────────────
 .claude/
