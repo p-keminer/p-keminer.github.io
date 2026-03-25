@@ -577,6 +577,10 @@ export function createBoardPreviewScene({
   // eines Fokus-Ziels, damit die Transition von der geschwenkten Position startet.
   let lookAroundExitPreset: CameraPreset | null = null;
 
+  // Fade-Out für Look-Around beim Zurück-zum-Menü: 0 = kein Fade, >0 = läuft.
+  let lookAroundFadeStartMs = 0;
+  const LOOK_AROUND_FADE_DURATION_MS = 500; // gleich wie EXIT_DURATION_MS
+
   /**
    * Rechnet den aktuellen Look-Around-Offset in ein CameraPreset ein.
    * Gibt null zurück wenn kein Offset aktiv ist (yaw=0, pitch=0).
@@ -640,7 +644,15 @@ export function createBoardPreviewScene({
     lookAround.setEnabled(isFixedView);
 
     if (isFixedView) {
-      const { yaw, pitch } = lookAround.getOffset();
+      let { yaw, pitch } = lookAround.getOffset();
+      // Sanftes Ausblenden des Look-Around während der Exit-Animation
+      if (lookAroundFadeStartMs > 0) {
+        const fadeElapsed = performance.now() - lookAroundFadeStartMs;
+        const fadeT = Math.min(fadeElapsed / LOOK_AROUND_FADE_DURATION_MS, 1);
+        const fadeFactor = 1 - fadeT; // 1 → 0
+        yaw *= fadeFactor;
+        pitch *= fadeFactor;
+      }
       if (yaw !== 0 || pitch !== 0) {
         _lookAroundScratch.pos.copy(stage.camera.position);
         // Basis-Blickrichtung: preset-Position → preset-Ziel
@@ -907,8 +919,11 @@ export function createBoardPreviewScene({
           // Zurück zum Menü: animiert das Zoom-Out damit die Kamera nicht springt.
           // syncStartFlowState wird hier nicht wieder in enger Schleife aufgerufen,
           // deshalb feuert der animateExit-Callback zuverlässig.
+          // Starte Look-Around-Fade-Out parallel zur Zoom-Exit-Animation
+          lookAroundFadeStartMs = performance.now();
           stage.roomCameraControls.animateExit(() => {
             roomCameraFree = false;
+            lookAroundFadeStartMs = 0;
             lookAround.reset();
           });
         } else {
