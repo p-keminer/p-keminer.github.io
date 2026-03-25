@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <rect width="64" height="64" rx="14" fill="#070a12"/>
+  <rect width="64" height="64" rx="14" fill="none"/>
   <!-- Antenna -->
   <line x1="32" y1="8" x2="32" y2="15" stroke="#70c3ff" stroke-width="2" stroke-linecap="round"/>
   <circle cx="32" cy="7" r="2.5" fill="#70c3ff"/>
