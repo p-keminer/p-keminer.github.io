@@ -1104,8 +1104,20 @@ body.web-embed-active .web-embed-overlay {
   }
 }
 
-/* Mobile Landscape: Buttons tiefer setzen */
+/* Mobile Landscape: Buttons tiefer, Header/Footer dünner */
 @media (max-width: 900px) and (orientation: landscape) {
+  #site-header {
+    height: 44px;
+    padding: 0 20px;
+  }
+  .site-header__avatar {
+    height: 28px;
+    width: 28px;
+  }
+  #site-footer {
+    height: 28px;
+    font-size: 0.55rem;
+  }
   .canvas-hud-controls {
     bottom: 2rem;
   }
