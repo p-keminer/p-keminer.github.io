@@ -577,9 +577,10 @@ export function createBoardPreviewScene({
   // tatsächlichen Position losfährt — egal ob Look-Around, Freikamera oder Orbit.
   let cameraExitSnapshot: CameraPreset | null = null;
 
-  // Fade-Out für Look-Around beim Zurück-zum-Menü: 0 = kein Fade, >0 = läuft.
-  let lookAroundFadeStartMs = 0;
-  const LOOK_AROUND_FADE_DURATION_MS = 900;
+  // Timer-basierte Transition für Mode-Wechsel (z.B. roomExplore → menu),
+  // die kein Focus-Progress-System haben.
+  let modeTransitionStartMs = 0;
+  const MODE_TRANSITION_DURATION_MS = 600;
 
 
 
@@ -600,25 +601,18 @@ export function createBoardPreviewScene({
     // Deaktiviert in: webEmbed (iframe bedeckt die Ansicht), pictureFrameDetail
     // (Nahaufnahme), boardFocus (Board-Kamera übernimmt), menu/introTransition.
     // Muss vollständig am Ziel angekommen sein (nicht unter Transition).
-    // Look-Around bleibt auch während der Freikamera-Exit-Animation aktiv,
-    // damit der Schwenk nicht abrupt zurückspringt wenn man "Zurück" drückt.
+    // Look-Around nur in fixen Ansichten (roomExplore + angekommen am Ziel).
+    // Nicht während Freikamera (roomCameraControls handhabt Orbit selbst).
     const isFixedView =
-      (startFlowMode === 'roomExplore' || roomCameraFree) &&
+      startFlowMode === 'roomExplore' &&
+      !roomCameraFree &&
       LOOK_AROUND_TARGETS.includes(startFlowFocusTarget) &&
       startFlowFocusProgress >= 1;
 
     lookAround.setEnabled(isFixedView);
 
     if (isFixedView) {
-      let { yaw, pitch } = lookAround.getOffset();
-      // Sanftes Ausblenden des Look-Around während der Exit-Animation
-      if (lookAroundFadeStartMs > 0) {
-        const fadeElapsed = performance.now() - lookAroundFadeStartMs;
-        const fadeT = Math.min(fadeElapsed / LOOK_AROUND_FADE_DURATION_MS, 1);
-        const fadeFactor = 1 - fadeT; // 1 → 0
-        yaw *= fadeFactor;
-        pitch *= fadeFactor;
-      }
+      const { yaw, pitch } = lookAround.getOffset();
       if (yaw !== 0 || pitch !== 0) {
         _lookAroundScratch.pos.copy(stage.camera.position);
         // Basis-Blickrichtung: preset-Position → preset-Ziel
@@ -658,7 +652,19 @@ export function createBoardPreviewScene({
     }
 
     if (startFlowMode === 'menu') {
-      return isPortrait ? PORTRAIT_MENU_CAMERA_PRESET : MENU_CAMERA_PRESET;
+      const menuPreset = isPortrait ? PORTRAIT_MENU_CAMERA_PRESET : MENU_CAMERA_PRESET;
+      // Timer-basierte Transition vom Snapshot zum Menü-Preset
+      if (cameraExitSnapshot && modeTransitionStartMs > 0) {
+        const elapsed = performance.now() - modeTransitionStartMs;
+        const t = Math.min(elapsed / MODE_TRANSITION_DURATION_MS, 1);
+        if (t >= 1) {
+          cameraExitSnapshot = null;
+          modeTransitionStartMs = 0;
+          return menuPreset;
+        }
+        return lerpCameraPreset(cameraExitSnapshot, menuPreset, easeInOutCubic(t));
+      }
+      return menuPreset;
     }
 
     if (startFlowMode === 'introTransition') {
@@ -826,8 +832,11 @@ export function createBoardPreviewScene({
       // die animateExit den Fade-Out des Look-Around.
       const focusTargetChanged = startFlowFocusTarget !== nextState.focusTarget;
       const modeChanged = startFlowMode !== nextState.mode;
-      const isMenuReturnFromFreeCamera = roomCameraFree && nextState.mode === 'menu';
-      if ((focusTargetChanged || modeChanged) && !isMenuReturnFromFreeCamera) {
+      if (focusTargetChanged || modeChanged) {
+        // Mode-Wechsel (z.B. roomExplore → menu) starten eine eigene Timer-Transition
+        if (modeChanged) {
+          modeTransitionStartMs = performance.now();
+        }
         // Snapshot der aktuellen Kamera-Position + Blickrichtung.
         // Target-Distanz vom Basis-Preset übernehmen damit die Lerp-Interpolation
         // keine verzerrten Winkel erzeugt (sonst wäre der Snapshot-Target nur 1 Unit
@@ -896,21 +905,10 @@ export function createBoardPreviewScene({
         roomCameraFree = true;
       } else if (!shouldBeFree && roomCameraFree) {
         stage.roomCameraControls.setEnabled(false);
-        if (startFlowMode === 'menu') {
-          // Zurück zum Menü: animiert das Zoom-Out damit die Kamera nicht springt.
-          // syncStartFlowState wird hier nicht wieder in enger Schleife aufgerufen,
-          // deshalb feuert der animateExit-Callback zuverlässig.
-          // Starte Look-Around-Fade-Out parallel zur Zoom-Exit-Animation
-          lookAroundFadeStartMs = performance.now();
-          stage.roomCameraControls.animateExit(() => {
-            roomCameraFree = false;
-            lookAroundFadeStartMs = 0;
-            lookAround.reset();
-          });
-        } else {
-          // Navigation zu Fokus-Ziel: cameraExitSnapshot wurde bereits oben erfasst.
-          roomCameraFree = false;
-        }
+        // cameraExitSnapshot wurde bereits oben erfasst — sofort Freikamera deaktivieren.
+        // Die Timer-Transition (modeTransitionStartMs) oder Focus-Progress sorgen für
+        // eine sanfte Kamerafahrt vom Snapshot zum Ziel.
+        roomCameraFree = false;
       }
 
       syncCameraControlLock();
