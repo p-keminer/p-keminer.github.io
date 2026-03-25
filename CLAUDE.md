@@ -30,6 +30,17 @@ Diese Datei richtet sich an Claude Code und gilt projektweit, sofern in Unterord
 - Wenn ein neuer Unterordner entsteht, soll er nur dann eigene Doku bekommen, wenn er echte Verantwortung traegt.
 - Wenn sich Prioritaeten aendern, muss `ROADMAP.md` mit aktualisiert werden.
 
+## UI-Overlays und Kaesten
+
+Jedes Overlay, Panel oder Kästchen muss robust umgesetzt werden:
+
+1. **Hoehe nie fest** — immer relativ zum Viewport mit genuegend Reserveplatz fuer Buttons und Footer.
+2. **Immer scrollbar** — `overflow-y: auto` auf dem Inhaltscontainer, damit langer Text nicht abgeschnitten wird.
+3. **Mobile-first testen** — der kleinste Viewport (375px Breite) bestimmt die Constraints. Media-Query-Overrides muessen nach den Basis-Regeln stehen (CSS-Cascade).
+4. **Klare Zonen ohne Ueberlappung** — Header-Zone oben, Content-Zone Mitte (scrollbar), Button-Zone unten, Footer-Zone ganz unten. Diese Bereiche duerfen sich nie gegenseitig verdecken.
+5. **z-index Hierarchie einhalten** — interaktive Buttons immer ueber dekorativen Overlays.
+6. **Kein `inset`-Shorthand** — explizite `top`/`right`/`bottom`/`left` verwenden, um Cascade-Konflikte mit Media Queries zu vermeiden.
+
 ## Uebergabequalitaet
 
 - Halte TODOs, Risiken und neue Annahmen in `progress.md` fest.
