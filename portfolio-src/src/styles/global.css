@@ -1,10 +1,4 @@
-@import '@fontsource/inter/300.css';
-@import '@fontsource/inter/400.css';
-@import '@fontsource/inter/500.css';
-@import '@fontsource/inter/600.css';
-@import '@fontsource/inter/700.css';
-@import '@fontsource/jetbrains-mono/400.css';
-@import '@fontsource/jetbrains-mono/500.css';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 /* Custom Properties */
 :root {
@@ -165,6 +159,13 @@ body {
     --brush-spin-dur-roomba: 2.5s;
     --jetpack-flame-dur: 0.65s;
     --jetpack-flame-dur-rev: 0.5s;
+  }
+}
+
+@media (max-width: 900px) and (orientation: landscape) {
+  html, body, #root {
+    height: 100vh !important;
+    overflow: hidden !important;
   }
 }
 
@@ -666,14 +667,6 @@ body {
   0%   { transform: scale(0.6); opacity: 0; }
   60%  { transform: scale(1.08); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
-}
-
-/* ── Lift fixed bottom buttons above mobile browser chrome (touch devices only) ── */
-@media (hover: none) and (pointer: coarse) {
-  .chiptune-btn,
-  .cards-toggle-btn {
-    bottom: 60px !important;
-  }
 }
 
 /* ── Reduced motion: pause all decorative animations ── */
