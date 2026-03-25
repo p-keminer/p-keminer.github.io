@@ -1404,7 +1404,14 @@ const PORTFOLIO_LANDSCAPE_CSS = `
   footer span {
     font-size: 0.55rem !important;
   }
-  /* Carousel-Bereich: weniger vertikaler Platz */
+  /* Carousel-Bereich: runterskalieren damit Karten in den Viewport passen */
+  main {
+    transform: scale(0.7) !important;
+    transform-origin: center center !important;
+    padding: 0 !important;
+    margin-top: -10px !important;
+  }
+  /* Joystick kleiner + tiefer */
   .scene-joystick {
     bottom: 8px !important;
     left: 10px !important;
