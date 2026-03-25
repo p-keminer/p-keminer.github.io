@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { projects } from "../data/projects";
 import ProjectCard from "./ProjectCard";
 
@@ -13,6 +13,7 @@ export default function PortfolioCarousel() {
   const [active, setActive] = useState(initialIndex);
   const [stageScale, setStageScale] = useState(0.72);
   const [isMobile, setIsMobile] = useState(false);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const update = () => {
@@ -71,6 +72,22 @@ export default function PortfolioCarousel() {
           e.preventDefault();
           setActive((i) => {
             const next = i + (e.deltaY > 0 ? 1 : -1);
+            return ((next % total) + total) % total;
+          });
+        }}
+        onTouchStart={(e) => {
+          const t = e.touches[0];
+          touchStart.current = { x: t.clientX, y: t.clientY };
+        }}
+        onTouchEnd={(e) => {
+          if (!touchStart.current) return;
+          const t = e.changedTouches[0];
+          const dx = t.clientX - touchStart.current.x;
+          const dy = t.clientY - touchStart.current.y;
+          touchStart.current = null;
+          if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+          setActive((i) => {
+            const next = i + (dx < 0 ? 1 : -1);
             return ((next % total) + total) % total;
           });
         }}
