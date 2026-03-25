@@ -1390,23 +1390,26 @@ const PORTFOLIO_LANDSCAPE_CSS = `
 @media (max-width: 900px) and (orientation: landscape) {
   /* Header dünner */
   header {
-    height: 40px !important;
-    padding: 0 16px !important;
+    height: 32px !important;
+    padding: 0 12px !important;
   }
   header .header-avatar {
-    width: 24px !important;
-    height: 24px !important;
+    width: 20px !important;
+    height: 20px !important;
+  }
+  header span, header p {
+    font-size: 0.65rem !important;
   }
   /* Footer dünner */
   footer {
-    padding: 6px 16px !important;
+    padding: 4px 12px !important;
   }
   footer span {
-    font-size: 0.55rem !important;
+    font-size: 0.5rem !important;
   }
-  /* Carousel-Bereich: runterskalieren damit Karten in den Viewport passen */
+  /* Carousel-Bereich: kleiner skalieren */
   main {
-    transform: scale(0.7) !important;
+    transform: scale(0.55) !important;
     transform-origin: center center !important;
     padding: 0 !important;
     margin-top: -10px !important;
