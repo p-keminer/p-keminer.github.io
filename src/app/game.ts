@@ -1314,6 +1314,21 @@ function renderStartFlowControls(
           </div>`
             : '';
 
+    // In der Übersicht: nur den Kontext-Button (Zurück) zeigen, kein "Zur Übersicht"
+    if (currentRoomFocusTarget === 'overview') {
+      return contextAction ? `
+        <div class="control-group">
+          <p class="control-label">Navigation</p>
+          ${contextAction}
+        </div>
+      ` : '';
+    }
+
+    // Während Kamerafahrt keine Buttons anzeigen — erst am Fokusziel
+    if (roomFocusTransitionActive) {
+      return '';
+    }
+
     return `
       <div class="control-group">
         <p class="control-label">Navigation</p>
@@ -1323,7 +1338,6 @@ function renderStartFlowControls(
             data-control="room-focus"
             data-room-focus-target="overview"
             type="button"
-            ${roomFocusTransitionActive || currentRoomFocusTarget === 'overview' ? 'disabled' : ''}
           >
             Zur Übersicht
           </button>

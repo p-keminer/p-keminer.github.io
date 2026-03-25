@@ -864,7 +864,7 @@ body.web-embed-active .web-embed-overlay {
 #legal-overlay {
   top: 80px;
   right: 0;
-  bottom: 120px;
+  bottom: 160px;
   left: 0;
   opacity: 0;
   pointer-events: none;
@@ -893,6 +893,7 @@ body.web-embed-active .web-embed-overlay {
   max-height: 100%;
   max-width: 560px;
   overflow-y: auto;
+  padding-bottom: 60px;
   position: relative;
   width: 90vw;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
