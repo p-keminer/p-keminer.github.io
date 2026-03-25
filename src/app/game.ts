@@ -1388,6 +1388,15 @@ function isRoomHotspotId(value: string | undefined): value is Exclude<RoomFocusT
 // ── Portfolio-iframe Landscape-Stylesheet Injection ─────────────────────────
 const PORTFOLIO_LANDSCAPE_CSS = `
 @media (max-width: 900px) and (orientation: landscape) {
+  /* Viewport fest — kein Scrollen */
+  html, body {
+    height: 100vh !important;
+    overflow: hidden !important;
+  }
+  #root {
+    height: 100vh !important;
+    overflow: hidden !important;
+  }
   /* Header dünner */
   header {
     height: 32px !important;
