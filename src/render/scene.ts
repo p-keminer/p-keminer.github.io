@@ -630,8 +630,10 @@ export function createBoardPreviewScene({
     // Deaktiviert in: webEmbed (iframe bedeckt die Ansicht), pictureFrameDetail
     // (Nahaufnahme), boardFocus (Board-Kamera übernimmt), menu/introTransition.
     // Muss vollständig am Ziel angekommen sein (nicht unter Transition).
+    // Look-Around bleibt auch während der Freikamera-Exit-Animation aktiv,
+    // damit der Schwenk nicht abrupt zurückspringt wenn man "Zurück" drückt.
     const isFixedView =
-      startFlowMode === 'roomExplore' &&
+      (startFlowMode === 'roomExplore' || roomCameraFree) &&
       LOOK_AROUND_TARGETS.includes(startFlowFocusTarget) &&
       startFlowFocusProgress >= 1;
 
@@ -841,10 +843,14 @@ export function createBoardPreviewScene({
     syncStartFlowState: (nextState) => {
       startFlowFocusFromTarget = nextState.focusFromTarget;
       startFlowFocusProgress = THREE.MathUtils.clamp(nextState.focusProgress, 0, 1);
-      // Beim Verlassen eines Fokus-Ziels: Look-Around-Offset ins Exit-Preset
-      // einrechnen, damit die Kamera-Transition von der geschwenkten Position
-      // startet statt erst zur Frontalansicht zurückzuspringen.
-      if (startFlowFocusTarget !== nextState.focusTarget) {
+      // Beim Verlassen eines Fokus-Ziels oder Mode-Wechsel: Look-Around-Offset
+      // ins Exit-Preset einrechnen, damit die Kamera-Transition von der
+      // geschwenkten Position startet statt erst zur Frontalansicht zurückzuspringen.
+      // Ausnahme: Wenn die Freikamera aktiv ist (roomCameraFree), steuert sie die
+      // Position — Look-Around-Reset wird dort durch animateExit gehandhabt.
+      const focusTargetChanged = startFlowFocusTarget !== nextState.focusTarget;
+      const modeChanged = startFlowMode !== nextState.mode;
+      if ((focusTargetChanged || modeChanged) && !roomCameraFree) {
         const currentBasePreset = getRoomFocusTargetPreset(startFlowFocusTarget);
         lookAroundExitPreset = computeLookAroundPreset(currentBasePreset);
         lookAround.reset();
@@ -903,6 +909,7 @@ export function createBoardPreviewScene({
           // deshalb feuert der animateExit-Callback zuverlässig.
           stage.roomCameraControls.animateExit(() => {
             roomCameraFree = false;
+            lookAround.reset();
           });
         } else {
           // Navigation zu Fokus-Ziel: erfasse die Live-Freikamera-Position damit
