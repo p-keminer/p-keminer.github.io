@@ -16,7 +16,7 @@ import {
 } from './combat-camera';
 import type { CombatPresentationStateInput } from './combat-presentation';
 import { applyCameraPreset, createBoardCamera, type CameraPreset, resizeCamera } from './camera';
-import { isMobileDevice, isTabletDevice } from './device-tier';
+import { deviceTier, isMobileDevice, isTabletDevice } from './device-tier';
 import { createBoardInteraction, type BoardInteractionLayer } from './interaction';
 import { createSceneLights, type SceneLights } from './lights';
 import { createBloomEffect, type BloomEffect } from './bloom';
@@ -407,7 +407,9 @@ export function createBoardPreviewScene({
     const height = Math.max(container.clientHeight, 1);
 
     // Tablets: pixelRatio auf 1.5 cappen — großes Display + hohe DPR = extrem viele Pixel.
-    const maxDpr = isTabletDevice ? 1.5 : 2;
+    // Mobile: DPR auf 1.0 cappen — mit 5-Pass Bloom wird jeder Pixel 5× gerendert,
+    // DPR 3.0 bedeutet 9× mehr Pixel × 5 Passes. DPR 1.0 spart massiv Fill-Rate.
+    const maxDpr = isTabletDevice ? 1.5 : deviceTier === 'high' ? 2 : 1;
     const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
     stage.renderer.setPixelRatio(dpr);
     stage.renderer.setSize(width, height, false);

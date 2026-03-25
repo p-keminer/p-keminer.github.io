@@ -66,6 +66,18 @@ export function createBoardCameraControls({
   let pinchStartDistance = 0;
   let pinchStartRadius = 0;
 
+  // rAF-Coalescing: Pointer/Touch/Wheel-Events feuern öfter als der Bildschirm
+  // aktualisieren kann. Wir bündeln alle Pose-Änderungen auf max 1× pro Frame.
+  let poseUpdateScheduled = false;
+  function schedulePoseUpdate(): void {
+    if (poseUpdateScheduled) return;
+    poseUpdateScheduled = true;
+    requestAnimationFrame(() => {
+      poseUpdateScheduled = false;
+      onPoseChange(buildCurrentPose());
+    });
+  }
+
   domElement.addEventListener('contextmenu', handleContextMenu);
   domElement.addEventListener('mousedown', handleMiddleMouseInterception, true);
   domElement.addEventListener('mouseup', handleMiddleMouseInterception, true);
@@ -222,7 +234,7 @@ export function createBoardCameraControls({
     if (gestureMode === 'orbit') {
       spherical.theta = clamp(spherical.theta - event.movementX * 0.0085, minTheta, maxTheta);
       spherical.phi = clamp(spherical.phi + event.movementY * 0.0068, MIN_PHI, MAX_PHI);
-      onPoseChange(buildCurrentPose());
+      schedulePoseUpdate();
       return;
     }
 
@@ -240,7 +252,7 @@ export function createBoardCameraControls({
     target.y = clamp(target.y, 0, MAX_TARGET_HEIGHT);
     target.z = clamp(target.z, -MAX_TARGET_OFFSET, MAX_TARGET_OFFSET);
 
-    onPoseChange(buildCurrentPose());
+    schedulePoseUpdate();
   }
 
   function handlePointerUpOrCancel(event: PointerEvent): void {
@@ -269,7 +281,7 @@ export function createBoardCameraControls({
     event.preventDefault();
     const zoomFactor = 1 + event.deltaY * 0.0012;
     spherical.radius = clamp(spherical.radius * zoomFactor, MIN_RADIUS, MAX_RADIUS);
-    onPoseChange(buildCurrentPose());
+    schedulePoseUpdate();
   }
 
   // ── Touch-Gesten-Handler ────────────────────────────────────────────────
@@ -319,7 +331,7 @@ export function createBoardCameraControls({
         const dy = t.clientY - prev.y;
         spherical.theta = clamp(spherical.theta - dx * 0.0085, minTheta, maxTheta);
         spherical.phi = clamp(spherical.phi + dy * 0.0068, MIN_PHI, MAX_PHI);
-        onPoseChange(buildCurrentPose());
+        schedulePoseUpdate();
         event.preventDefault();
       }
 
@@ -331,7 +343,7 @@ export function createBoardCameraControls({
       const currentDistance = getTouchDistance(activeTouches);
       const scale = pinchStartDistance / Math.max(currentDistance, 1);
       spherical.radius = clamp(pinchStartRadius * scale, MIN_RADIUS, MAX_RADIUS);
-      onPoseChange(buildCurrentPose());
+      schedulePoseUpdate();
       event.preventDefault();
     }
   }
