@@ -62,10 +62,10 @@ export default function PortfolioCarousel() {
         style={{
           position: "relative",
           width: "100%",
-          height: CARD_H * stageScale + 80,
+          height: CARD_H * stageScale + 40,
           perspective: "1800px",
           perspectiveOrigin: "50% 40%",
-          overflow: "hidden",
+          overflow: "visible",
         }}
         onWheel={(e) => {
           e.preventDefault();
@@ -136,7 +136,7 @@ export default function PortfolioCarousel() {
                   <div
                     style={{
                       position: "absolute",
-                      bottom: -50,
+                      top: -52,
                       left: 0,
                       width: "100%",
                       display: "flex",
@@ -202,7 +202,7 @@ export default function PortfolioCarousel() {
       </div>
 
       {/* Dot indicators */}
-      <div style={{ display: "flex", gap: "8px", alignItems: "center", position: "relative", zIndex: 200 }}>
+      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
         {projects.map((_, i) => (
           <button
             key={i}
