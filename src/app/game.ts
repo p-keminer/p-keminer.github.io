@@ -464,6 +464,11 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       snapshot.startFlow.currentRoomFocusTarget === 'webEmbed';
     document.body.classList.toggle('web-embed-active', isWebEmbed);
 
+    // Landscape-Stylesheet in den Portfolio-iframe injizieren (same-origin)
+    if (isWebEmbed) {
+      injectPortfolioLandscapeStyles();
+    }
+
     // Legal Overlay ein-/ausblenden wenn legalWall Transition abgeschlossen
     const isAtLegalWall =
       !snapshot.startFlow.roomFocusTransitionActive &&
@@ -1379,3 +1384,90 @@ function isRoomFocusTargetId(value: string | undefined): value is RoomFocusTarge
 function isRoomHotspotId(value: string | undefined): value is Exclude<RoomFocusTargetId, 'overview'> {
   return value === 'board' || value === 'displayCase' || value === 'pictureFrame' || value === 'workbench';
 }
+
+// ── Portfolio-iframe Landscape-Stylesheet Injection ─────────────────────────
+const PORTFOLIO_LANDSCAPE_CSS = `
+@media (max-width: 900px) and (orientation: landscape) {
+  /* Header dünner */
+  header {
+    height: 40px !important;
+    padding: 0 16px !important;
+  }
+  header .header-avatar {
+    width: 24px !important;
+    height: 24px !important;
+  }
+  /* Footer dünner */
+  footer {
+    padding: 6px 16px !important;
+  }
+  footer span {
+    font-size: 0.55rem !important;
+  }
+  /* Carousel-Bereich: weniger vertikaler Platz */
+  .scene-joystick {
+    bottom: 8px !important;
+    left: 10px !important;
+  }
+  .scene-joystick-pad {
+    width: 52px !important;
+    height: 52px !important;
+  }
+  .scene-joystick-thumb {
+    width: 20px !important;
+    height: 20px !important;
+  }
+  /* Chiptune + Cards-Toggle tiefer */
+  .chiptune-btn, .cards-toggle-btn {
+    bottom: 8px !important;
+  }
+  /* Mobile social menu kompakter */
+  .mobile-social-menu {
+    transform: scale(0.85);
+    transform-origin: top right;
+  }
+}
+`;
+
+let portfolioStyleInjected = false;
+
+function injectPortfolioLandscapeStyles(): void {
+  if (portfolioStyleInjected) return;
+
+  const iframe = document.querySelector<HTMLIFrameElement>('.web-embed-overlay iframe');
+  if (!iframe) return;
+
+  const tryInject = (): void => {
+    try {
+      const doc = iframe.contentDocument;
+      if (!doc || !doc.head) return;
+      if (doc.getElementById('landscape-override')) {
+        portfolioStyleInjected = true;
+        return;
+      }
+      const style = doc.createElement('style');
+      style.id = 'landscape-override';
+      style.textContent = PORTFOLIO_LANDSCAPE_CSS;
+      doc.head.appendChild(style);
+      portfolioStyleInjected = true;
+    } catch {
+      // Cross-origin oder noch nicht geladen — ignorieren
+    }
+  };
+
+  // Sofort versuchen + nach Load
+  tryInject();
+  if (!portfolioStyleInjected) {
+    iframe.addEventListener('load', () => {
+      tryInject();
+    }, { once: true });
+  }
+}
+
+// Reset-Flag wenn iframe entfernt wird (Focus wechselt weg von webEmbed)
+const portfolioObserver = new MutationObserver(() => {
+  if (!document.querySelector('.web-embed-overlay iframe')) {
+    portfolioStyleInjected = false;
+  }
+});
+portfolioObserver.observe(document.body, { childList: true, subtree: true });
