@@ -630,8 +630,16 @@ function createPieceVisualPresentationSettings(piece: ChessPieceState): PieceVis
   };
 }
 
+// Einzelne Figurentypen deren GLB-Pivot minimal versetzt ist.
+const PIECE_Y_OFFSET: Partial<Record<ChessPieceType, number>> = {
+  rook: 0.06
+};
+
 function getPieceWorldPosition(piece: ChessPieceState): THREE.Vector3 {
-  return getPieceWorldPositionFromSquare(piece.square);
+  const pos = getPieceWorldPositionFromSquare(piece.square);
+  const yOff = PIECE_Y_OFFSET[piece.type];
+  if (yOff) pos.y += yOff;
+  return pos;
 }
 
 function getPieceWorldPositionFromSquare(square: BoardSquare): THREE.Vector3 {

@@ -876,18 +876,15 @@ export function createBoardPreviewScene({
         activePictureFrameDetailId = nextState.pictureFrameDetailId;
       }
 
-      // Figuren werden nur in boardFocus gezeigt — sie schweben sichtbar in Raum-Erkunden.
-      // Die Board-Gruppe bleibt permanent versteckt (Raum-GLB stellt die Grafik;
-      // Raycasting via board.squares ist von visibility nicht beeinflusst).
+      // Engine-Figuren immer sichtbar — sie ersetzen die statischen Raum-Figuren
+      // und sind nur in boardFocus interaktiv (via boardInteraction.setEnabled).
       const isBoardFocus = startFlowMode === 'boardFocus';
-      stage.pieceLayer.group.visible = isBoardFocus;
+      stage.pieceLayer.group.visible = true;
 
-      // Statische GLB-Raum-Figuren verstecken wenn boardFocus aktiv ist damit sie
-      // nicht die Three.js-Engine-Figuren überlagern. In allen anderen Modi zeigen.
-      const roomPiecesVisible = !isBoardFocus;
+      // Statische GLB-Raum-Figuren permanent versteckt — Engine-Figuren übernehmen.
       for (const node of stage.roomPieceNodes) {
-        if (node.visible !== roomPiecesVisible) {
-          node.visible = roomPiecesVisible;
+        if (node.visible) {
+          node.visible = false;
         }
       }
 
@@ -1118,6 +1115,7 @@ function createStageScene(
       roomGroup.traverse((node) => {
         if (ROOM_PIECE_PATTERN.test(node.name)) {
           roomPieceNodes.push(node);
+          node.visible = false;
         }
       });
       cctvScreen.attach(roomGroup);
