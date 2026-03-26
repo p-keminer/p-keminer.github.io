@@ -8,7 +8,7 @@ const IMPRESSUM_TEXT = `
   44627 Herne
 </p>
 <p>
-  E-Mail: <a href="mailto:p-keminer@gmx.de">p-keminer@gmx.de</a>
+  E-Mail: <a href="mailto:p.keminer@gmx.de">p.keminer@gmx.de</a>
 </p>
 
 <h3>Hinweis</h3>
@@ -25,7 +25,7 @@ const DATENSCHUTZ_TEXT = `
 <h3>Verantwortlicher</h3>
 <p>
   Philip Keminer, 44627 Herne<br>
-  E-Mail: <a href="mailto:p-keminer@gmx.de">p-keminer@gmx.de</a>
+  E-Mail: <a href="mailto:p.keminer@gmx.de">p.keminer@gmx.de</a>
 </p>
 
 <h3>Hosting</h3>
