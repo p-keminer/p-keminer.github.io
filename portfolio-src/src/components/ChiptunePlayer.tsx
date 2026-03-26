@@ -29,7 +29,6 @@ export default function ChiptunePlayer() {
 
   return (
     <button
-      className="fab-bottom-right"
       onClick={toggle}
       title={playing ? "Musik stoppen" : "Musik starten"}
       className="chiptune-btn"
