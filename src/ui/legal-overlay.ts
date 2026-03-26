@@ -71,17 +71,16 @@ const DATENSCHUTZ_TEXT = `
 <h3>Ihre Rechte</h3>
 <p>
   Sie haben gemäß DSGVO folgende Rechte bezüglich Ihrer personenbezogenen Daten:
+  Auskunft (Art.&nbsp;15), Berichtigung (Art.&nbsp;16), Löschung (Art.&nbsp;17),
+  Einschränkung der Verarbeitung (Art.&nbsp;18), Datenübertragbarkeit (Art.&nbsp;20)
+  und Widerspruch (Art.&nbsp;21).
 </p>
-<ul>
-  <li>Auskunft über gespeicherte Daten (Art.&nbsp;15 DSGVO)</li>
-  <li>Berichtigung unrichtiger Daten (Art.&nbsp;16 DSGVO)</li>
-  <li>Löschung Ihrer Daten (Art.&nbsp;17 DSGVO)</li>
-  <li>Einschränkung der Verarbeitung (Art.&nbsp;18 DSGVO)</li>
-  <li>Datenübertragbarkeit (Art.&nbsp;20 DSGVO)</li>
-  <li>Widerspruch gegen die Verarbeitung (Art.&nbsp;21 DSGVO)</li>
-</ul>
 <p>
-  Wenden Sie sich dazu an die oben genannte E-Mail-Adresse.
+  Da diese Website selbst keine personenbezogenen Daten speichert, liegen
+  Zugriffsdaten ausschließlich bei den genannten Drittanbietern (GitHub, Google).
+  Anfragen zur Auskunft oder Löschung dieser Daten richten Sie bitte direkt an
+  den jeweiligen Anbieter. Bei allgemeinen Fragen zum Datenschutz dieser Website
+  können Sie sich an die oben genannte E-Mail-Adresse wenden.
 </p>
 
 <h3>Aufsichtsbehörde</h3>
