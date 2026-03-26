@@ -402,7 +402,6 @@ export default function App() {
 
       {/* ── Cards toggle button ── */}
       <button
-        className="fab-bottom-right"
         type="button"
         aria-label={cardsVisible ? "Karten ausblenden" : "Karten einblenden"}
         title={cardsVisible ? "Karten ausblenden" : "Karten einblenden"}
