@@ -686,6 +686,18 @@ body {
   }
 }
 
+/* ── Landscape mobile: Buttons unten rechts fixieren ── */
+@media (orientation: landscape) and (max-height: 500px) {
+  .chiptune-btn,
+  .cards-toggle-btn {
+    bottom: 8px !important;
+    right: 8px !important;
+  }
+  .cards-toggle-btn {
+    right: 56px !important;
+  }
+}
+
 /* ── Reduced motion: pause all decorative animations ── */
 @media (prefers-reduced-motion: reduce) {
   *,
