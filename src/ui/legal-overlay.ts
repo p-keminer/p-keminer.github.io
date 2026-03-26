@@ -30,10 +30,15 @@ const DATENSCHUTZ_TEXT = `
 
 <h3>Hosting</h3>
 <p>
-  Diese Website wird über <strong>GitHub Pages</strong> (GitHub Inc., 88 Colin P Kelly Jr St,
-  San Francisco, CA 94107, USA) gehostet. GitHub verarbeitet beim Abrufen der Seite
-  technische Zugriffsdaten einschließlich IP-Adresse in Server-Logs.
-  Weitere Informationen: <a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement" target="_blank" rel="noopener">GitHub Privacy Statement</a>
+  Diese Website wird über <strong>GitHub Pages</strong> (GitHub B.V., Prins
+  Bernhardplein 200, 1097 JB Amsterdam, Niederlande; Muttergesellschaft: GitHub Inc.,
+  USA) gehostet. Beim Abrufen der Seite verarbeitet GitHub technische Zugriffsdaten
+  einschließlich Ihrer IP-Adresse in Server-Logs.<br>
+  Rechtsgrundlage: Art.&nbsp;6 Abs.&nbsp;1 lit.&nbsp;f DSGVO (berechtigtes Interesse
+  an der Bereitstellung der Website).<br>
+  Weitere Informationen:
+  <a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement"
+     target="_blank" rel="noopener">GitHub Privacy Statement</a>
 </p>
 
 <h3>3D-Modell-Dekompression</h3>
@@ -41,20 +46,42 @@ const DATENSCHUTZ_TEXT = `
   Beim Laden des 3D-Bereichs wird einmalig ein technischer Decoder von
   <strong>gstatic.com</strong> (Google LLC, USA) eingebunden. Dies ist eine reine
   technische Hilfsbibliothek zur Dekompression von 3D-Modellen (Draco-Codec).
-  Es findet kein Tracking statt. Datenschutzerklärung Google:
+  Es findet kein Tracking statt.<br>
+  Rechtsgrundlage: Art.&nbsp;6 Abs.&nbsp;1 lit.&nbsp;f DSGVO (berechtigtes Interesse
+  an der technisch korrekten Darstellung der Inhalte).<br>
+  Datenschutzerklärung Google:
   <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a>
+</p>
+
+<h3>Drittlandübermittlung</h3>
+<p>
+  Durch die Nutzung von GitHub Pages und des Draco-Decoders (Google) werden Daten
+  in die USA übermittelt. Beide Anbieter sind unter dem
+  <strong>EU-U.S. Data Privacy Framework</strong> zertifiziert, das ein angemessenes
+  Datenschutzniveau gemäß Art.&nbsp;45 DSGVO gewährleistet.
 </p>
 
 <h3>Keine Cookies, kein Tracking</h3>
 <p>
   Diese Website verwendet keine Cookies, kein Tracking und keine Analyse-Tools.
-  Es werden keine personenbezogenen Daten erhoben oder gespeichert.
+  Es werden keine personenbezogenen Daten über die oben genannten technischen
+  Zugriffsdaten hinaus erhoben oder gespeichert.
 </p>
 
 <h3>Ihre Rechte</h3>
 <p>
-  Sie haben das Recht auf Auskunft, Berichtigung und Löschung Ihrer gespeicherten
-  Daten (Art. 15–17 DSGVO). Wenden Sie sich dazu an die oben genannte E-Mail-Adresse.
+  Sie haben gemäß DSGVO folgende Rechte bezüglich Ihrer personenbezogenen Daten:
+</p>
+<ul>
+  <li>Auskunft über gespeicherte Daten (Art.&nbsp;15 DSGVO)</li>
+  <li>Berichtigung unrichtiger Daten (Art.&nbsp;16 DSGVO)</li>
+  <li>Löschung Ihrer Daten (Art.&nbsp;17 DSGVO)</li>
+  <li>Einschränkung der Verarbeitung (Art.&nbsp;18 DSGVO)</li>
+  <li>Datenübertragbarkeit (Art.&nbsp;20 DSGVO)</li>
+  <li>Widerspruch gegen die Verarbeitung (Art.&nbsp;21 DSGVO)</li>
+</ul>
+<p>
+  Wenden Sie sich dazu an die oben genannte E-Mail-Adresse.
 </p>
 
 <h3>Aufsichtsbehörde</h3>
