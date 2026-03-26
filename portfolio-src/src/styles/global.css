@@ -168,15 +168,6 @@ body {
   }
 }
 
-@media (max-width: 900px) and (orientation: landscape) {
-  html, body, #root {
-    height: 100vh !important;
-    overflow: hidden !important;
-  }
-  .fab-bottom-right {
-    bottom: 8px !important;
-  }
-}
 
 .mobile-social-menu {
   display: none;
