@@ -382,7 +382,7 @@ select {
   font: 600 9px / 1.2 'Segoe UI', system-ui, sans-serif;
   gap: 6px;
   letter-spacing: 0.05em;
-  min-width: 108px;
+  min-width: 0;
   padding: 6px 10px;
   pointer-events: auto;
   position: absolute;
@@ -634,7 +634,9 @@ select {
 
 /* When webEmbed is active hide the 3D site header/footer (portfolio has its own) */
 body.web-embed-active #site-header,
-body.web-embed-active #site-footer {
+body.web-embed-active #site-footer,
+body.comic-embed-active #site-header,
+body.comic-embed-active #site-footer {
   display: none;
 }
 
@@ -680,6 +682,90 @@ body.web-embed-active .web-embed-overlay {
   background: rgba(35, 8, 8, 0.94);
   border-color: rgba(255, 90, 90, 0.60);
   box-shadow: 0 0 12px rgba(220, 60, 60, 0.22);
+}
+
+.comic-screen-overlay .web-embed-nav {
+  bottom: 70px;
+  left: 70px;
+}
+
+/* ──── Comic-Screen Overlay ─────────────────────────────────────────────── */
+
+.comic-screen-overlay {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  pointer-events: auto;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+}
+
+.comic-screen-overlay iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+  display: block;
+  min-height: 0;
+}
+
+/* ──── TV-Select Overlay ────────────────────────────────────────────────── */
+
+.tv-select-overlay {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  pointer-events: auto;
+  background: #000;
+  z-index: 100;
+}
+
+.tv-select-controls {
+  position: absolute;
+  bottom: 35%;
+  left: 50%;
+  transform: translate(-50%, 50%);
+  display: flex;
+  gap: 12px;
+  z-index: 1;
+}
+
+.tv-select-overlay .web-embed-nav {
+  bottom: 70px;
+  left: 70px;
+}
+
+/* ──── Horror-Screen Overlay ───────────────────────────────────────────── */
+
+.horror-screen-overlay {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  pointer-events: auto;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+}
+
+.horror-screen-overlay video {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  object-fit: contain;
+  background: #000;
+}
+
+.horror-screen-overlay .web-embed-nav {
+  bottom: 70px;
+  left: 70px;
 }
 
 /* ───────────────────────────────────────────────────────────────────────── */

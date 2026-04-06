@@ -45,7 +45,7 @@ export interface BoardPresentationStateInput extends CombatPresentationStateInpu
   combatRemainingMs: CombatCameraStateInput['combatRemainingMs'];
 }
 
-export type RoomFocusTargetId = 'board' | 'displayCase' | 'legalWall' | 'overview' | 'pictureFrame' | 'pictureFrameDetail' | 'webEmbed' | 'workbench';
+export type RoomFocusTargetId = 'board' | 'comicEmbed' | 'comicScreen' | 'displayCase' | 'horrorEmbed' | 'legalWall' | 'overview' | 'pictureFrame' | 'pictureFrameDetail' | 'tvSelect' | 'webEmbed' | 'workbench';
 
 export type StartFlowMode = 'boardFocus' | 'displayCaseFocus' | 'introTransition' | 'menu' | 'roomExplore';
 
@@ -260,6 +260,26 @@ const PORTRAIT_MENU_CAMERA_PRESET: CameraPreset = (() => {
 })();
 
 const ROOM_FOCUS_TARGET_PRESETS: Record<Exclude<RoomFocusTargetId, 'board'>, CameraPreset> = {
+  // Comic-Film Display — Nahaufnahme des schwarzen Bildschirms über dem Schachbrett.
+  comicScreen: {
+    position: { x: 0, y: 9.8, z: 2 },
+    target: { x: 0, y: 9.8, z: -10 }
+  },
+  // Comic-Film Embed — Kamera vollständig hinein in den Comic-Bildschirm.
+  comicEmbed: {
+    position: { x: 0, y: 9.8, z: -4 },
+    target: { x: 0, y: 9.8, z: -10 }
+  },
+  // Horror-Film Embed — gleiche Kameraposition wie comicEmbed.
+  horrorEmbed: {
+    position: { x: 0, y: 9.8, z: -4 },
+    target: { x: 0, y: 9.8, z: -10 }
+  },
+  // TV-Auswahl — gleiche Position wie comicEmbed (rein in den Bildschirm).
+  tvSelect: {
+    position: { x: 0, y: 9.8, z: -4 },
+    target: { x: 0, y: 9.8, z: -10 }
+  },
   // Vitrine — hinten-links im Raum.
   displayCase: {
     position: { x: -20.5, y: 4.5, z: 9.0 },
@@ -308,6 +328,12 @@ const ROOM_HOTSPOT_DEFINITIONS: ReadonlyArray<{
     focusTarget: 'board',
     id: 'board',
     label: 'Schachbrett'
+  },
+  {
+    anchor: new THREE.Vector3(0, 9.5, -4),
+    focusTarget: 'tvSelect',
+    id: 'tvSelect',
+    label: 'TV'
   },
   {
     anchor: new THREE.Vector3(-15.5, 5.22, 2.29),

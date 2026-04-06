@@ -85,6 +85,10 @@ const ROOM_FOCUS_TARGET_OPTIONS: ReadonlyArray<{ id: RoomFocusTargetId; label: s
   { id: 'board', label: 'Schachbrett' },
   { id: 'workbench', label: 'Workbench' },
   { id: 'pictureFrame', label: 'Leistungsnachweise' },
+  { id: 'comicScreen', label: 'TV' },
+  { id: 'comicEmbed', label: 'Über mich' },
+  { id: 'tvSelect', label: 'TV' },
+  { id: 'horrorEmbed', label: 'AI-Horror Trailer' },
   { id: 'pictureFrameDetail', label: 'Certificate Detail' },
   { id: 'webEmbed', label: 'Portfolio Website' }
 ];
@@ -229,6 +233,70 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       return;
     }
 
+    if (action === 'direct-to-comic') {
+      if (startFlowState === 'menu') {
+        beginStartFlowTransitionToTarget('comicEmbed');
+      }
+
+      return;
+    }
+
+    if (action === 'back-from-comic-embed') {
+      if (startFlowState === 'roomExplore' && roomFocusTarget === 'comicEmbed' && !isRoomFocusTransitionActive()) {
+        // Sofort zurück zur TV-Auswahl ohne Kamerafahrt
+        roomFocusFromTarget = 'tvSelect';
+        roomFocusTarget = 'tvSelect';
+        roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
+        syncStartFlowToPreview();
+      }
+
+      return;
+    }
+
+    if (action === 'select-comic-from-tv') {
+      if (startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
+        // Sofort umschalten ohne Kamerafahrt
+        roomFocusFromTarget = 'comicEmbed';
+        roomFocusTarget = 'comicEmbed';
+        roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
+        syncStartFlowToPreview();
+      }
+
+      return;
+    }
+
+    if (action === 'select-horror-from-tv') {
+      if (startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
+        // Sofort umschalten ohne Kamerafahrt
+        roomFocusFromTarget = 'horrorEmbed';
+        roomFocusTarget = 'horrorEmbed';
+        roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
+        syncStartFlowToPreview();
+      }
+
+      return;
+    }
+
+    if (action === 'back-from-tv-select') {
+      if (startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
+        focusRoomTarget('overview');
+      }
+
+      return;
+    }
+
+    if (action === 'back-from-horror-embed') {
+      if (startFlowState === 'roomExplore' && roomFocusTarget === 'horrorEmbed' && !isRoomFocusTransitionActive()) {
+        // Sofort zurück zur TV-Auswahl ohne Kamerafahrt
+        roomFocusFromTarget = 'tvSelect';
+        roomFocusTarget = 'tvSelect';
+        roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
+        syncStartFlowToPreview();
+      }
+
+      return;
+    }
+
     if (action === 'enter-web-embed') {
       if (startFlowState === 'roomExplore' && roomFocusTarget === 'workbench' && !isRoomFocusTransitionActive()) {
         focusRoomTarget('webEmbed');
@@ -277,6 +345,14 @@ export function mountGame(root: HTMLDivElement): MountedGame {
         preview.requestLookAroundReset(() => {
           returnToMenu();
         });
+      }
+
+      return;
+    }
+
+    if (action === 'return-to-overview-from-tv') {
+      if (startFlowState === 'roomExplore' && !isRoomFocusTransitionActive()) {
+        focusRoomTarget('overview');
       }
 
       return;
@@ -463,6 +539,13 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       !snapshot.startFlow.roomFocusTransitionActive &&
       snapshot.startFlow.currentRoomFocusTarget === 'webEmbed';
     document.body.classList.toggle('web-embed-active', isWebEmbed);
+
+    // Body-Klasse umschalten für comicEmbed/tvSelect/horrorEmbed (Header/Footer ausblenden)
+    const currentTarget = snapshot.startFlow.currentRoomFocusTarget;
+    const isComicEmbed =
+      !snapshot.startFlow.roomFocusTransitionActive &&
+      (currentTarget === 'comicEmbed' || currentTarget === 'tvSelect' || currentTarget === 'horrorEmbed');
+    document.body.classList.toggle('comic-embed-active', isComicEmbed);
 
     // Landscape-Stylesheet in den Portfolio-iframe injizieren (same-origin)
     if (isWebEmbed) {
@@ -1210,12 +1293,59 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
          </div>`
       : '';
 
+  // ── TV-Auswahl-Overlay (tvSelect Fokus) ─────────────────────────────────
+  const tvSelectOverlay =
+    !snapshot.startFlow.roomFocusTransitionActive &&
+    snapshot.startFlow.currentRoomFocusTarget === 'tvSelect'
+      ? `<div class="tv-select-overlay">
+           <div class="tv-select-controls">
+             <button class="web-embed-nav__btn" data-control="select-comic-from-tv" type="button">Über mich</button>
+             <button class="web-embed-nav__btn" data-control="select-horror-from-tv" type="button">AI-Horror Trailer</button>
+           </div>
+           <div class="web-embed-nav">
+             <button class="web-embed-nav__btn" data-control="back-from-tv-select" type="button">Zurück</button>
+             <button class="web-embed-nav__btn" data-control="return-to-menu-from-focus" type="button">Zum Hauptmenü</button>
+           </div>
+         </div>`
+      : '';
+
+  // ── Comic-Embed-Overlay (nur comicEmbed Fokus) ──────────────────────────
+  const comicEmbedOverlay =
+    !snapshot.startFlow.roomFocusTransitionActive &&
+    snapshot.startFlow.currentRoomFocusTarget === 'comicEmbed'
+      ? `<div class="comic-screen-overlay">
+           <iframe src="/comic-film/index.html" title="Über mich" allowfullscreen></iframe>
+           <div class="web-embed-nav">
+             <button class="web-embed-nav__btn" data-control="back-from-comic-embed" type="button">Zurück</button>
+             <button class="web-embed-nav__btn" data-control="return-to-overview-from-tv" type="button">Zur Übersicht</button>
+             <button class="web-embed-nav__btn" data-control="return-to-menu-from-focus" type="button">Zum Hauptmenü</button>
+           </div>
+         </div>`
+      : '';
+
+  // ── Horror-Embed-Overlay (nur horrorEmbed Fokus) ────────────────────────
+  const horrorEmbedOverlay =
+    !snapshot.startFlow.roomFocusTransitionActive &&
+    snapshot.startFlow.currentRoomFocusTarget === 'horrorEmbed'
+      ? `<div class="horror-screen-overlay">
+           <video src="/horror-film/trailer.mp4" autoplay playsinline></video>
+           <div class="web-embed-nav">
+             <button class="web-embed-nav__btn" data-control="back-from-horror-embed" type="button">Zurück</button>
+             <button class="web-embed-nav__btn" data-control="return-to-overview-from-tv" type="button">Zur Übersicht</button>
+             <button class="web-embed-nav__btn" data-control="return-to-menu-from-focus" type="button">Zum Hauptmenü</button>
+           </div>
+         </div>`
+      : '';
+
   return `
     <div class="room-hotspots-layer">
       ${hotspotButtons}
       ${pictureFrameGlows}
       ${pictureFrameDetailOverlay}
       ${webEmbedOverlay}
+      ${tvSelectOverlay}
+      ${comicEmbedOverlay}
+      ${horrorEmbedOverlay}
       ${infoPlate}
     </div>
   `;
@@ -1244,6 +1374,11 @@ function renderStartFlowControls(
   if (startFlowState === 'roomExplore') {
     // webEmbed: Buttons werden im web-embed-overlay div selbst gerendert
     if (!roomFocusTransitionActive && currentRoomFocusTarget === 'webEmbed') {
+      return '';
+    }
+
+    // comicEmbed/tvSelect/horrorEmbed: Buttons werden im jeweiligen Overlay gerendert
+    if (!roomFocusTransitionActive && (currentRoomFocusTarget === 'comicEmbed' || currentRoomFocusTarget === 'comicScreen' || currentRoomFocusTarget === 'tvSelect' || currentRoomFocusTarget === 'horrorEmbed')) {
       return '';
     }
 
@@ -1373,16 +1508,21 @@ function renderStartFlowControls(
           Zu den Leistungsnachweisen
         </button>
       </div>
+      <div class="control-row">
+        <button class="control-button control-button--secondary" data-control="direct-to-comic" type="button" ${buttonDisabled ? 'disabled' : ''}>
+          Über mich
+        </button>
+      </div>
     </div>
   `;
 }
 
 function isRoomFocusTargetId(value: string | undefined): value is RoomFocusTargetId {
-  return value === 'board' || value === 'displayCase' || value === 'legalWall' || value === 'overview' || value === 'workbench' || value === 'pictureFrame' || value === 'pictureFrameDetail' || value === 'webEmbed';
+  return value === 'board' || value === 'comicEmbed' || value === 'comicScreen' || value === 'displayCase' || value === 'horrorEmbed' || value === 'legalWall' || value === 'overview' || value === 'tvSelect' || value === 'workbench' || value === 'pictureFrame' || value === 'pictureFrameDetail' || value === 'webEmbed';
 }
 
 function isRoomHotspotId(value: string | undefined): value is Exclude<RoomFocusTargetId, 'overview'> {
-  return value === 'board' || value === 'displayCase' || value === 'pictureFrame' || value === 'workbench';
+  return value === 'board' || value === 'comicEmbed' || value === 'comicScreen' || value === 'displayCase' || value === 'horrorEmbed' || value === 'pictureFrame' || value === 'tvSelect' || value === 'workbench';
 }
 
 // ── Portfolio-iframe Landscape-Stylesheet Injection ─────────────────────────
