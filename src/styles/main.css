@@ -659,7 +659,10 @@ body.web-embed-active .web-embed-overlay {
   bottom: 20px;
   left: 20px;
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
+  max-width: calc(100% - 40px);
   z-index: 20;
   pointer-events: auto;
 }
@@ -673,6 +676,7 @@ body.web-embed-active .web-embed-overlay {
   font: 600 10px / 1.2 'Inter', 'Segoe UI', system-ui, sans-serif;
   letter-spacing: 0.07em;
   padding: 8px 18px;
+  text-align: center;
   text-transform: uppercase;
   transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
   backdrop-filter: blur(6px);
@@ -762,7 +766,7 @@ body.web-embed-active .web-embed-overlay {
   position: relative;
   z-index: 1;
   width: min(100%, 1260px);
-  min-height: 100%;
+  min-height: 100dvh;
   margin: 0 auto;
   padding: clamp(108px, 12vh, 156px) clamp(18px, 4vw, 56px) clamp(102px, 9vh, 138px);
   display: grid;
@@ -1133,82 +1137,182 @@ body.web-embed-active .web-embed-overlay {
 }
 
 @media (max-width: 680px) {
+  .tv-select-overlay {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
   .tv-select-overlay::after {
-    inset: 12px;
-    border-radius: 20px;
+    inset: 10px;
+    border-radius: 18px;
   }
 
   .tv-select-shell {
-    padding: 66px 16px 128px;
+    min-height: 100dvh;
+    padding: calc(40px + env(safe-area-inset-top)) 16px calc(124px + env(safe-area-inset-bottom));
+    row-gap: 14px;
   }
 
   .tv-select-header {
-    padding-top: 38px;
+    max-width: 100%;
+    padding-top: 0;
+    text-align: center;
+  }
+
+  .tv-select-kicker {
+    margin-bottom: 10px;
+    font-size: 0.66rem;
+    letter-spacing: 0.22em;
   }
 
   .tv-select-title {
-    max-width: 8.2ch;
-    font-size: clamp(2.5rem, 15vw, 4rem);
+    max-width: 7.8ch;
+    margin: 0 auto;
+    font-size: clamp(2.2rem, 12.4vw, 3.45rem);
   }
 
   .tv-select-track {
-    width: min(100%, 420px);
-    padding-top: 38px;
+    width: 100%;
+    max-width: 340px;
+    justify-self: center;
+    padding-top: 0;
   }
 
   .tv-select-carousel {
-    width: 100%;
-    min-height: 340px;
+    width: min(100%, 340px);
+    min-height: clamp(300px, 50vh, 390px);
+    margin: 8px auto 0;
+    overflow: visible;
   }
 
   .tv-select-card {
-    top: 55%;
-    width: clamp(214px, 56vw, 260px);
+    top: 58%;
+    padding: 14px;
+    border-radius: 20px;
   }
 
   .tv-select-card--active {
-    left: 6px;
-    transform: translateY(-54%) rotate(-1.5deg);
+    left: 50%;
+    width: min(72vw, 252px);
+    transform: translate(-60%, -54%) rotate(-2.5deg);
   }
 
   .tv-select-card--standby {
-    width: clamp(172px, 44vw, 206px);
-    right: 0;
-    transform: translateY(-40%) rotate(4deg);
+    left: 50%;
+    right: auto;
+    width: min(52vw, 184px);
+    transform: translate(12%, -36%) rotate(6deg);
   }
 
-  .tv-select-card--active:hover,
-  .tv-select-card--active:focus-visible {
-    transform: translateX(-4px) translateY(-55%) rotate(-2deg) scale(1.01);
+  .tv-select-card__body {
+    gap: 5px;
   }
 
-  .tv-select-card--standby:hover,
-  .tv-select-card--standby:focus-visible {
-    transform: translateX(-2px) translateY(-41%) rotate(3deg);
+  .tv-select-card__channel {
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+  }
+
+  .tv-select-card__title {
+    font-size: clamp(1.12rem, 5.4vw, 1.46rem);
+  }
+
+  .tv-select-card__meta {
+    font-size: 0.62rem;
+    letter-spacing: 0.04em;
+  }
+
+  .tv-select-card__description {
+    max-width: 11.5rem;
+    font-size: 0.74rem;
+    line-height: 1.36;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .tv-select-card__cta {
+    margin-top: 2px;
+    padding: 8px 11px;
+    font-size: 0.58rem;
+  }
+
+  .tv-select-card--standby .tv-select-card__meta,
+  .tv-select-card--standby .tv-select-card__description {
+    display: none;
   }
 
   .tv-select-overlay .web-embed-nav {
-    left: 16px;
-    right: 16px;
-    bottom: 16px;
-    flex-wrap: wrap;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: min(calc(100% - 24px), 360px);
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    justify-content: center;
+  }
+
+  .tv-select-guide {
+    width: 100%;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .tv-select-guide__pill {
+    flex: 1 1 calc(50% - 8px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    max-width: 166px;
+    text-align: center;
+    font-size: 0.66rem;
+    padding: 10px 12px;
   }
 }
 
 @media (max-width: 460px) {
+  .tv-select-shell {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
   .tv-select-kicker {
-    font-size: 0.68rem;
-    letter-spacing: 0.22em;
+    font-size: 0.64rem;
+    letter-spacing: 0.2em;
+  }
+
+  .tv-select-title {
+    max-width: 7.4ch;
+    font-size: clamp(2rem, 12.8vw, 3rem);
+  }
+
+  .tv-select-track {
+    max-width: 310px;
+  }
+
+  .tv-select-carousel {
+    min-height: 286px;
   }
 
   .tv-select-card {
-    padding: 16px;
-    border-radius: 22px;
+    padding: 13px;
+    border-radius: 18px;
+  }
+
+  .tv-select-card--active {
+    width: min(74vw, 234px);
+    transform: translate(-59%, -54%) rotate(-2deg);
+  }
+
+  .tv-select-card--standby {
+    width: min(54vw, 170px);
+    transform: translate(9%, -34%) rotate(5deg);
   }
 
   .tv-select-card__description {
-    max-width: 100%;
-    font-size: 0.8rem;
+    max-width: 10.5rem;
+    font-size: 0.7rem;
   }
 
   .tv-select-guide {
@@ -1216,8 +1320,12 @@ body.web-embed-active .web-embed-overlay {
   }
 
   .tv-select-guide__pill {
-    font-size: 0.66rem;
-    padding: 8px 10px;
+    font-size: 0.62rem;
+    padding: 9px 10px;
+  }
+
+  .tv-select-overlay .web-embed-nav__btn {
+    flex: 1 1 100%;
   }
 }
 
@@ -1662,11 +1770,30 @@ body.web-embed-active .web-embed-overlay {
     width: 90vw;
   }
 
-  /* WebEmbed nav: lift above mobile browser chrome */
+  /* WebEmbed nav: keep controls inside the mobile viewport */
   .web-embed-nav {
-    bottom: 60px;
-    gap: 6px;
-    left: 16px;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    justify-content: center;
+    gap: 8px;
+    width: min(calc(100% - 20px), 400px);
+    max-width: calc(100% - 20px);
+  }
+
+  .comic-screen-overlay .web-embed-nav,
+  .horror-screen-overlay .web-embed-nav,
+  .tv-select-overlay .web-embed-nav {
+    left: 50%;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+  }
+
+  .web-embed-nav__btn {
+    flex: 1 1 150px;
+    min-height: 42px;
+    padding: 10px 14px;
+    font-size: 0.64rem;
   }
 }
 

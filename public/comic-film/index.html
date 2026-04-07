@@ -10,6 +10,7 @@
 
       html, body {
         height: 100%;
+        min-height: 100dvh;
         overflow: hidden;
       }
 
@@ -19,6 +20,7 @@
         font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
         display: flex;
         flex-direction: column;
+        min-height: 100dvh;
         user-select: none;
       }
 
@@ -39,10 +41,10 @@
       /* ─── Timeline (Comic Strip) ────────────────────────────────── */
 
       .timeline {
-        height: 58px;
+        height: calc(58px + env(safe-area-inset-bottom));
         display: flex;
         align-items: center;
-        padding: 0 28px;
+        padding: 0 max(16px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(16px, env(safe-area-inset-left));
         background: transparent;
         border-top: none;
         position: absolute;
@@ -134,12 +136,12 @@
 
       .nav-arrows {
         position: absolute;
-        bottom: 72px;
+        bottom: calc(72px + env(safe-area-inset-bottom));
         left: 0;
         right: 0;
         display: flex;
         justify-content: space-between;
-        padding: 0 16px;
+        padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
         pointer-events: none;
         z-index: 2;
       }
@@ -177,11 +179,12 @@
       /* ─── Responsive ───────────────────────────────────────────── */
 
       @media (max-width: 480px) {
-        .timeline { padding: 0 12px; height: 52px; }
-        .timeline-marker { width: 28px; height: 28px; }
-        .timeline-marker__label { font-size: 0.4rem; }
+        .timeline { padding: 0 max(10px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(10px, env(safe-area-inset-left)); height: calc(52px + env(safe-area-inset-bottom)); }
+        .timeline-marker { min-width: 26px; height: 26px; padding: 0 4px; }
+        .timeline-marker__label { font-size: 0.38rem; }
         .scene-header__label { font-size: 0.6rem; }
         .scene-header__title { font-size: 0.9rem; }
+        .nav-arrows { bottom: calc(66px + env(safe-area-inset-bottom)); padding: 0 max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left)); }
         .nav-arrow { width: 30px; height: 30px; font-size: 0.85rem; }
       }
     </style>
@@ -1050,10 +1053,15 @@
       }
       if (video) {
         if (video.readyState >= 2) {
-          // Draw video frame onto canvas, cover-fit
+          // On portrait phones, keep the full frame visible instead of cropping to the center.
           var vw = video.videoWidth || 1920;
           var vh = video.videoHeight || 1080;
-          var scale = Math.max(w / vw, h / vh);
+          var useContainFit = h > w * 1.02;
+          if (useContainFit) {
+            ctx.fillStyle = '#04060b';
+            ctx.fillRect(0, 0, w, h);
+          }
+          var scale = useContainFit ? Math.min(w / vw, h / vh) : Math.max(w / vw, h / vh);
           var dw = vw * scale;
           var dh = vh * scale;
           var dx = (w - dw) / 2;
