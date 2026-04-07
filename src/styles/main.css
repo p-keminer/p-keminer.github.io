@@ -1140,6 +1140,8 @@ body.web-embed-active .web-embed-overlay {
   .tv-select-overlay {
     overflow-x: hidden;
     overflow-y: auto;
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
   }
 
   .tv-select-overlay::after {
@@ -1173,35 +1175,41 @@ body.web-embed-active .web-embed-overlay {
 
   .tv-select-track {
     width: 100%;
-    max-width: 340px;
+    max-width: 320px;
     justify-self: center;
     padding-top: 0;
   }
 
   .tv-select-carousel {
-    width: min(100%, 340px);
-    min-height: clamp(300px, 50vh, 390px);
+    width: min(100%, 320px);
+    min-height: clamp(288px, 48vh, 372px);
     margin: 8px auto 0;
     overflow: visible;
+    touch-action: pan-y;
   }
 
   .tv-select-card {
     top: 58%;
-    padding: 14px;
-    border-radius: 20px;
+    padding: 13px;
+    border-radius: 18px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
   }
 
   .tv-select-card--active {
     left: 50%;
-    width: min(72vw, 252px);
-    transform: translate(-60%, -54%) rotate(-2.5deg);
+    width: min(68vw, 236px);
+    transform: translate(-59%, -54%) rotate(-2.5deg);
+    animation: none;
   }
 
   .tv-select-card--standby {
     left: 50%;
     right: auto;
-    width: min(52vw, 184px);
-    transform: translate(12%, -36%) rotate(6deg);
+    width: min(46vw, 166px);
+    transform: translate(6%, -35%) rotate(6deg);
+    animation: none;
   }
 
   .tv-select-card__body {
@@ -1214,18 +1222,18 @@ body.web-embed-active .web-embed-overlay {
   }
 
   .tv-select-card__title {
-    font-size: clamp(1.12rem, 5.4vw, 1.46rem);
+    font-size: clamp(1.08rem, 5.1vw, 1.38rem);
   }
 
   .tv-select-card__meta {
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     letter-spacing: 0.04em;
   }
 
   .tv-select-card__description {
-    max-width: 11.5rem;
-    font-size: 0.74rem;
-    line-height: 1.36;
+    max-width: 11rem;
+    font-size: 0.72rem;
+    line-height: 1.34;
     display: -webkit-box;
     overflow: hidden;
     -webkit-box-orient: vertical;
@@ -1234,8 +1242,18 @@ body.web-embed-active .web-embed-overlay {
 
   .tv-select-card__cta {
     margin-top: 2px;
-    padding: 8px 11px;
-    font-size: 0.58rem;
+    padding: 8px 10px;
+    font-size: 0.56rem;
+  }
+
+  .tv-select-card--active:hover,
+  .tv-select-card--active:focus-visible {
+    transform: translate(-59%, -54%) rotate(-2.5deg);
+  }
+
+  .tv-select-card--standby:hover,
+  .tv-select-card--standby:focus-visible {
+    transform: translate(6%, -35%) rotate(6deg);
   }
 
   .tv-select-card--standby .tv-select-card__meta,
@@ -1255,6 +1273,7 @@ body.web-embed-active .web-embed-overlay {
   .tv-select-guide {
     width: 100%;
     gap: 8px;
+    margin-top: 12px;
     justify-content: center;
   }
 
@@ -1264,10 +1283,11 @@ body.web-embed-active .web-embed-overlay {
     align-items: center;
     justify-content: center;
     min-height: 42px;
-    max-width: 166px;
+    max-width: 160px;
     text-align: center;
-    font-size: 0.66rem;
+    font-size: 0.64rem;
     padding: 10px 12px;
+    touch-action: manipulation;
   }
 }
 
@@ -1288,39 +1308,50 @@ body.web-embed-active .web-embed-overlay {
   }
 
   .tv-select-track {
-    max-width: 310px;
+    max-width: 296px;
   }
 
   .tv-select-carousel {
-    min-height: 286px;
+    min-height: 272px;
   }
 
   .tv-select-card {
-    padding: 13px;
+    padding: 12px;
     border-radius: 18px;
   }
 
   .tv-select-card--active {
-    width: min(74vw, 234px);
-    transform: translate(-59%, -54%) rotate(-2deg);
+    width: min(66vw, 220px);
+    transform: translate(-58%, -54%) rotate(-2deg);
   }
 
   .tv-select-card--standby {
-    width: min(54vw, 170px);
-    transform: translate(9%, -34%) rotate(5deg);
+    width: min(44vw, 154px);
+    transform: translate(4%, -34%) rotate(5deg);
+  }
+
+  .tv-select-card--active:hover,
+  .tv-select-card--active:focus-visible {
+    transform: translate(-58%, -54%) rotate(-2deg);
+  }
+
+  .tv-select-card--standby:hover,
+  .tv-select-card--standby:focus-visible {
+    transform: translate(4%, -34%) rotate(5deg);
   }
 
   .tv-select-card__description {
-    max-width: 10.5rem;
-    font-size: 0.7rem;
+    max-width: 10rem;
+    font-size: 0.68rem;
   }
 
   .tv-select-guide {
     gap: 8px;
+    margin-top: 14px;
   }
 
   .tv-select-guide__pill {
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     padding: 9px 10px;
   }
 
@@ -1787,6 +1818,11 @@ body.web-embed-active .web-embed-overlay {
   .tv-select-overlay .web-embed-nav {
     left: 50%;
     bottom: calc(14px + env(safe-area-inset-bottom));
+  }
+
+  .comic-screen-overlay .web-embed-nav {
+    bottom: calc(104px + env(safe-area-inset-bottom));
+    width: min(calc(100% - 20px), 430px);
   }
 
   .web-embed-nav__btn {
