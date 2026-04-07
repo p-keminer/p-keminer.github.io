@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KI-Trailer</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        background: #000;
+        overflow: hidden;
+      }
+
+      body {
+        position: relative;
+      }
+
+      .horror-player {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+
+      .horror-player__video {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+        object-position: center;
+        background: #000;
+      }
+
+      .horror-player__video::-webkit-media-controls,
+      .horror-player__video::-webkit-media-controls-enclosure,
+      .horror-player__video::-webkit-media-controls-panel {
+        display: none !important;
+        -webkit-appearance: none;
+      }
+
+      .horror-player__topbar {
+        position: absolute;
+        inset: 0 0 auto 0;
+        display: flex;
+        justify-content: flex-end;
+        padding: clamp(18px, 3vw, 28px);
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0));
+        pointer-events: none;
+      }
+
+      .horror-player__mute {
+        pointer-events: auto;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 999px;
+        background: rgba(6, 10, 18, 0.68);
+        color: #f3f6ff;
+        cursor: pointer;
+        padding: 12px 16px;
+        font: 700 0.76rem/1 "JetBrains Mono", "Segoe UI", monospace;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        backdrop-filter: blur(12px);
+        transition:
+          border-color 180ms ease,
+          background 180ms ease,
+          transform 180ms ease;
+      }
+
+      .horror-player__mute:hover,
+      .horror-player__mute:focus-visible {
+        border-color: rgba(255, 157, 110, 0.48);
+        background: rgba(28, 14, 14, 0.84);
+        transform: translateY(-1px);
+      }
+
+      .horror-player__mute:focus-visible {
+        outline: 2px solid rgba(255, 184, 132, 0.92);
+        outline-offset: 4px;
+      }
+
+      @media (max-width: 640px) {
+        .horror-player__topbar {
+          padding: 16px;
+        }
+
+        .horror-player__mute {
+          padding: 10px 14px;
+          font-size: 0.7rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="horror-player">
+      <video
+        class="horror-player__video"
+        id="trailer"
+        src="/horror-film/trailer.mp4"
+        autoplay
+        playsinline
+        preload="auto"
+        disablepictureinpicture
+        disableremoteplayback
+      ></video>
+      <div class="horror-player__topbar">
+        <button class="horror-player__mute" id="mute-toggle" type="button" aria-pressed="false">Ton aus</button>
+      </div>
+    </main>
+    <script>
+      const video = document.getElementById('trailer');
+      const muteToggle = document.getElementById('mute-toggle');
+
+      const syncMuteButton = () => {
+        const isMuted = video.muted || video.volume === 0;
+        muteToggle.textContent = isMuted ? 'Ton an' : 'Ton aus';
+        muteToggle.setAttribute('aria-pressed', String(isMuted));
+      };
+
+      const ensurePlayback = async () => {
+        video.muted = false;
+        try {
+          await video.play();
+        } catch (error) {
+          video.muted = true;
+          syncMuteButton();
+          try {
+            await video.play();
+          } catch (_) {
+            return;
+          }
+        }
+
+        syncMuteButton();
+      };
+
+      muteToggle.addEventListener('click', async () => {
+        video.muted = !video.muted;
+        syncMuteButton();
+
+        try {
+          await video.play();
+        } catch (_) {
+          // Ignore autoplay recovery failures; the toggle state still updates.
+        }
+      });
+
+      video.addEventListener('volumechange', syncMuteButton);
+
+      document.addEventListener('keydown', async (event) => {
+        if (event.key.toLowerCase() !== 'm') return;
+        event.preventDefault();
+        video.muted = !video.muted;
+        syncMuteButton();
+
+        try {
+          await video.play();
+        } catch (_) {
+          // Ignore autoplay recovery failures; the toggle state still updates.
+        }
+      });
+
+      void ensurePlayback();
+    </script>
+  </body>
+</html>

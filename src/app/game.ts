@@ -43,6 +43,8 @@ interface GameInteractionControllerState {
   selectedSquare: BoardSquare | null;
 }
 
+type TvSelectionId = 'comic' | 'horror';
+
 interface GameSnapshot extends BoardPreviewSnapshot {
   assetLoading: {
     pendingPieceAssetSet: PieceAssetSet | null;
@@ -65,6 +67,7 @@ interface GameSnapshot extends BoardPreviewSnapshot {
   };
   startFlow: {
     activePictureFrameDetailId: string;
+    activeTvSelection: TvSelectionId;
     currentRoomFocusTarget: RoomFocusTargetId | null;
     gameplayInteractionEnabled: boolean;
     hoveredRoomHotspot: RoomFocusTargetId | null;
@@ -88,7 +91,7 @@ const ROOM_FOCUS_TARGET_OPTIONS: ReadonlyArray<{ id: RoomFocusTargetId; label: s
   { id: 'comicScreen', label: 'TV' },
   { id: 'comicEmbed', label: 'Über mich' },
   { id: 'tvSelect', label: 'TV' },
-  { id: 'horrorEmbed', label: 'AI-Horror Trailer' },
+  { id: 'horrorEmbed', label: 'KI-Trailer' },
   { id: 'pictureFrameDetail', label: 'Certificate Detail' },
   { id: 'webEmbed', label: 'Portfolio Website' }
 ];
@@ -115,6 +118,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   let hoveredRoomHotspot: RoomFocusTargetId | null = null;
   let hoveredPictureFrameId: string | null = null;
   let activePictureFrameDetailId = 'frame0';
+  let activeTvSelection: TvSelectionId = 'comic';
   let pendingMenuReturn = false;
   let legalWallTab: 'impressum' | 'datenschutz' = 'impressum';
   const controllerState: GameInteractionControllerState = {
@@ -243,7 +247,8 @@ export function mountGame(root: HTMLDivElement): MountedGame {
 
     if (action === 'back-from-comic-embed') {
       if (startFlowState === 'roomExplore' && roomFocusTarget === 'comicEmbed' && !isRoomFocusTransitionActive()) {
-        // Sofort zurück zur TV-Auswahl ohne Kamerafahrt
+        activeTvSelection = 'comic';
+        // Sofort zur?ck zur TV-Auswahl ohne Kamerafahrt
         roomFocusFromTarget = 'tvSelect';
         roomFocusTarget = 'tvSelect';
         roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
@@ -253,8 +258,36 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       return;
     }
 
+    if (action === 'activate-comic-from-tv') {
+      if (startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
+        activeTvSelection = 'comic';
+        syncPanels();
+      }
+
+      return;
+    }
+
+    if (action === 'activate-horror-from-tv') {
+      if (startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
+        activeTvSelection = 'horror';
+        syncPanels();
+      }
+
+      return;
+    }
+
+    if (action === 'toggle-tv-selection') {
+      if (startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
+        activeTvSelection = activeTvSelection === 'comic' ? 'horror' : 'comic';
+        syncPanels();
+      }
+
+      return;
+    }
+
     if (action === 'select-comic-from-tv') {
       if (startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
+        activeTvSelection = 'comic';
         // Sofort umschalten ohne Kamerafahrt
         roomFocusFromTarget = 'comicEmbed';
         roomFocusTarget = 'comicEmbed';
@@ -267,6 +300,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
 
     if (action === 'select-horror-from-tv') {
       if (startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
+        activeTvSelection = 'horror';
         // Sofort umschalten ohne Kamerafahrt
         roomFocusFromTarget = 'horrorEmbed';
         roomFocusTarget = 'horrorEmbed';
@@ -287,7 +321,8 @@ export function mountGame(root: HTMLDivElement): MountedGame {
 
     if (action === 'back-from-horror-embed') {
       if (startFlowState === 'roomExplore' && roomFocusTarget === 'horrorEmbed' && !isRoomFocusTransitionActive()) {
-        // Sofort zurück zur TV-Auswahl ohne Kamerafahrt
+        activeTvSelection = 'horror';
+        // Sofort zur?ck zur TV-Auswahl ohne Kamerafahrt
         roomFocusFromTarget = 'tvSelect';
         roomFocusTarget = 'tvSelect';
         roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
@@ -729,6 +764,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       },
       startFlow: {
         activePictureFrameDetailId,
+        activeTvSelection,
         currentRoomFocusTarget: startFlowState === 'menu' ? null : roomFocusTarget,
         gameplayInteractionEnabled: isGameplayInteractionEnabled(),
         hoveredRoomHotspot,
@@ -1293,23 +1329,102 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
          </div>`
       : '';
 
-  // ── TV-Auswahl-Overlay (tvSelect Fokus) ─────────────────────────────────
+  // TV-Auswahl-Overlay (tvSelect Fokus)
   const tvSelectOverlay =
     !snapshot.startFlow.roomFocusTransitionActive &&
     snapshot.startFlow.currentRoomFocusTarget === 'tvSelect'
-      ? `<div class="tv-select-overlay">
-           <div class="tv-select-controls">
-             <button class="web-embed-nav__btn" data-control="select-comic-from-tv" type="button">Über mich</button>
-             <button class="web-embed-nav__btn" data-control="select-horror-from-tv" type="button">AI-Horror Trailer</button>
-           </div>
-           <div class="web-embed-nav">
-             <button class="web-embed-nav__btn" data-control="back-from-tv-select" type="button">Zurück</button>
-             <button class="web-embed-nav__btn" data-control="return-to-menu-from-focus" type="button">Zum Hauptmenü</button>
-           </div>
-         </div>`
+      ? (() => {
+          const tvPrograms: Record<TvSelectionId, {
+            activateControl: string;
+            ariaLabel: string;
+            channel: string;
+            cta: string;
+            description: string;
+            guideLabel: string;
+            meta: string;
+            playControl: string;
+            posterSrc: string;
+            title: string;
+          }> = {
+            comic: {
+              activateControl: 'activate-comic-from-tv',
+              ariaLabel: 'Ueber mich abspielen',
+              channel: 'CH 01 - Persoenlich',
+              cta: 'Jetzt ansehen',
+              description: 'Ein stilisierter Blick auf Stationen, Entscheidungen und Wendepunkte meines Weges.',
+              guideLabel: 'CH 01 Ueber mich',
+              meta: 'Comic-Flow - 10 Szenen - ca. 3 Min.',
+              playControl: 'select-comic-from-tv',
+              posterSrc: '/comic-film/cover.webp',
+              title: 'Ueber mich'
+            },
+            horror: {
+              activateControl: 'activate-horror-from-tv',
+              ariaLabel: 'KI-Trailer abspielen',
+              channel: 'CH 02 - Genre',
+              cta: 'Trailer starten',
+              description: 'Dunkle Trailer-Energie mit synthetischer Bildsprache, Suspense und schnellem Schnitt.',
+              guideLabel: 'CH 02 KI-Trailer',
+              meta: 'Horror-Trailer - 1:36 Min. - Cinematic',
+              playControl: 'select-horror-from-tv',
+              posterSrc: '/horror-film/cover.webp',
+              title: 'KI-Trailer'
+            }
+          };
+
+          const activeId = snapshot.startFlow.activeTvSelection;
+          const standbyId: TvSelectionId = activeId === 'comic' ? 'horror' : 'comic';
+          const activeProgram = tvPrograms[activeId];
+          const standbyProgram = tvPrograms[standbyId];
+          const renderTvCard = (program: typeof activeProgram, state: 'active' | 'standby'): string => {
+            const isActive = state === 'active';
+            return `
+              <button
+                class="tv-select-card tv-select-card--${state}"
+                data-control="${isActive ? program.playControl : program.activateControl}"
+                type="button"
+                aria-label="${isActive ? program.ariaLabel : program.title + ' als aktiven Sender waehlen'}"
+                ${isActive ? 'aria-current="true"' : ''}
+              >
+                <span class="tv-select-card__poster" aria-hidden="true">
+                  <img src="${program.posterSrc}" alt="" loading="eager" decoding="async">
+                </span>
+                <span class="tv-select-card__body">
+                  <span class="tv-select-card__channel">${program.channel}</span>
+                  <span class="tv-select-card__title">${program.title}</span>
+                  <span class="tv-select-card__meta">${program.meta}</span>
+                  <span class="tv-select-card__description">${program.description}</span>
+                  <span class="tv-select-card__cta">${isActive ? program.cta : 'Zum Kanal'}</span>
+                </span>
+              </button>`;
+          };
+
+          return `<div class="tv-select-overlay">
+            <div class="tv-select-shell">
+              <div class="tv-select-header">
+                <p class="tv-select-kicker">TV Senderauswahl</p>
+                <h2 class="tv-select-title">Heute im Showcase</h2>
+              </div>
+              <div class="tv-select-track" aria-label="Programmauswahl">
+                <div class="tv-select-carousel">
+                  ${renderTvCard(activeProgram, 'active')}
+                  ${renderTvCard(standbyProgram, 'standby')}
+                </div>
+              </div>
+              <div class="tv-select-guide" aria-label="Senderliste">
+
+                <button class="tv-select-guide__pill ${activeId === 'comic' ? 'is-active' : ''}" data-control="activate-comic-from-tv" type="button" ${activeId === 'comic' ? 'disabled' : ''}>${tvPrograms.comic.guideLabel}</button>
+                <button class="tv-select-guide__pill ${activeId === 'horror' ? 'is-active' : ''}" data-control="activate-horror-from-tv" type="button" ${activeId === 'horror' ? 'disabled' : ''}>${tvPrograms.horror.guideLabel}</button>
+              </div>
+            </div>
+            <div class="web-embed-nav">
+              <button class="web-embed-nav__btn" data-control="back-from-tv-select" type="button">Zurueck</button>
+              <button class="web-embed-nav__btn" data-control="return-to-menu-from-focus" type="button">Zum Hauptmenue</button>
+            </div>
+          </div>`;
+        })()
       : '';
 
-  // ── Comic-Embed-Overlay (nur comicEmbed Fokus) ──────────────────────────
   const comicEmbedOverlay =
     !snapshot.startFlow.roomFocusTransitionActive &&
     snapshot.startFlow.currentRoomFocusTarget === 'comicEmbed'
@@ -1328,7 +1443,7 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
     !snapshot.startFlow.roomFocusTransitionActive &&
     snapshot.startFlow.currentRoomFocusTarget === 'horrorEmbed'
       ? `<div class="horror-screen-overlay">
-           <video src="/horror-film/trailer.mp4" autoplay playsinline></video>
+           <iframe src="/horror-film/index.html" title="KI-Trailer" allow="autoplay; fullscreen" allowfullscreen></iframe>
            <div class="web-embed-nav">
              <button class="web-embed-nav__btn" data-control="back-from-horror-embed" type="button">Zurück</button>
              <button class="web-embed-nav__btn" data-control="return-to-overview-from-tv" type="button">Zur Übersicht</button>

@@ -1,0 +1,1371 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#07090f" />
+    <title>p-keminer | Meine Geschichte</title>
+    <style>
+      *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+      html, body {
+        height: 100%;
+        overflow: hidden;
+      }
+
+      body {
+        background: #07090f;
+        color: #c0dce8;
+        font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+        display: flex;
+        flex-direction: column;
+        user-select: none;
+      }
+
+      /* ─── Canvas ───────────────────────────────────────────────── */
+
+      .stage-wrap {
+        flex: 1;
+        position: relative;
+        min-height: 0;
+      }
+
+      #stage {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* ─── Timeline (Comic Strip) ────────────────────────────────── */
+
+      .timeline {
+        height: 58px;
+        display: flex;
+        align-items: center;
+        padding: 0 28px;
+        background: transparent;
+        border-top: none;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 10;
+      }
+
+      .timeline-track {
+        position: relative;
+        flex: 1;
+        height: 2px;
+        background: rgba(42, 31, 0, 0.3);
+        border-top: 1px dashed rgba(42, 31, 0, 0.4);
+        border-bottom: 1px dashed rgba(42, 31, 0, 0.4);
+        border-radius: 0;
+      }
+
+      .timeline-progress {
+        position: absolute;
+        top: -1px;
+        left: 0;
+        height: calc(100% + 2px);
+        background: rgba(42, 31, 0, 0.5);
+        border-radius: 0;
+        transition: width 300ms ease;
+      }
+
+      .timeline-marker {
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%) rotate(-1deg);
+        border: 3px solid #1a1200;
+        border-radius: 5px;
+        min-width: 44px;
+        height: 26px;
+        padding: 0 6px;
+        background: linear-gradient(170deg, #fdf4d0 0%, #f5e6a3 60%, #e8d48b 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 200ms ease;
+        z-index: 1;
+        box-shadow: 2px 2px 0 rgba(42, 31, 0, 0.35);
+        white-space: nowrap;
+      }
+
+      .timeline-marker:nth-child(even) {
+        transform: translate(-50%, -50%) rotate(1deg);
+      }
+
+      .timeline-marker__label {
+        font-size: 0.5rem;
+        font-weight: 800;
+        font-style: italic;
+        letter-spacing: 0.02em;
+        color: #2a1f00;
+        pointer-events: none;
+        transition: all 200ms ease;
+        line-height: 1;
+        text-align: center;
+      }
+
+      .timeline-marker:hover {
+        transform: translate(-50%, -56%) rotate(0deg);
+        background: linear-gradient(170deg, #fff8e0 0%, #fdf4d0 60%, #f5e6a3 100%);
+        box-shadow: 3px 3px 0 rgba(42, 31, 0, 0.4);
+      }
+
+      .timeline-marker:hover .timeline-marker__label {
+        color: #0a0800;
+      }
+
+      .timeline-marker.active {
+        border-color: #1a1200;
+        background: linear-gradient(170deg, #fff 0%, #f5e6a3 40%, #d4b84a 100%);
+        box-shadow: 2px 2px 0 #8a7530, 0 0 8px rgba(245, 230, 163, 0.4);
+        transform: translate(-50%, -56%) rotate(0deg) scale(1.12);
+      }
+
+      .timeline-marker.active .timeline-marker__label {
+        color: #1a1200;
+        font-style: italic;
+      }
+
+      /* ─── Nav Arrows ───────────────────────────────────────────── */
+
+      .nav-arrows {
+        position: absolute;
+        bottom: 72px;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: space-between;
+        padding: 0 16px;
+        pointer-events: none;
+        z-index: 2;
+      }
+
+      .nav-arrow {
+        pointer-events: auto;
+        background: rgba(245, 235, 210, 0.7);
+        border: 2.5px solid #2a1f00;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: #2a1f00;
+        font-size: 1rem;
+        transition: all 200ms ease;
+        box-shadow: 1px 2px 0 rgba(42, 31, 0, 0.3);
+      }
+
+      .nav-arrow:hover {
+        background: #fdf4d0;
+        border-color: #c03030;
+        color: #c03030;
+        box-shadow: 2px 3px 0 rgba(42, 31, 0, 0.35);
+      }
+
+      .nav-arrow:disabled {
+        opacity: 0.2;
+        cursor: default;
+        pointer-events: none;
+      }
+
+      /* ─── Responsive ───────────────────────────────────────────── */
+
+      @media (max-width: 480px) {
+        .timeline { padding: 0 12px; height: 52px; }
+        .timeline-marker { width: 28px; height: 28px; }
+        .timeline-marker__label { font-size: 0.4rem; }
+        .scene-header__label { font-size: 0.6rem; }
+        .scene-header__title { font-size: 0.9rem; }
+        .nav-arrow { width: 30px; height: 30px; font-size: 0.85rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage-wrap">
+      <canvas id="stage"></canvas>
+      <div class="nav-arrows">
+        <button class="nav-arrow" id="nav-prev" aria-label="Vorherige Szene">&#9664;</button>
+        <button class="nav-arrow" id="nav-next" aria-label="Naechste Szene">&#9654;</button>
+      </div>
+    </div>
+    <nav class="timeline" id="timeline">
+      <div class="timeline-track" id="timeline-track">
+        <div class="timeline-progress" id="timeline-progress"></div>
+      </div>
+    </nav>
+
+    <script>
+    // ═══════════════════════════════════════════════════════════════
+    // SCENE DATA
+    // ═══════════════════════════════════════════════════════════════
+
+    const SCENES = [
+      { id: 'scene-01', label: '10 y.o', title: 'Der Spielzeugroboter' },
+      { id: 'scene-02', label: '16 y.o', title: 'Die Entscheidung' },
+      { id: 'scene-03', label: '18 y.o', title: 'Die Fabrik' },
+      { id: 'scene-04', label: '22 y.o', title: 'Die Eins Plus' },
+      { id: 'scene-05', label: '22 y.o', title: 'Das Trinkgeld' },
+      { id: 'scene-06', label: '26 y.o', title: 'Der IHK-Abschluss' },
+      { id: 'scene-07', label: '28 y.o', title: 'Der Stillstand' },
+      { id: 'scene-08', label: '28 y.o', title: 'Der Weg' },
+      { id: 'scene-09', label: '30 y.o', title: 'Der Abschied' },
+      { id: 'scene-10', label: '31 y.o', title: 'Angekommen' },
+    ];
+
+    // Placeholder render — draws age, title, and a pulsing ring.
+    // Will be replaced with actual Canvas animations per scene.
+    function renderPlaceholderScene(ctx, scene, progress, w, h) {
+      // Background
+      ctx.fillStyle = '#07090f';
+      ctx.fillRect(0, 0, w, h);
+
+      const cx = w / 2;
+      const cy = h / 2;
+
+      // Pulsing ring
+      const pulse = 0.5 + 0.5 * Math.sin(progress * Math.PI * 2);
+      const radius = 60 + pulse * 20;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0, 212, 255, ' + (0.15 + pulse * 0.15) + ')';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Inner ring
+      ctx.beginPath();
+      ctx.arc(cx, cy, 40, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0, 212, 255, 0.08)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Age number
+      ctx.fillStyle = '#00d4ff';
+      ctx.font = 'bold 48px Inter, Segoe UI, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(scene.label, cx, cy);
+
+      // Scene index
+      var idx = SCENES.indexOf(scene) + 1;
+      ctx.fillStyle = 'rgba(192, 220, 232, 0.25)';
+      ctx.font = '11px Inter, Segoe UI, system-ui, sans-serif';
+      ctx.fillText('Szene ' + idx + ' / ' + SCENES.length, cx, cy + 50);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // SHARED DRAWING HELPERS
+    // ═══════════════════════════════════════════════════════════════
+
+    function roundRect(ctx, x, y, w, h, r) {
+      if (r > Math.min(w, h) / 2) r = Math.min(w, h) / 2;
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    function fillStroke(ctx, fill, lw) {
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = lw;
+      ctx.stroke();
+    }
+
+    // tailDir: 'left' | 'right' | 'top-right' (tail points up-right, from above)
+    function drawSpeechBubble(ctx, x, y, text, s, tailDir, fontSize) {
+      var fs = fontSize || 14;
+      var lines = text.split('\n');
+      var lineH = (fs + 4) * s;
+      var pad = (fs) * s;
+      ctx.font = 'bold ' + Math.round(fs * s) + 'px Inter, Segoe UI, system-ui, sans-serif';
+      var maxW = 0;
+      for (var i = 0; i < lines.length; i++) {
+        var m = ctx.measureText(lines[i]).width;
+        if (m > maxW) maxW = m;
+      }
+      var bw = maxW + pad * 2;
+      var bh = lines.length * lineH + pad * 1.6;
+      var bx = x - bw / 2;
+      var by = y - bh;
+      // Body
+      roundRect(ctx, bx, by, bw, bh, 12 * s);
+      fillStroke(ctx, '#fff', 2.5 * s);
+
+      if (tailDir === 'top-right') {
+        // Tail pointing UP from top edge, angled right
+        var tx = bx + bw * 0.7;
+        ctx.beginPath();
+        ctx.moveTo(tx - 7 * s, by + 1);
+        ctx.lineTo(tx + 12 * s, by - 16 * s);
+        ctx.lineTo(tx + 7 * s, by + 1);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(tx - 7 * s, by);
+        ctx.lineTo(tx + 12 * s, by - 16 * s);
+        ctx.lineTo(tx + 7 * s, by);
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2.5 * s;
+        ctx.stroke();
+        // Cover gap
+        ctx.beginPath();
+        ctx.moveTo(tx - 8 * s, by);
+        ctx.lineTo(tx + 8 * s, by);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 3.5 * s;
+        ctx.stroke();
+      } else {
+        // Tail pointing DOWN (default)
+        var tx = tailDir === 'left' ? bx + bw * 0.25 : bx + bw * 0.75;
+        ctx.beginPath();
+        ctx.moveTo(tx - 7 * s, by + bh - 1);
+        ctx.lineTo(tx + (tailDir === 'left' ? -12 : 12) * s, by + bh + 16 * s);
+        ctx.lineTo(tx + 7 * s, by + bh - 1);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(tx - 7 * s, by + bh);
+        ctx.lineTo(tx + (tailDir === 'left' ? -12 : 12) * s, by + bh + 16 * s);
+        ctx.lineTo(tx + 7 * s, by + bh);
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2.5 * s;
+        ctx.stroke();
+        // Cover gap
+        ctx.beginPath();
+        ctx.moveTo(tx - 8 * s, by + bh);
+        ctx.lineTo(tx + 8 * s, by + bh);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 3.5 * s;
+        ctx.stroke();
+      }
+
+      // Text
+      ctx.fillStyle = '#1a1a1a';
+      ctx.font = 'bold ' + Math.round(fs * s) + 'px Inter, Segoe UI, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (var i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], x, by + pad + lineH * i + lineH * 0.45);
+      }
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // CAPTION BOX HELPER (comic-style location/narration box)
+    // ═══════════════════════════════════════════════════════════════
+
+    function drawCaptionBox(ctx, x, y, text, s) {
+      var lines = text.split('\n');
+      var fs = Math.round(15 * s);
+      var lineH = fs * 1.4;
+      ctx.font = 'italic bold ' + fs + 'px Inter, Segoe UI, system-ui, sans-serif';
+      var pad = 14 * s;
+      var maxW = 0;
+      for (var i = 0; i < lines.length; i++) {
+        var m = ctx.measureText(lines[i]).width;
+        if (m > maxW) maxW = m;
+      }
+      var bw = maxW + pad * 2;
+      var bh = lines.length * lineH + pad * 1.6;
+      var bx = x;
+      var by = y;
+
+      // Yellow/golden background like classic comic caption boxes
+      var grad = ctx.createLinearGradient(bx, by, bx, by + bh);
+      grad.addColorStop(0, '#f5e6a3');
+      grad.addColorStop(0.5, '#fdf4d0');
+      grad.addColorStop(1, '#e8d48b');
+
+      ctx.fillStyle = grad;
+      ctx.fillRect(bx, by, bw, bh);
+
+      // Border
+      ctx.strokeStyle = '#8a7530';
+      ctx.lineWidth = 2 * s;
+      ctx.strokeRect(bx, by, bw, bh);
+
+      // Text
+      ctx.fillStyle = '#2a1f00';
+      ctx.font = 'italic bold ' + fs + 'px Inter, Segoe UI, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (var i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], bx + bw / 2, by + pad * 0.8 + lineH * i + lineH * 0.5);
+      }
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // THOUGHT BUBBLE HELPER
+    // ═══════════════════════════════════════════════════════════════
+
+    function drawThoughtBubble(ctx, x, y, text, s, trailDir) {
+      var lines = text.split('\n');
+      var lineH = 32 * s;
+      var pad = 28 * s;
+      ctx.font = 'italic bold ' + Math.round(23 * s) + 'px Inter, Segoe UI, system-ui, sans-serif';
+      var maxW = 0;
+      for (var i = 0; i < lines.length; i++) {
+        var m = ctx.measureText(lines[i]).width;
+        if (m > maxW) maxW = m;
+      }
+      var bw = maxW + pad * 2.6;
+      var bh = lines.length * lineH + pad * 2.4;
+      var cx = x;
+      var cy = y - bh / 2;
+      var rx = bw / 2;
+      var ry = bh / 2;
+
+      // White metallic gradient fill
+      var metalGrad = ctx.createLinearGradient(cx - rx, cy - ry, cx - rx, cy + ry);
+      metalGrad.addColorStop(0, '#f8f9fb');
+      metalGrad.addColorStop(0.25, '#ffffff');
+      metalGrad.addColorStop(0.5, '#ffffff');
+      metalGrad.addColorStop(0.75, '#f0f3f6');
+      metalGrad.addColorStop(1, '#e6eaef');
+
+      // Metallic border
+      var borderGrad = ctx.createLinearGradient(cx - rx, cy - ry, cx + rx, cy + ry);
+      borderGrad.addColorStop(0, '#a0b0c0');
+      borderGrad.addColorStop(0.4, '#cdd8e2');
+      borderGrad.addColorStop(0.6, '#8a9daf');
+      borderGrad.addColorStop(1, '#b0c0d0');
+
+      // Main bubble body (ellipse)
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fillStyle = metalGrad;
+      ctx.fill();
+      ctx.strokeStyle = borderGrad;
+      ctx.lineWidth = 2.5 * s;
+      ctx.stroke();
+
+      // Metallic shine highlight
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      ctx.clip();
+      var shineGrad = ctx.createLinearGradient(cx - rx, cy - ry, cx - rx + bw * 0.4, cy - ry + bh * 0.3);
+      shineGrad.addColorStop(0, 'rgba(255,255,255,0.6)');
+      shineGrad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = shineGrad;
+      ctx.fillRect(cx - rx, cy - ry, bw * 0.6, bh * 0.5);
+      ctx.restore();
+
+      // Thought bubble trail
+      var trail;
+      if (trailDir === 'top') {
+        trail = [
+          { cx: x + bw * 0.10, cy: cy - ry - 12 * s, r: 8 * s },
+          { cx: x + bw * 0.18, cy: cy - ry - 28 * s, r: 5 * s },
+          { cx: x + bw * 0.24, cy: cy - ry - 40 * s, r: 3 * s },
+        ];
+      } else {
+        trail = [
+          { cx: x + bw * 0.15, cy: cy + ry + 14 * s, r: 9 * s },
+          { cx: x + bw * 0.24, cy: cy + ry + 32 * s, r: 6 * s },
+          { cx: x + bw * 0.30, cy: cy + ry + 46 * s, r: 4 * s },
+        ];
+      }
+      for (var t = 0; t < trail.length; t++) {
+        ctx.beginPath();
+        ctx.arc(trail[t].cx, trail[t].cy, trail[t].r, 0, Math.PI * 2);
+        ctx.fillStyle = metalGrad;
+        ctx.fill();
+        ctx.strokeStyle = borderGrad;
+        ctx.lineWidth = 2 * s;
+        ctx.stroke();
+      }
+
+      // Text
+      ctx.fillStyle = '#1a2a3a';
+      ctx.font = 'italic bold ' + Math.round(23 * s) + 'px Inter, Segoe UI, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      var textBlockH = lines.length * lineH;
+      var textStartY = cy - textBlockH / 2 + lineH * 0.5;
+      for (var i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], cx, textStartY + lineH * i);
+      }
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // SCENE OVERLAYS
+    // ═══════════════════════════════════════════════════════════════
+
+    var SCENE_OVERLAYS = [];
+
+    // Scene 01 overlay — thought bubble + father speech bubble
+    SCENE_OVERLAYS[0] = function(ctx, progress, w, h) {
+      var s = Math.min(w / 800, h / 500);
+
+      // ── Caption box: 1s–4s (progress 0.071–0.283), fade in/out ──
+      if (progress >= 0.071 && progress <= 0.283) {
+        var a = 1;
+        if (progress < 0.1) a = (progress - 0.071) / 0.029;
+        else if (progress > 0.25) a = 1 - (progress - 0.25) / 0.033;
+        a = Math.max(0, Math.min(1, a));
+
+        ctx.save();
+        ctx.globalAlpha = a;
+        drawCaptionBox(ctx, w * 0.03, h * 0.05, '  Der Spielzeugladen -  \n  wo alles begann  ', s);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // ── Thought bubble: 3.5s–7s (progress 0.248–0.496) ──
+      if (progress >= 0.248 && progress <= 0.496) {
+        var alpha = 1;
+        if (progress < 0.288) alpha = (progress - 0.248) / 0.04;
+        else if (progress > 0.460) alpha = 1 - (progress - 0.460) / 0.036;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawThoughtBubble(ctx, w * 0.38, h * 0.32,
+          'Wie gerne würde ich\nden nur haben!', s * 0.7);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // ── Father speech bubble: 9.5s–end (progress 0.67–1.0) ──
+      // Fade in from top-right, tail pointing right (father off-screen)
+      if (progress >= 0.67) {
+        var alpha2 = 1;
+        if (progress < 0.71) alpha2 = (progress - 0.67) / 0.04;
+        alpha2 = Math.max(0, Math.min(1, alpha2));
+
+        ctx.save();
+        ctx.globalAlpha = alpha2;
+        drawSpeechBubble(ctx, w * 0.75, h * 0.22,
+          'Heute nicht,\nein anderes Mal!', s, 'top-right', 18);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+
+    SCENE_OVERLAYS[1] = function(ctx, progress, w, h) {
+      var s = Math.min(w / 800, h / 500);
+
+      // ── First thought bubble: 0–2s (progress 0–0.16), fade in/out within ──
+      if (progress <= 0.16) {
+        var a = 1;
+        if (progress < 0.04) a = progress / 0.04;
+        else if (progress > 0.12) a = 1 - (progress - 0.12) / 0.04;
+        a = Math.max(0, Math.min(1, a));
+
+        ctx.save();
+        ctx.globalAlpha = a;
+        drawThoughtBubble(ctx, w * 0.15, h * 0.22, 'Bis heute habe ich diesen\nRoboter nicht bekommen..', s * 0.75);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // ── Thought bubble: 8s–end (progress 0.66–1.0) ──
+      if (progress >= 0.66) {
+        var alpha = 1;
+        if (progress < 0.70) alpha = (progress - 0.66) / 0.04;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawThoughtBubble(ctx, w * 0.15, h * 0.22, 'Ich muss mein eigenes\nGeld verdienen!', s * 0.75);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+
+    SCENE_OVERLAYS[2] = function(ctx, progress, w, h) {
+      var s = Math.min(w / 800, h / 500);
+
+      // ── Caption box: 1s–4s (progress 0.124–0.497), fade in/out ──
+      if (progress >= 0.124 && progress <= 0.497) {
+        var alpha = 1;
+        if (progress < 0.16) alpha = (progress - 0.124) / 0.036;
+        else if (progress > 0.44) alpha = 1 - (progress - 0.44) / 0.057;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawCaptionBox(ctx, w * 0.03, h * 0.05, 'Franken Metalltechnik\nAusbildung zum Metallbauer', s);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // ── Thought bubble: 4s–end (progress 0.50–1.0) ──
+      if (progress >= 0.50) {
+        var alpha = 1;
+        if (progress < 0.54) alpha = (progress - 0.50) / 0.04;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        // Text switches at 6s (progress 0.75)
+        var text = progress < 0.75
+          ? 'Das fordert mich\nnicht ausreichend...'
+          : 'Und das für 500€\nim Monat? Nein, danke!';
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawThoughtBubble(ctx, w * 0.22, h * 0.55, text, s * 0.8, 'top');
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+
+    SCENE_OVERLAYS[3] = function(ctx, progress, w, h) {
+      var s = Math.min(w / 800, h / 500);
+
+      // ── Caption box: 1s–4s (progress 0.055–0.22), fade in/out ──
+      if (progress >= 0.055 && progress <= 0.22) {
+        var alpha = 1;
+        if (progress < 0.08) alpha = (progress - 0.055) / 0.025;
+        else if (progress > 0.193) alpha = 1 - (progress - 0.193) / 0.027;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawCaptionBox(ctx, w * 0.03, h * 0.05, 'Ottilie-Schönewald-Weiterbildungskolleg\nFHR (schulischer Teil)', s);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // ── Thought bubble 1: 10s–13.5s (progress 0.551–0.745), fade out at 13s ──
+      if (progress >= 0.551 && progress <= 0.745) {
+        var alpha = 1;
+        if (progress < 0.58) alpha = (progress - 0.551) / 0.029;
+        else if (progress > 0.717) alpha = 1 - (progress - 0.717) / 0.028;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawThoughtBubble(ctx, w * 0.22, h * 0.25, 'Bald habe ich es geschafft..', s * 0.8);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // ── Thought bubble 2: 13s–end (progress 0.717–1.0), fade in ──
+      if (progress >= 0.717) {
+        var alpha = 1;
+        if (progress < 0.745) alpha = (progress - 0.717) / 0.028;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawThoughtBubble(ctx, w * 0.30, h * 0.22, 'Mein Fachabitur,\nwer hätte das gedacht', s * 0.8);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+
+    SCENE_OVERLAYS[5] = function(ctx, progress, w, h) {
+      var s = Math.min(w / 800, h / 500);
+
+      // ── Caption box: 1s–4s (progress 0.066–0.264), fade in/out ──
+      if (progress >= 0.066 && progress <= 0.264) {
+        var alpha = 1;
+        if (progress < 0.093) alpha = (progress - 0.066) / 0.027;
+        else if (progress > 0.237) alpha = 1 - (progress - 0.237) / 0.027;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawCaptionBox(ctx, w * 0.03, h * 0.05, 'Parkhotel Herne\nRestaurantfachmann - IHK Abschluss', s);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+
+    SCENE_OVERLAYS[7] = function(ctx, progress, w, h) {
+      var s = Math.min(w / 800, h / 500);
+
+      // ── Thought bubble 1: 1s–3s (progress 0.067–0.200), fade in/out ──
+      if (progress >= 0.067 && progress <= 0.200) {
+        var alpha = 1;
+        if (progress < 0.095) alpha = (progress - 0.067) / 0.028;
+        else if (progress > 0.172) alpha = 1 - (progress - 0.172) / 0.028;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawThoughtBubble(ctx, w * 0.15, h * 0.22, 'Es muss doch irgendwo ein\nbezahlbares IT Studium geben..', s * 0.75);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // ── Thought bubble 2: 9s–12.5s (progress 0.600–0.833), fade in/out ──
+      if (progress >= 0.600 && progress <= 0.833) {
+        var alpha = 1;
+        if (progress < 0.628) alpha = (progress - 0.600) / 0.028;
+        else if (progress > 0.800) alpha = 1 - (progress - 0.800) / 0.033;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawThoughtBubble(ctx, w * 0.15, h * 0.18, 'Volltreffer!', s * 0.75);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // ── Thought bubble 3: 14s–end (progress 0.933–1.0), fade in ──
+      if (progress >= 0.933) {
+        var alpha = 1;
+        if (progress < 0.961) alpha = (progress - 0.933) / 0.028;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawThoughtBubble(ctx, w * 0.15, h * 0.18, 'Das ist der Weg!', s * 0.75);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+
+    SCENE_OVERLAYS[8] = function(ctx, progress, w, h) {
+      var s = Math.min(w / 800, h / 500);
+
+      // ── Caption box: 1s–4s (progress 0.0375–0.15), fade in/out ──
+      if (progress >= 0.0375 && progress <= 0.15) {
+        var alpha = 1;
+        if (progress < 0.06) alpha = (progress - 0.0375) / 0.0225;
+        else if (progress > 0.125) alpha = 1 - (progress - 0.125) / 0.025;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawCaptionBox(ctx, w * 0.03, h * 0.05, 'Relais & Châteaux\nHotel Seesteg, Norderney', s);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // ── Speech bubble: 6.5s–8s (progress 0.244–0.300), fade in/out ──
+      if (progress >= 0.244 && progress <= 0.300) {
+        var alpha = 1;
+        if (progress < 0.260) alpha = (progress - 0.244) / 0.016;
+        else if (progress > 0.284) alpha = 1 - (progress - 0.284) / 0.016;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawSpeechBubble(ctx, w * 0.52, h * 0.20, 'Guten Appetit die Damen!', s * 0.9);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // ── Thought bubble: 23s–end (progress 0.863–1.0), text switch at 24.5s (0.919) ──
+      if (progress >= 0.863) {
+        var alpha = 1;
+        if (progress < 0.888) alpha = (progress - 0.863) / 0.025;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        var bubbleText = progress < 0.919
+          ? 'Danke für diese letzte\nschöne Erfahrung!'
+          : 'Jetzt kann es losgehen!';
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawThoughtBubble(ctx, w * 0.22, h * 0.10, bubbleText, s * 0.45);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+
+    SCENE_OVERLAYS[9] = function(ctx, progress, w, h) {
+      var s = Math.min(w / 800, h / 500);
+
+      // ── Caption box: 1s–4s (progress 0.04–0.159), fade in/out ──
+      if (progress >= 0.04 && progress <= 0.159) {
+        var alpha = 1;
+        if (progress < 0.065) alpha = (progress - 0.04) / 0.025;
+        else if (progress > 0.134) alpha = 1 - (progress - 0.134) / 0.025;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawCaptionBox(ctx, w * 0.03, h * 0.05, 'THGA Bochum - Studium\nDigitalisierung & Informationstechnik/Ingenieursinformatik', s);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // ── Thought bubble: 22s–end (progress 0.881–1.0), fade in ──
+      if (progress >= 0.881) {
+        var alpha = 1;
+        if (progress < 0.906) alpha = (progress - 0.881) / 0.025;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawThoughtBubble(ctx, w * 0.40, h * 0.19, 'Endlich angekommen,\nwo ich schon ewig sein wollte!', s * 0.7);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+
+    SCENE_OVERLAYS[6] = function(ctx, progress, w, h) {
+      var s = Math.min(w / 800, h / 500);
+
+      // ── Caption box: 1s–4s (progress 0.081–0.322), fade in/out ──
+      if (progress >= 0.081 && progress <= 0.322) {
+        var alpha = 1;
+        if (progress < 0.108) alpha = (progress - 0.081) / 0.027;
+        else if (progress > 0.295) alpha = 1 - (progress - 0.295) / 0.027;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawCaptionBox(ctx, w * 0.03, h * 0.05, '2 Jahre später -\nder Gastronomie überdrüssig', s);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // ── Thought bubble 1: 3.75s–7s (progress 0.302–0.565), fade in/out ──
+      if (progress >= 0.302 && progress <= 0.565) {
+        var alpha = 1;
+        if (progress < 0.334) alpha = (progress - 0.302) / 0.032;
+        else if (progress > 0.533) alpha = 1 - (progress - 0.533) / 0.032;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawThoughtBubble(ctx, w * 0.36, h * 0.20, 'Wie soll ich das bloß\nmein Leben lang machen?', s * 0.75);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // ── Thought bubble 2: 8s–end (progress 0.645–1.0), fade in ──
+      if (progress >= 0.645) {
+        var alpha = 1;
+        if (progress < 0.677) alpha = (progress - 0.645) / 0.032;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawThoughtBubble(ctx, w * 0.36, h * 0.20, 'Ich will einfach nur\nnoch raus hier..', s * 0.75);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+
+    SCENE_OVERLAYS[4] = function(ctx, progress, w, h) {
+      var s = Math.min(w / 800, h / 500);
+
+      // ── Caption box: 1s–4s (progress 0.057–0.227), fade in/out ──
+      if (progress >= 0.057 && progress <= 0.227) {
+        var alpha = 1;
+        if (progress < 0.085) alpha = (progress - 0.057) / 0.028;
+        else if (progress > 0.2) alpha = 1 - (progress - 0.2) / 0.027;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawCaptionBox(ctx, w * 0.03, h * 0.05, 'Aushilfsjob in der Gastronomie,\nwährend des Fachabiturs', s);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // ── Thought bubble 1 (Wow): 12s–16.5s (progress 0.682–0.938), fade out at 16s ──
+      if (progress >= 0.682 && progress <= 0.938) {
+        var alpha = 1;
+        if (progress < 0.711) alpha = (progress - 0.682) / 0.029;
+        else if (progress > 0.910) alpha = 1 - (progress - 0.910) / 0.028;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawThoughtBubble(ctx, w * 0.25, h * 0.15, 'Wow!', s * 0.65);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // ── Thought bubble 2: 16s–end (progress 0.910–1.0), fade in, trail top ──
+      if (progress >= 0.910) {
+        var alpha = 1;
+        if (progress < 0.938) alpha = (progress - 0.910) / 0.028;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawThoughtBubble(ctx, w * 0.22, h * 0.40, 'Das ist mehr als ich in der\nAusbildung in einer Woche\nverdient habe!', s * 0.65, 'top');
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+
+    // ═══════════════════════════════════════════════════════════════
+    // VIDEO SCENE SYSTEM
+    // ═══════════════════════════════════════════════════════════════
+
+    // Map scene index → video src (only scenes with videos)
+    var SCENE_VIDEOS = {
+      0: 'szene1.mp4',
+      1: 'szene2.mp4',
+      2: 'szene3.mp4',
+      3: 'szene4.mp4',
+      4: 'szene5.mp4',
+      5: 'szene6.mp4',
+      6: 'szene7.mp4',
+      7: 'szene8.mp4',
+      8: 'szene9.mp4',
+      9: 'szene10.mp4',
+    };
+
+    // Loaded <video> elements keyed by scene index
+    var videoElements = {};
+    var activeVideoIndex = -1;
+
+    function createSceneVideo(sceneIndex, preloadMode) {
+      var idx = String(sceneIndex);
+      var video = document.createElement('video');
+      video.muted = true;
+      video.playsInline = true;
+      video.preload = preloadMode || 'metadata';
+      video.loop = false;
+      video.style.display = 'none';
+      video.src = SCENE_VIDEOS[sceneIndex];
+      document.body.appendChild(video);
+      video.load();
+      videoElements[idx] = video;
+      return video;
+    }
+
+    function ensureSceneVideo(sceneIndex, preloadMode) {
+      if (SCENE_VIDEOS[sceneIndex] === undefined) return null;
+
+      var idx = String(sceneIndex);
+      var video = videoElements[idx];
+      if (!video) {
+        return createSceneVideo(sceneIndex, preloadMode);
+      }
+
+      if (preloadMode && video.preload !== preloadMode) {
+        video.preload = preloadMode;
+        if (video.readyState === 0) {
+          video.load();
+        }
+      }
+
+      return video;
+    }
+
+    function releaseSceneVideo(sceneIndex) {
+      var idx = String(sceneIndex);
+      var video = videoElements[idx];
+      if (!video) return;
+
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      if (video.parentNode) {
+        video.parentNode.removeChild(video);
+      }
+      delete videoElements[idx];
+      if (activeVideoIndex === sceneIndex) {
+        activeVideoIndex = -1;
+      }
+    }
+
+    function syncSceneVideoBuffer(snapshot) {
+      var keep = {};
+      var primaryIndex = snapshot.state === 'TRANSITIONING'
+        ? snapshot.transition.toIndex
+        : snapshot.currentSceneIndex;
+
+      if (SCENE_VIDEOS[primaryIndex] !== undefined) {
+        ensureSceneVideo(primaryIndex, 'auto');
+        keep[String(primaryIndex)] = true;
+      }
+
+      if (snapshot.state === 'TRANSITIONING' && snapshot.transition && SCENE_VIDEOS[snapshot.transition.fromIndex] !== undefined) {
+        ensureSceneVideo(snapshot.transition.fromIndex, 'metadata');
+        keep[String(snapshot.transition.fromIndex)] = true;
+      }
+
+      if (snapshot.state !== 'TRANSITIONING') {
+        var nextIndex = primaryIndex + 1;
+        if (SCENE_VIDEOS[nextIndex] !== undefined) {
+          ensureSceneVideo(nextIndex, 'metadata');
+          keep[String(nextIndex)] = true;
+        }
+      }
+
+      Object.keys(videoElements).forEach(function(idx) {
+        if (!keep[idx]) {
+          releaseSceneVideo(Number(idx));
+        }
+      });
+    }
+
+    function playSceneVideo(sceneIndex) {
+      var idx = String(sceneIndex);
+      // Pause all other videos
+      Object.keys(videoElements).forEach(function(k) {
+        if (k !== idx) {
+          videoElements[k].pause();
+          videoElements[k].currentTime = 0;
+        }
+      });
+      // Play the target video from start
+      var v = ensureSceneVideo(sceneIndex, 'auto');
+      if (v) {
+        v.currentTime = 0;
+        v.play().catch(function() {}); // autoplay might need user gesture
+        activeVideoIndex = sceneIndex;
+      }
+    }
+
+    function stopAllVideos() {
+      Object.keys(videoElements).forEach(function(k) {
+        videoElements[k].pause();
+      });
+      activeVideoIndex = -1;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // SCENE DISPATCH
+    // ═══════════════════════════════════════════════════════════════
+
+    var SCENE_RENDERERS = [];
+
+    function renderScene(ctx, sceneIndex, progress, w, h) {
+      var video = videoElements[String(sceneIndex)];
+      if (!video && SCENE_VIDEOS[sceneIndex] !== undefined) {
+        video = ensureSceneVideo(sceneIndex, sceneIndex === activeVideoIndex ? 'auto' : 'metadata');
+      }
+      if (video) {
+        if (video.readyState >= 2) {
+          // Draw video frame onto canvas, cover-fit
+          var vw = video.videoWidth || 1920;
+          var vh = video.videoHeight || 1080;
+          var scale = Math.max(w / vw, h / vh);
+          var dw = vw * scale;
+          var dh = vh * scale;
+          var dx = (w - dw) / 2;
+          var dy = (h - dh) / 2;
+          ctx.drawImage(video, dx, dy, dw, dh);
+
+          // Draw overlay (speech bubbles etc.) on top of video
+          var overlayFn = SCENE_OVERLAYS[sceneIndex];
+          if (overlayFn) {
+            var vidProgress = (video.duration > 0) ? (video.currentTime / video.duration) : 0;
+            overlayFn(ctx, vidProgress, w, h);
+          }
+        } else {
+          // Video loading — show black
+          ctx.fillStyle = '#07090f';
+          ctx.fillRect(0, 0, w, h);
+        }
+        return;
+      }
+
+      // Custom renderer or placeholder
+      var fn = SCENE_RENDERERS[sceneIndex];
+      if (fn) {
+        fn(ctx, progress, w, h);
+      } else {
+        renderPlaceholderScene(ctx, SCENES[sceneIndex], progress, w, h);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // STATE MACHINE
+    // ═══════════════════════════════════════════════════════════════
+
+    var TRANSITION_DURATION_MS = 500;
+
+    function createFilmStateMachine(scenes) {
+      var state = 'IDLE';            // 'IDLE' | 'PLAYING' | 'TRANSITIONING'
+      var currentSceneIndex = 0;
+      var sceneElapsedMs = 0;
+      var sceneDurationMs = 10000;   // default per-scene duration for PLAYING
+
+      // Transition state
+      var transFromIndex = 0;
+      var transToIndex = 0;
+      var transElapsedMs = 0;
+      var transDurationMs = TRANSITION_DURATION_MS;
+
+      function advance(ms) {
+        if (state === 'PLAYING') {
+          sceneElapsedMs += ms;
+          // Loop the progress for continuous animation
+          if (sceneElapsedMs >= sceneDurationMs) {
+            sceneElapsedMs = sceneElapsedMs % sceneDurationMs;
+          }
+          return true;
+        }
+
+        if (state === 'TRANSITIONING') {
+          transElapsedMs += ms;
+          if (transElapsedMs >= transDurationMs) {
+            // Transition complete
+            currentSceneIndex = transToIndex;
+            sceneElapsedMs = 0;
+            state = 'IDLE';
+            return true;
+          }
+          return true;
+        }
+
+        return false;
+      }
+
+      function play() {
+        if (state === 'IDLE') {
+          state = 'PLAYING';
+        }
+      }
+
+      function pause() {
+        if (state === 'PLAYING') {
+          state = 'IDLE';
+        }
+      }
+
+      function goToScene(index) {
+        if (index < 0 || index >= scenes.length) return;
+        if (index === currentSceneIndex && state !== 'TRANSITIONING') return;
+
+        transFromIndex = currentSceneIndex;
+        transToIndex = index;
+        transElapsedMs = 0;
+        transDurationMs = TRANSITION_DURATION_MS;
+        state = 'TRANSITIONING';
+      }
+
+      function getSnapshot() {
+        var transProgress = state === 'TRANSITIONING'
+          ? easeInOutCubic(Math.min(transElapsedMs / transDurationMs, 1))
+          : 0;
+
+        return {
+          state: state,
+          currentSceneIndex: currentSceneIndex,
+          sceneElapsedMs: sceneElapsedMs,
+          sceneProgress: sceneDurationMs > 0 ? (sceneElapsedMs / sceneDurationMs) : 0,
+          transition: state === 'TRANSITIONING' ? {
+            fromIndex: transFromIndex,
+            toIndex: transToIndex,
+            progress: transProgress,
+            elapsedMs: transElapsedMs,
+            durationMs: transDurationMs,
+          } : null,
+          sceneCount: scenes.length,
+        };
+      }
+
+      return { advance: advance, play: play, pause: pause, goToScene: goToScene, getSnapshot: getSnapshot };
+    }
+
+    function easeInOutCubic(t) {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // TIMELINE UI
+    // ═══════════════════════════════════════════════════════════════
+
+    function createTimelineUI(scenes, onSceneSelect) {
+      var track = document.getElementById('timeline-track');
+      var progress = document.getElementById('timeline-progress');
+      var markers = [];
+
+      // Generate markers
+      for (var i = 0; i < scenes.length; i++) {
+        var marker = document.createElement('button');
+        marker.className = 'timeline-marker';
+        marker.dataset.index = String(i);
+        marker.setAttribute('aria-label', 'Szene ' + (i + 1) + ': Alter ' + scenes[i].label);
+
+        var label = document.createElement('span');
+        label.className = 'timeline-marker__label';
+        label.textContent = scenes[i].label;
+        marker.appendChild(label);
+
+        // Position: evenly distributed
+        var pct = scenes.length > 1 ? (i / (scenes.length - 1)) * 100 : 50;
+        marker.style.left = pct + '%';
+
+        track.appendChild(marker);
+        markers.push(marker);
+
+        marker.addEventListener('click', (function(idx) {
+          return function() { onSceneSelect(idx); };
+        })(i));
+      }
+
+      function update(snapshot) {
+        var activeIndex = snapshot.state === 'TRANSITIONING'
+          ? snapshot.transition.toIndex
+          : snapshot.currentSceneIndex;
+
+        for (var i = 0; i < markers.length; i++) {
+          markers[i].classList.toggle('active', i === activeIndex);
+        }
+
+        // Progress bar
+        var pct = scenes.length > 1 ? (activeIndex / (scenes.length - 1)) * 100 : 0;
+        progress.style.width = pct + '%';
+      }
+
+      return { update: update };
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // RENDERER
+    // ═══════════════════════════════════════════════════════════════
+
+    function createRenderer(canvas, scenes, stateMachine) {
+      var ctx = canvas.getContext('2d');
+      var w = 0;
+      var h = 0;
+      var dpr = 1;
+
+      function resize() {
+        var rect = canvas.parentElement.getBoundingClientRect();
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        w = Math.floor(rect.width);
+        h = Math.floor(rect.height);
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        canvas.style.width = w + 'px';
+        canvas.style.height = h + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function render(snapshot) {
+        if (w === 0 || h === 0) return;
+
+        if (snapshot.state === 'TRANSITIONING' && snapshot.transition) {
+          var t = snapshot.transition;
+
+          // Draw outgoing scene
+          ctx.globalAlpha = 1 - t.progress;
+          renderScene(ctx, t.fromIndex, snapshot.sceneProgress, w, h);
+
+          // Draw incoming scene
+          ctx.globalAlpha = t.progress;
+          renderScene(ctx, t.toIndex, 0, w, h);
+
+          ctx.globalAlpha = 1;
+
+        } else {
+          ctx.globalAlpha = 1;
+          renderScene(ctx, snapshot.currentSceneIndex, snapshot.sceneProgress, w, h);
+
+        }
+      }
+
+      // Observe resize
+      var ro = new ResizeObserver(function() { resize(); });
+      ro.observe(canvas.parentElement);
+      resize();
+
+      return { render: render, resize: resize };
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // BOOTSTRAP
+    // ═══════════════════════════════════════════════════════════════
+
+    (function boot() {
+      var canvas = document.getElementById('stage');
+      var sm = createFilmStateMachine(SCENES);
+      var renderer = createRenderer(canvas, SCENES, sm);
+      var timeline = createTimelineUI(SCENES, function(idx) { sm.goToScene(idx); });
+      var prevBtn = document.getElementById('nav-prev');
+      var nextBtn = document.getElementById('nav-next');
+
+
+      // Track scene changes to start/stop videos
+      var lastSceneIndex = -1;
+      function onSceneChange(sceneIndex) {
+        if (sceneIndex === lastSceneIndex) return;
+        lastSceneIndex = sceneIndex;
+        if (SCENE_VIDEOS[sceneIndex] !== undefined) {
+          playSceneVideo(sceneIndex);
+        } else {
+          stopAllVideos();
+        }
+      }
+
+      // Start playing so the pulse animates
+      sm.play();
+      syncSceneVideoBuffer(sm.getSnapshot());
+      onSceneChange(0);
+
+      // Nav arrows
+      prevBtn.addEventListener('click', function() {
+        var s = sm.getSnapshot();
+        var idx = s.state === 'TRANSITIONING' ? s.transition.toIndex : s.currentSceneIndex;
+        if (idx > 0) sm.goToScene(idx - 1);
+      });
+      nextBtn.addEventListener('click', function() {
+        var s = sm.getSnapshot();
+        var idx = s.state === 'TRANSITIONING' ? s.transition.toIndex : s.currentSceneIndex;
+        if (idx < SCENES.length - 1) sm.goToScene(idx + 1);
+      });
+
+      // Keyboard navigation
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowLeft') {
+          var s = sm.getSnapshot();
+          var idx = s.state === 'TRANSITIONING' ? s.transition.toIndex : s.currentSceneIndex;
+          if (idx > 0) sm.goToScene(idx - 1);
+        } else if (e.key === 'ArrowRight') {
+          var s = sm.getSnapshot();
+          var idx = s.state === 'TRANSITIONING' ? s.transition.toIndex : s.currentSceneIndex;
+          if (idx < SCENES.length - 1) sm.goToScene(idx + 1);
+        }
+      });
+
+      // Update nav arrow disabled state
+      function updateNavArrows(snapshot) {
+        var idx = snapshot.state === 'TRANSITIONING' ? snapshot.transition.toIndex : snapshot.currentSceneIndex;
+        prevBtn.disabled = idx <= 0;
+        nextBtn.disabled = idx >= SCENES.length - 1;
+      }
+
+      // Main loop
+      var lastTime = performance.now();
+
+      function tick(timestamp) {
+        var dt = Math.min(timestamp - lastTime, 32);
+        lastTime = timestamp;
+        sm.advance(dt);
+        var snapshot = sm.getSnapshot();
+        syncSceneVideoBuffer(snapshot);
+
+        // Detect scene change → start/stop videos
+        var currentIdx = snapshot.state === 'TRANSITIONING'
+          ? snapshot.transition.toIndex
+          : snapshot.currentSceneIndex;
+        onSceneChange(currentIdx);
+
+        renderer.render(snapshot);
+        timeline.update(snapshot);
+        updateNavArrows(snapshot);
+        requestAnimationFrame(tick);
+      }
+
+      requestAnimationFrame(tick);
+    })();
+    </script>
+  </body>
+</html>
