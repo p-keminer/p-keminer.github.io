@@ -58,6 +58,7 @@
         position: relative;
         flex: 1;
         height: 2px;
+        margin-inline: clamp(22px, 3.4vw, 30px);
         background: rgba(42, 31, 0, 0.3);
         border-top: 1px dashed rgba(42, 31, 0, 0.4);
         border-bottom: 1px dashed rgba(42, 31, 0, 0.4);
@@ -180,6 +181,7 @@
 
       @media (max-width: 480px) {
         .timeline { padding: 0 max(10px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(10px, env(safe-area-inset-left)); height: calc(52px + env(safe-area-inset-bottom)); }
+        .timeline-track { margin-inline: 16px; }
         .timeline-marker { min-width: 26px; height: 26px; padding: 0 4px; }
         .timeline-marker__label { font-size: 0.38rem; }
         .scene-header__label { font-size: 0.6rem; }
@@ -1068,11 +1070,22 @@
           var dy = (h - dh) / 2;
           ctx.drawImage(video, dx, dy, dw, dh);
 
-          // Draw overlay (speech bubbles etc.) on top of video
+          // Draw overlays relative to the visible video rect so bubbles stay aligned
+          // on different aspect ratios and contain-fit layouts.
           var overlayFn = SCENE_OVERLAYS[sceneIndex];
           if (overlayFn) {
             var vidProgress = (video.duration > 0) ? (video.currentTime / video.duration) : 0;
-            overlayFn(ctx, vidProgress, w, h);
+            ctx.save();
+            ctx.translate(dx, dy);
+            overlayFn(ctx, vidProgress, dw, dh, {
+              canvasWidth: w,
+              canvasHeight: h,
+              x: dx,
+              y: dy,
+              width: dw,
+              height: dh,
+            });
+            ctx.restore();
           }
         } else {
           // Video loading — show black
