@@ -1400,6 +1400,9 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
           };
 
           return `<div class="tv-select-overlay">
+            <div class="mobile-landscape-lock" role="status" aria-live="polite">
+              <div class="mobile-landscape-lock__message">In Landscape Ansicht nicht verf&uuml;gbar</div>
+            </div>
             <div class="tv-select-shell">
               <div class="tv-select-header">
                 <p class="tv-select-kicker">TV Senderauswahl</p>
@@ -1418,8 +1421,8 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
               </div>
             </div>
             <div class="web-embed-nav">
-              <button class="web-embed-nav__btn" data-control="back-from-tv-select" type="button">Zurueck</button>
-              <button class="web-embed-nav__btn" data-control="return-to-menu-from-focus" type="button">Zum Hauptmenue</button>
+              <button class="web-embed-nav__btn" data-control="back-from-tv-select" type="button">Zur&uuml;ck</button>
+              <button class="web-embed-nav__btn" data-control="return-to-menu-from-focus" type="button">Zum Hauptmen&uuml;</button>
             </div>
           </div>`;
         })()

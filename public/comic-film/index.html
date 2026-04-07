@@ -24,6 +24,31 @@
         user-select: none;
       }
 
+      .orientation-lock {
+        position: fixed;
+        inset: 0;
+        z-index: 25;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background:
+          radial-gradient(circle at 50% 18%, rgba(245, 230, 163, 0.14), transparent 34%),
+          rgba(7, 9, 15, 0.96);
+      }
+
+      .orientation-lock__message {
+        max-width: min(92vw, 420px);
+        border: 2px solid rgba(245, 230, 163, 0.26);
+        border-radius: 22px;
+        padding: 22px 24px;
+        background: rgba(12, 15, 24, 0.92);
+        box-shadow: 0 20px 42px rgba(0, 0, 0, 0.34);
+        color: #fdf4d0;
+        font: 800 clamp(1rem, 3.4vw, 1.25rem)/1.4 'Inter', 'Segoe UI', system-ui, sans-serif;
+        text-align: center;
+      }
+
       /* ─── Canvas ───────────────────────────────────────────────── */
 
       .stage-wrap {
@@ -189,9 +214,24 @@
         .nav-arrows { bottom: calc(66px + env(safe-area-inset-bottom)); padding: 0 max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left)); }
         .nav-arrow { width: 30px; height: 30px; font-size: 0.85rem; }
       }
+
+      @media (orientation: landscape) and (hover: none) and (pointer: coarse) {
+        .orientation-lock {
+          display: flex;
+        }
+
+        .stage-wrap,
+        .timeline {
+          visibility: hidden;
+          pointer-events: none;
+        }
+      }
     </style>
   </head>
   <body>
+    <div class="orientation-lock" role="status" aria-live="polite">
+      <div class="orientation-lock__message">In Landscape Ansicht nicht verf&uuml;gbar</div>
+    </div>
     <div class="stage-wrap">
       <canvas id="stage"></canvas>
       <div class="nav-arrows">
@@ -625,7 +665,7 @@
         // Text switches at 6s (progress 0.75)
         var text = progress < 0.75
           ? 'Das fordert mich\nnicht ausreichend...'
-          : 'Und das für 500€\nim Monat? Nein, danke!';
+          : 'Und das für 500€\nim Monat...';
 
         ctx.save();
         ctx.globalAlpha = alpha;
@@ -817,7 +857,7 @@
 
         ctx.save();
         ctx.globalAlpha = alpha;
-        drawThoughtBubble(ctx, w * 0.40, h * 0.19, 'Endlich angekommen,\nwo ich schon ewig sein wollte!', s * 0.7);
+        drawThoughtBubble(ctx, w * 0.40, h * 0.19, 'Endlich angekommen!', s * 0.7);
         ctx.globalAlpha = 1;
         ctx.restore();
       }

@@ -762,6 +762,32 @@ body.web-embed-active .web-embed-overlay {
   pointer-events: none;
 }
 
+.mobile-landscape-lock {
+  position: absolute;
+  inset: 0;
+  z-index: 24;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 138, 92, 0.14), transparent 34%),
+    rgba(7, 10, 19, 0.94);
+}
+
+.mobile-landscape-lock__message {
+  max-width: min(92vw, 420px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  padding: 22px 24px;
+  background: rgba(10, 15, 28, 0.92);
+  box-shadow: 0 20px 42px rgba(0, 0, 0, 0.34);
+  color: #f4f7ff;
+  font: 800 clamp(1rem, 3.3vw, 1.2rem) / 1.4 'Inter', system-ui, sans-serif;
+  letter-spacing: 0.01em;
+  text-align: center;
+}
+
 .tv-select-shell {
   position: relative;
   z-index: 1;
@@ -1849,6 +1875,21 @@ body.web-embed-active .web-embed-overlay {
   }
   .canvas-hud-controls {
     bottom: 2rem;
+  }
+}
+
+@media (orientation: landscape) and (hover: none) and (pointer: coarse) {
+  .tv-select-overlay .mobile-landscape-lock {
+    display: flex;
+  }
+
+  .tv-select-overlay .tv-select-shell {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .tv-select-overlay .web-embed-nav {
+    z-index: 30;
   }
 }
 

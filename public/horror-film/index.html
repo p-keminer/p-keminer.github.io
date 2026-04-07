@@ -62,8 +62,16 @@
         pointer-events: none;
       }
 
-      .horror-player__mute {
+      .horror-player__controls {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 10px;
         pointer-events: auto;
+      }
+
+      .horror-player__control {
         border: 1px solid rgba(255, 255, 255, 0.18);
         border-radius: 999px;
         background: rgba(6, 10, 18, 0.68);
@@ -77,19 +85,52 @@
         transition:
           border-color 180ms ease,
           background 180ms ease,
-          transform 180ms ease;
+          transform 180ms ease,
+          opacity 180ms ease;
       }
 
-      .horror-player__mute:hover,
-      .horror-player__mute:focus-visible {
+      .horror-player__control:hover,
+      .horror-player__control:focus-visible {
         border-color: rgba(255, 157, 110, 0.48);
         background: rgba(28, 14, 14, 0.84);
         transform: translateY(-1px);
       }
 
-      .horror-player__mute:focus-visible {
+      .horror-player__control:focus-visible {
         outline: 2px solid rgba(255, 184, 132, 0.92);
         outline-offset: 4px;
+      }
+
+      .horror-player__control:disabled {
+        opacity: 0.5;
+        cursor: progress;
+        transform: none;
+      }
+
+      .orientation-lock {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background:
+          radial-gradient(circle at 50% 18%, rgba(255, 120, 82, 0.18), transparent 34%),
+          rgba(3, 6, 14, 0.96);
+      }
+
+      .orientation-lock__message {
+        max-width: min(92vw, 420px);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 22px;
+        padding: 22px 24px;
+        background: rgba(10, 15, 28, 0.88);
+        box-shadow: 0 22px 48px rgba(0, 0, 0, 0.35);
+        color: #f4f7ff;
+        font: 700 clamp(1rem, 3.6vw, 1.3rem)/1.4 "Inter", "Segoe UI", system-ui, sans-serif;
+        letter-spacing: 0.01em;
+        text-align: center;
       }
 
       @media (orientation: portrait) {
@@ -107,9 +148,25 @@
           padding: calc(env(safe-area-inset-top) + 14px) max(12px, calc(env(safe-area-inset-right) + 12px)) 0 max(12px, calc(env(safe-area-inset-left) + 12px));
         }
 
-        .horror-player__mute {
+        .horror-player__controls {
+          gap: 8px;
+        }
+
+        .horror-player__control {
           padding: 10px 14px;
           font-size: 0.7rem;
+        }
+      }
+
+      @media (orientation: landscape) and (hover: none) and (pointer: coarse) {
+        .orientation-lock {
+          display: flex;
+        }
+
+        .horror-player__topbar,
+        .horror-player__video {
+          visibility: hidden;
+          pointer-events: none;
         }
       }
     </style>
@@ -125,14 +182,98 @@
         preload="auto"
         disablepictureinpicture
         disableremoteplayback
+        data-source-kind="stream"
       ></video>
       <div class="horror-player__topbar">
-        <button class="horror-player__mute" id="mute-toggle" type="button" aria-pressed="false">Ton aus</button>
+        <div class="horror-player__controls">
+          <button class="horror-player__control" id="seek-backward" type="button">-10s</button>
+          <button class="horror-player__control" id="play-toggle" type="button" aria-pressed="true">Stop</button>
+          <button class="horror-player__control" id="seek-forward" type="button">+10s</button>
+          <button class="horror-player__control" id="mute-toggle" type="button" aria-pressed="false">Ton aus</button>
+        </div>
+      </div>
+      <div class="orientation-lock" role="status" aria-live="polite">
+        <div class="orientation-lock__message">In Landscape Ansicht nicht verf&uuml;gbar</div>
       </div>
     </main>
     <script>
+      const TRAILER_SRC = '/horror-film/trailer.mp4';
       const video = document.getElementById('trailer');
       const muteToggle = document.getElementById('mute-toggle');
+      const playToggle = document.getElementById('play-toggle');
+      const seekBackward = document.getElementById('seek-backward');
+      const seekForward = document.getElementById('seek-forward');
+      const landscapeLockQuery = window.matchMedia('(orientation: landscape) and (hover: none) and (pointer: coarse)');
+
+      let seekBlobUrl = '';
+      let seekBlobPromise = null;
+      let promoteSeekablePromise = null;
+
+      const waitForEvent = (target, eventName, timeoutMs) =>
+        new Promise((resolve) => {
+          let timeoutId = 0;
+          const cleanup = () => {
+            target.removeEventListener(eventName, onEvent);
+            if (timeoutId) window.clearTimeout(timeoutId);
+          };
+          const onEvent = () => {
+            cleanup();
+            resolve();
+          };
+          target.addEventListener(eventName, onEvent, { once: true });
+          if (timeoutMs) {
+            timeoutId = window.setTimeout(() => {
+              cleanup();
+              resolve();
+            }, timeoutMs);
+          }
+        });
+
+      const setSeekButtonsBusy = (isBusy) => {
+        seekBackward.disabled = isBusy;
+        seekForward.disabled = isBusy;
+      };
+
+      const hasUsableSeekRange = () => {
+        if (!video.seekable || video.seekable.length === 0) return false;
+        try {
+          const end = video.seekable.end(video.seekable.length - 1);
+          return Number.isFinite(end) && end > 0.5;
+        } catch (_) {
+          return false;
+        }
+      };
+
+      const clampTime = (timeSeconds) => {
+        const duration = Number.isFinite(video.duration) ? video.duration : null;
+        if (duration == null) return Math.max(0, timeSeconds);
+        return Math.min(duration, Math.max(0, timeSeconds));
+      };
+
+      const ensureSeekBlobReady = async () => {
+        if (seekBlobUrl) return seekBlobUrl;
+        if (!seekBlobPromise) {
+          seekBlobPromise = fetch(TRAILER_SRC)
+            .then((response) => {
+              if (!response.ok) throw new Error('Trailer download failed');
+              return response.blob();
+            })
+            .then((blob) => {
+              seekBlobUrl = URL.createObjectURL(blob);
+              return seekBlobUrl;
+            });
+        }
+        return seekBlobPromise;
+      };
+
+      const maybeWarmSeekBlob = () => {
+        if (hasUsableSeekRange() || seekBlobUrl || seekBlobPromise || video.dataset.sourceKind === 'blob') {
+          return;
+        }
+        void ensureSeekBlobReady().catch(() => {
+          seekBlobPromise = null;
+        });
+      };
 
       const syncMuteButton = () => {
         const isMuted = video.muted || video.volume === 0;
@@ -140,7 +281,117 @@
         muteToggle.setAttribute('aria-pressed', String(isMuted));
       };
 
+      const syncPlayButton = () => {
+        const isPlaying = !video.paused && !video.ended;
+        playToggle.textContent = isPlaying ? 'Stop' : 'Play';
+        playToggle.setAttribute('aria-pressed', String(isPlaying));
+      };
+
+      const syncLandscapeLock = () => {
+        if (landscapeLockQuery.matches && !video.paused) {
+          video.pause();
+        }
+        syncPlayButton();
+      };
+
+      const promoteToSeekableSource = async (resumeTime, shouldResume) => {
+        if (hasUsableSeekRange() || video.dataset.sourceKind === 'blob') {
+          return;
+        }
+        if (promoteSeekablePromise) {
+          await promoteSeekablePromise;
+          return;
+        }
+
+        promoteSeekablePromise = (async () => {
+          setSeekButtonsBusy(true);
+          const wasMuted = video.muted;
+          const targetTime = clampTime(resumeTime);
+
+          video.pause();
+          const blobUrl = await ensureSeekBlobReady();
+          video.src = blobUrl;
+          video.dataset.sourceKind = 'blob';
+          video.load();
+
+          await waitForEvent(video, 'loadedmetadata', 2500);
+
+          const finalTarget = clampTime(targetTime);
+          if (typeof video.fastSeek === 'function') {
+            try {
+              video.fastSeek(finalTarget);
+            } catch (_) {
+              video.currentTime = finalTarget;
+            }
+          } else {
+            video.currentTime = finalTarget;
+          }
+          await waitForEvent(video, 'seeked', 1200);
+
+          video.muted = wasMuted;
+          if (shouldResume && !landscapeLockQuery.matches) {
+            try {
+              await video.play();
+            } catch (_) {
+              // Ignore autoplay/interaction failures and keep controls in sync.
+            }
+          }
+        })()
+          .catch(() => {
+            seekBlobPromise = null;
+          })
+          .finally(() => {
+            setSeekButtonsBusy(false);
+            promoteSeekablePromise = null;
+            syncMuteButton();
+            syncPlayButton();
+          });
+
+        await promoteSeekablePromise;
+      };
+
+      const seekBy = async (deltaSeconds) => {
+        if (landscapeLockQuery.matches) {
+          return;
+        }
+
+        const shouldResume = !video.paused && !video.ended;
+        const startingTime = video.currentTime;
+
+        if (!hasUsableSeekRange() && video.dataset.sourceKind !== 'blob') {
+          await promoteToSeekableSource(startingTime, shouldResume);
+        }
+
+        const targetTime = clampTime(video.currentTime + deltaSeconds);
+        if (typeof video.fastSeek === 'function') {
+          try {
+            video.fastSeek(targetTime);
+          } catch (_) {
+            video.currentTime = targetTime;
+          }
+        } else {
+          video.currentTime = targetTime;
+        }
+
+        await waitForEvent(video, 'seeked', 800);
+
+        if (shouldResume && video.paused && !landscapeLockQuery.matches) {
+          try {
+            await video.play();
+          } catch (_) {
+            // Keep button state stable if autoplay resume is blocked.
+          }
+        }
+        syncPlayButton();
+      };
+
       const ensurePlayback = async () => {
+        if (landscapeLockQuery.matches) {
+          syncMuteButton();
+          syncPlayButton();
+          return;
+        }
+
         video.muted = false;
         try {
           await video.play();
@@ -150,39 +401,82 @@
           try {
             await video.play();
           } catch (_) {
+            syncPlayButton();
             return;
           }
         }
 
         syncMuteButton();
+        syncPlayButton();
       };
 
-      muteToggle.addEventListener('click', async () => {
+      muteToggle.addEventListener('click', () => {
         video.muted = !video.muted;
         syncMuteButton();
+      });
+
+      playToggle.addEventListener('click', async () => {
+        if (landscapeLockQuery.matches) {
+          return;
+        }
+
+        if (!video.paused && !video.ended) {
+          video.pause();
+          syncPlayButton();
+          return;
+        }
+
+        if (video.ended) {
+          video.currentTime = 0;
+        }
 
         try {
           await video.play();
         } catch (_) {
-          // Ignore autoplay recovery failures; the toggle state still updates.
+          // Keep button state in sync even if playback is blocked.
         }
+        syncPlayButton();
+      });
+
+      seekBackward.addEventListener('click', async () => {
+        await seekBy(-10);
+      });
+
+      seekForward.addEventListener('click', async () => {
+        await seekBy(10);
       });
 
       video.addEventListener('volumechange', syncMuteButton);
+      video.addEventListener('play', syncPlayButton);
+      video.addEventListener('pause', syncPlayButton);
+      video.addEventListener('ended', syncPlayButton);
+      video.addEventListener('loadedmetadata', () => {
+        syncPlayButton();
+      });
+      video.addEventListener('seeked', syncPlayButton);
 
-      document.addEventListener('keydown', async (event) => {
+      document.addEventListener('keydown', (event) => {
         if (event.key.toLowerCase() !== 'm') return;
         event.preventDefault();
         video.muted = !video.muted;
         syncMuteButton();
+      });
 
-        try {
-          await video.play();
-        } catch (_) {
-          // Ignore autoplay recovery failures; the toggle state still updates.
+      if (typeof landscapeLockQuery.addEventListener === 'function') {
+        landscapeLockQuery.addEventListener('change', syncLandscapeLock);
+      } else if (typeof landscapeLockQuery.addListener === 'function') {
+        landscapeLockQuery.addListener(syncLandscapeLock);
+      }
+
+      window.addEventListener('beforeunload', () => {
+        if (seekBlobUrl) {
+          URL.revokeObjectURL(seekBlobUrl);
         }
       });
 
+      syncMuteButton();
+      syncPlayButton();
+      syncLandscapeLock();
       void ensurePlayback();
     </script>
   </body>
