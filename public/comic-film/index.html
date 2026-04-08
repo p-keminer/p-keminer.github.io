@@ -228,6 +228,8 @@
       }
 
       @media (max-width: 480px) {
+        body { background: transparent; }
+        .stage-wrap { background: transparent; }
         .timeline { padding: 0 max(10px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(10px, env(safe-area-inset-left)); height: calc(52px + env(safe-area-inset-bottom)); }
         .timeline-track { margin-inline: 16px; }
         .timeline-marker { min-width: 26px; height: 26px; padding: 0 4px; }
@@ -1206,8 +1208,12 @@ berechtigung!`, s * 0.42, 'bottom-left-tight');
 
           syncDesktopUiToVideoRect(dx, dw, w);
 
-          ctx.fillStyle = '#04060b';
-          ctx.fillRect(0, 0, w, h);
+          if (isCompactViewport) {
+            ctx.clearRect(0, 0, w, h);
+          } else {
+            ctx.fillStyle = '#04060b';
+            ctx.fillRect(0, 0, w, h);
+          }
 
           if (dw < w || dh < h) {
             var bgScale = Math.max(w / vw, h / vh);
@@ -1218,7 +1224,14 @@ berechtigung!`, s * 0.42, 'bottom-left-tight');
 
             if (isCompactViewport) {
               ctx.fillStyle = '#04060b';
-              ctx.fillRect(0, 0, w, h);
+              if (dy > 0) {
+                ctx.fillRect(0, 0, w, dy);
+                ctx.fillRect(0, dy + dh, w, h - (dy + dh));
+              }
+              if (dx > 0) {
+                ctx.fillRect(0, dy, dx, dh);
+                ctx.fillRect(dx + dw, dy, w - (dx + dw), dh);
+              }
             } else {
               ctx.save();
               ctx.filter = 'blur(28px) brightness(0.5)';
