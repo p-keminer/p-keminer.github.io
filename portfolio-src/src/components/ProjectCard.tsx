@@ -7,6 +7,8 @@ const GLOW: Record<string, { strong: string; soft: string; line: string; led: st
   github:   { strong: "rgba(160, 110, 255, 0.36)", soft: "rgba(160, 110, 255, 0.11)", line: "rgba(170, 120, 255, 0.7)", led: "#a78bfa" },
   robotics: { strong: "rgba(50, 220, 190, 0.36)",  soft: "rgba(50, 220, 190, 0.11)",  line: "rgba(60, 225, 195, 0.7)",  led: "#34d399" },
   education:{ strong: "rgba(232, 84, 107, 0.36)",  soft: "rgba(232, 84, 107, 0.11)",  line: "rgba(245, 118, 138, 0.7)", led: "#fca5a5" },
+  thesis:   { strong: "rgba(76, 212, 164, 0.34)",  soft: "rgba(76, 212, 164, 0.11)",  line: "rgba(110, 235, 191, 0.72)", led: "#6ee7b7" },
+  organizer:{ strong: "rgba(96, 165, 250, 0.34)",  soft: "rgba(96, 165, 250, 0.11)",  line: "rgba(147, 197, 253, 0.72)", led: "#93c5fd" },
   portfolio:{ strong: "rgba(245, 158, 11, 0.36)",  soft: "rgba(245, 158, 11, 0.11)",  line: "rgba(251, 191, 36, 0.7)",  led: "#fbbf24" },
 };
 
@@ -59,27 +61,37 @@ function IotCover() {
     <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%", display: "block" }}>
       <defs>
         <radialGradient id="iot-bg" cx="50%" cy="50%" r="75%">
-          <stop offset="0%" stopColor="#321412" />
-          <stop offset="100%" stopColor="#18060a" />
+          <stop offset="0%" stopColor="#2b130f" />
+          <stop offset="100%" stopColor="#17070a" />
         </radialGradient>
+        <linearGradient id="iot-shield" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="rgba(255,186,122,0.22)" />
+          <stop offset="100%" stopColor="rgba(255,138,76,0.06)" />
+        </linearGradient>
         <filter id="iot-glow">
           <feGaussianBlur stdDeviation="3" result="coloredBlur" />
           <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
       <rect width="400" height="220" fill="url(#iot-bg)" />
-      {[28, 52, 77, 102, 130].map((r, i) => (
-        <circle key={i} cx="200" cy="116" r={r} fill="none" stroke="#ff9b55" strokeWidth="0.95" strokeOpacity={0.72 - i * 0.11} />
+      {[54, 92, 130, 168].map((y, i) => (
+        <line key={i} x1="42" y1={y} x2="358" y2={y} stroke="#6a2d18" strokeWidth="0.8" strokeOpacity={0.14 + i * 0.04} />
       ))}
-      <circle cx="200" cy="116" r="8" fill="#ff9d62" filter="url(#iot-glow)" />
-      <circle cx="200" cy="116" r="15" fill="none" stroke="#ffb07b" strokeWidth="1.6" strokeOpacity="0.52" />
-      <path d="M 80 116 L 162 116" stroke="#ff9b55" strokeWidth="1.1" strokeOpacity="0.42" strokeDasharray="4 3" />
-      <path d="M 238 116 L 320 116" stroke="#ff9b55" strokeWidth="1.1" strokeOpacity="0.42" strokeDasharray="4 3" />
-      <path d="M 200 42 L 200 98" stroke="#ff9b55" strokeWidth="1.1" strokeOpacity="0.42" strokeDasharray="4 3" />
-      <path d="M 200 134 L 200 192" stroke="#ff9b55" strokeWidth="1.1" strokeOpacity="0.42" strokeDasharray="4 3" />
-      {[[80,112],[320,112],[196,42],[196,184]].map(([x,y],i) => (
-        <rect key={i} x={x} y={y} width="9" height="9" rx="2" fill="#ff8b4d" opacity="0.88" />
-      ))}
+      <g filter="url(#iot-glow)">
+        <path d="M200 42 L276 72 L258 154 L200 186 L142 154 L124 72 Z" fill="url(#iot-shield)" stroke="#ffb071" strokeWidth="1.5" strokeOpacity="0.78" />
+        <path d="M200 68 L250 88 L238 144 L200 166 L162 144 L150 88 Z" fill="rgba(255,176,113,0.04)" stroke="#ff9f66" strokeWidth="1.1" strokeOpacity="0.42" />
+        <path d="M178 104 Q178 84 200 84 Q222 84 222 104" fill="none" stroke="#ffd3ad" strokeWidth="4" strokeLinecap="round" strokeOpacity="0.82" />
+        <rect x="170" y="102" width="60" height="40" rx="10" fill="rgba(255,176,113,0.12)" stroke="#ffd3ad" strokeWidth="1.6" strokeOpacity="0.84" />
+        <circle cx="200" cy="120" r="6" fill="none" stroke="#ffd3ad" strokeWidth="1.4" strokeOpacity="0.82" />
+        <line x1="200" y1="126" x2="200" y2="134" stroke="#ffd3ad" strokeWidth="1.4" strokeOpacity="0.82" />
+        <path d="M148 82 L116 64" stroke="#ff9b55" strokeWidth="1.2" strokeDasharray="4 4" strokeOpacity="0.46" />
+        <path d="M252 82 L284 64" stroke="#ff9b55" strokeWidth="1.2" strokeDasharray="4 4" strokeOpacity="0.46" />
+        <path d="M164 154 L126 172" stroke="#ff9b55" strokeWidth="1.2" strokeDasharray="4 4" strokeOpacity="0.36" />
+        <path d="M236 154 L274 172" stroke="#ff9b55" strokeWidth="1.2" strokeDasharray="4 4" strokeOpacity="0.36" />
+        {[[108,60],[292,60],[120,174],[280,174]].map(([x,y],i) => (
+          <circle key={i} cx={x} cy={y} r="6" fill="rgba(255,155,85,0.16)" stroke="#ff9b55" strokeWidth="1.2" strokeOpacity="0.68" />
+        ))}
+      </g>
       <rect width="400" height="30" fill="rgba(38,10,8,0.26)" />
       <text x="18" y="20" fontFamily="JetBrains Mono, monospace" fontSize="10" fill="#ffd0b2" letterSpacing="2">IOT ALARMSYSTEM</text>
     </svg>
@@ -203,6 +215,83 @@ function EducationCover() {
   );
 }
 
+
+function ThesisCover() {
+  return (
+    <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%", display: "block" }}>
+      <defs>
+        <linearGradient id="th-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#061616" />
+          <stop offset="100%" stopColor="#0d2621" />
+        </linearGradient>
+        <filter id="th-glow">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+          <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      <rect width="400" height="220" fill="url(#th-bg)" />
+      {[62, 104, 146, 188].map((y, i) => (
+        <line key={i} x1="44" y1={y} x2="356" y2={y} stroke="#245a4e" strokeWidth="0.8" strokeOpacity={0.2 + i * 0.06} />
+      ))}
+      <g filter="url(#th-glow)">
+        <rect x="54" y="56" width="84" height="108" rx="9" fill="rgba(110,231,183,0.08)" stroke="#6ee7b7" strokeWidth="1.4" strokeOpacity="0.72" />
+        <line x1="72" y1="82" x2="120" y2="82" stroke="#a7f3d0" strokeWidth="2.2" strokeLinecap="round" />
+        <line x1="72" y1="98" x2="120" y2="98" stroke="#6ee7b7" strokeWidth="1.6" strokeLinecap="round" strokeOpacity="0.85" />
+        <line x1="72" y1="114" x2="112" y2="114" stroke="#6ee7b7" strokeWidth="1.6" strokeLinecap="round" strokeOpacity="0.72" />
+        <line x1="138" y1="110" x2="186" y2="110" stroke="#6ee7b7" strokeWidth="1.2" strokeDasharray="4 4" strokeOpacity="0.48" />
+        <path d="M192 116 L202 126 L220 106" fill="none" stroke="#a7f3d0" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+        <line x1="224" y1="110" x2="272" y2="110" stroke="#6ee7b7" strokeWidth="1.2" strokeDasharray="4 4" strokeOpacity="0.42" />
+        <path d="M268 62 Q289 52 310 62 L310 158 Q289 148 268 158 Z" fill="rgba(110,231,183,0.08)" stroke="#6ee7b7" strokeWidth="1.25" strokeOpacity="0.72" />
+        <path d="M310 62 Q331 52 352 62 L352 158 Q331 148 310 158 Z" fill="rgba(110,231,183,0.14)" stroke="#a7f3d0" strokeWidth="1.25" strokeOpacity="0.78" />
+        <line x1="287" y1="86" x2="332" y2="86" stroke="#d1fae5" strokeWidth="1.2" strokeLinecap="round" />
+        <line x1="287" y1="98" x2="332" y2="98" stroke="#6ee7b7" strokeWidth="1.05" strokeLinecap="round" strokeOpacity="0.68" />
+        <line x1="287" y1="110" x2="332" y2="110" stroke="#6ee7b7" strokeWidth="1.05" strokeLinecap="round" strokeOpacity="0.58" />
+        <text x="310" y="136" fontFamily="JetBrains Mono, monospace" fontSize="6.6" fill="#d1fae5" textAnchor="middle" letterSpacing="1.3">THESIS</text>
+      </g>
+      <rect width="400" height="30" fill="rgba(8,24,20,0.26)" />
+      <text x="18" y="20" fontFamily="JetBrains Mono, monospace" fontSize="10" fill="#d1fae5" letterSpacing="2">TECHTHESIS NAVIGATOR</text>
+    </svg>
+  );
+}
+
+function OrganizerCover() {
+  return (
+    <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%", display: "block" }}>
+      <defs>
+        <linearGradient id="org-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#0a1224" />
+          <stop offset="100%" stopColor="#0d1f36" />
+        </linearGradient>
+        <filter id="org-glow">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+          <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      <rect width="400" height="220" fill="url(#org-bg)" />
+      {[70, 110, 150].map((y, i) => (
+        <line key={i} x1="38" y1={y} x2="362" y2={y} stroke="#29466d" strokeWidth="0.8" strokeOpacity={0.26 + i * 0.08} />
+      ))}
+      {[94, 146, 198, 250, 302].map((x, i) => (
+        <line key={`v${i}`} x1={x} y1="44" x2={x} y2="190" stroke="#29466d" strokeWidth="0.75" strokeOpacity={0.16 + i * 0.05} />
+      ))}
+      <g filter="url(#org-glow)">
+        <rect x="60" y="58" width="120" height="94" rx="12" fill="rgba(147,197,253,0.08)" stroke="#93c5fd" strokeWidth="1.3" strokeOpacity="0.75" />
+        <rect x="78" y="78" width="84" height="12" rx="5" fill="rgba(147,197,253,0.18)" />
+        <rect x="78" y="98" width="56" height="8" rx="4" fill="rgba(147,197,253,0.16)" />
+        <rect x="78" y="112" width="72" height="8" rx="4" fill="rgba(96,165,250,0.15)" />
+        <rect x="226" y="62" width="108" height="118" rx="10" fill="rgba(147,197,253,0.06)" stroke="#60a5fa" strokeWidth="1.2" strokeOpacity="0.68" />
+        {[0,1,2].map((row) => (
+          [0,1,2].map((col) => (
+            <rect key={`${row}-${col}`} x={244 + col * 24} y={84 + row * 24} width="16" height="16" rx="3" fill={row === 1 && col === 1 ? 'rgba(110,231,183,0.28)' : 'rgba(147,197,253,0.12)'} stroke="rgba(147,197,253,0.24)" strokeWidth="0.6" />
+          ))
+        ))}
+      </g>
+      <rect width="400" height="30" fill="rgba(10,18,36,0.28)" />
+      <text x="18" y="20" fontFamily="JetBrains Mono, monospace" fontSize="10" fill="#dbeafe" letterSpacing="2">STUDIENORGANISATOR</text>
+    </svg>
+  );
+}
+
 function PortfolioCover() {
   return (
     <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%", display: "block" }}>
@@ -212,163 +301,37 @@ function PortfolioCover() {
           <stop offset="100%" stopColor="#16120a" />
         </linearGradient>
         <filter id="pf-glow">
-          <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+          <feGaussianBlur stdDeviation="2.2" result="coloredBlur" />
           <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
-        <marker id="pf-arr" markerWidth="5" markerHeight="4" refX="4" refY="2" orient="auto">
-          <polygon points="0 0, 5 2, 0 4" fill="#f59e0b" fillOpacity="0.65" />
-        </marker>
       </defs>
       <rect width="400" height="220" fill="url(#pf-bg)" />
-      {[80, 160, 240, 320].map((x) => (
-        <line key={`v${x}`} x1={x} y1="0" x2={x} y2="220" stroke="#6b4d10" strokeWidth="0.35" strokeOpacity="0.18" />
+      {[74, 118, 162].map((y, i) => (
+        <line key={i} x1="32" y1={y} x2="368" y2={y} stroke="#6b4d10" strokeWidth="0.55" strokeOpacity={0.16 + i * 0.04} />
       ))}
-      {[70, 130, 190].map((y) => (
-        <line key={`h${y}`} x1="0" y1={y} x2="400" y2={y} stroke="#6b4d10" strokeWidth="0.35" strokeOpacity="0.18" />
+      {[76, 138, 200, 262, 324].map((x, i) => (
+        <line key={`v${i}`} x1={x} y1="34" x2={x} y2="188" stroke="#6b4d10" strokeWidth="0.45" strokeOpacity={0.1 + i * 0.03} />
       ))}
-
-      {/* ── TOP ROW: 3D SITE ── */}
-
-      {/* Left panel: Leistungsnachweise */}
       <g filter="url(#pf-glow)">
-        <rect x="6" y="33" width="78" height="76" rx="3" fill="rgba(245,158,11,0.05)" stroke="#f59e0b" strokeWidth="0.9" strokeOpacity="0.48" />
-        <rect x="6" y="33" width="78" height="11" rx="3" fill="rgba(245,158,11,0.09)" />
-        <line x1="6" y1="44" x2="84" y2="44" stroke="#f59e0b" strokeWidth="0.5" strokeOpacity="0.28" />
-        <text x="45" y="41.5" fontFamily="JetBrains Mono, monospace" fontSize="4.8" fill="#fcd34d" textAnchor="middle" letterSpacing="0.6">LEISTUNGEN</text>
-        <circle cx="16" cy="54" r="3" fill="none" stroke="#fbbf24" strokeWidth="0.9" strokeOpacity="0.65" />
-        <path d="M14.5 53.5L15.8 55L18.5 52" stroke="#fbbf24" strokeWidth="0.9" fill="none" strokeOpacity="0.7" />
-        <line x1="23" y1="54" x2="78" y2="54" stroke="#fbbf24" strokeWidth="0.6" strokeOpacity="0.28" />
-        <line x1="23" y1="58" x2="70" y2="58" stroke="#f59e0b" strokeWidth="0.4" strokeOpacity="0.18" />
-        <circle cx="16" cy="67" r="3" fill="none" stroke="#fbbf24" strokeWidth="0.9" strokeOpacity="0.55" />
-        <path d="M14.5 66.5L15.8 68L18.5 65" stroke="#fbbf24" strokeWidth="0.9" fill="none" strokeOpacity="0.55" />
-        <line x1="23" y1="67" x2="75" y2="67" stroke="#f59e0b" strokeWidth="0.6" strokeOpacity="0.22" />
-        <line x1="23" y1="71" x2="66" y2="71" stroke="#f59e0b" strokeWidth="0.4" strokeOpacity="0.15" />
-        <circle cx="16" cy="80" r="3" fill="none" stroke="#f59e0b" strokeWidth="0.9" strokeOpacity="0.38" />
-        <line x1="23" y1="80" x2="72" y2="80" stroke="#f59e0b" strokeWidth="0.5" strokeOpacity="0.18" />
-        <line x1="23" y1="84" x2="60" y2="84" stroke="#f59e0b" strokeWidth="0.4" strokeOpacity="0.13" />
-        <text x="45" y="102" fontFamily="JetBrains Mono, monospace" fontSize="8" fill="#fbbf24" textAnchor="middle" fillOpacity="0.4">{'\u2605'} {'\u2605'} {'\u2605'}</text>
+        <rect x="74" y="38" width="252" height="168" rx="8" fill="rgba(245,158,11,0.06)" stroke="#f59e0b" strokeWidth="1.4" strokeOpacity="0.76" />
+        <rect x="74" y="38" width="252" height="18" rx="8" fill="rgba(245,158,11,0.11)" />
+        <line x1="74" y1="56" x2="326" y2="56" stroke="#f59e0b" strokeWidth="0.7" strokeOpacity="0.28" />
+        <circle cx="88" cy="47" r="2.7" fill="#ef4444" opacity="0.68" />
+        <circle cx="98" cy="47" r="2.7" fill="#f59e0b" opacity="0.68" />
+        <circle cx="108" cy="47" r="2.7" fill="#22c55e" opacity="0.68" />
+        <text x="200" y="50.5" fontFamily="JetBrains Mono, monospace" fontSize="5.3" fill="rgba(255,221,154,0.48)" textAnchor="middle">p-keminer.github.io</text>
+        <polygon points="200,72 232,84 200,96 168,84" fill="rgba(245,158,11,0.11)" stroke="#fbbf24" strokeWidth="1.2" strokeOpacity="0.72" />
+        <polygon points="168,84 200,96 200,126 168,114" fill="rgba(245,158,11,0.05)" stroke="#f59e0b" strokeWidth="1.1" strokeOpacity="0.5" />
+        <polygon points="232,84 200,96 200,126 232,114" fill="rgba(245,158,11,0.03)" stroke="#f59e0b" strokeWidth="1.1" strokeOpacity="0.42" />
+        <text x="200" y="150" fontFamily="JetBrains Mono, monospace" fontSize="10" fill="#fcd34d" textAnchor="middle" fillOpacity="0.86">3D + React Portfolio</text>
+        <text x="200" y="165" fontFamily="JetBrains Mono, monospace" fontSize="5" fill="#fbbf24" textAnchor="middle" fillOpacity="0.4">Room - Portfolio App - Mini Games</text>
+        <rect x="102" y="168" width="54" height="14" rx="4" fill="rgba(245,158,11,0.08)" stroke="#f59e0b" strokeWidth="0.8" strokeOpacity="0.34" />
+        <rect x="173" y="168" width="54" height="14" rx="4" fill="rgba(245,158,11,0.08)" stroke="#f59e0b" strokeWidth="0.8" strokeOpacity="0.34" />
+        <rect x="244" y="168" width="54" height="14" rx="4" fill="rgba(245,158,11,0.08)" stroke="#f59e0b" strokeWidth="0.8" strokeOpacity="0.34" />
+        <text x="129" y="177.5" fontFamily="JetBrains Mono, monospace" fontSize="4.4" fill="#fde68a" textAnchor="middle">THREE.JS</text>
+        <text x="200" y="177.5" fontFamily="JetBrains Mono, monospace" fontSize="4.4" fill="#fde68a" textAnchor="middle">EMBED APP</text>
+        <text x="271" y="177.5" fontFamily="JetBrains Mono, monospace" fontSize="4.4" fill="#fde68a" textAnchor="middle">GAMES</text>
       </g>
-
-      {/* Arrow: 3D browser → Leistungen */}
-      <line x1="92" y1="71" x2="84" y2="71" stroke="#f59e0b" strokeWidth="1" strokeOpacity="0.52" markerEnd="url(#pf-arr)" />
-
-      {/* Center top: 3D site browser */}
-      <g filter="url(#pf-glow)">
-        <rect x="92" y="30" width="216" height="83" rx="4" fill="rgba(245,158,11,0.07)" stroke="#f59e0b" strokeWidth="1.3" strokeOpacity="0.78" />
-        <rect x="92" y="30" width="216" height="14" rx="4" fill="rgba(245,158,11,0.12)" />
-        <line x1="92" y1="44" x2="308" y2="44" stroke="#f59e0b" strokeWidth="0.7" strokeOpacity="0.32" />
-        <circle cx="104" cy="37" r="2.5" fill="#ef4444" opacity="0.65" />
-        <circle cx="113" cy="37" r="2.5" fill="#f59e0b" opacity="0.65" />
-        <circle cx="122" cy="37" r="2.5" fill="#22c55e" opacity="0.65" />
-        <text x="200" y="40.5" fontFamily="JetBrains Mono, monospace" fontSize="5.2" fill="rgba(255,215,130,0.48)" textAnchor="middle">localhost:5173</text>
-        {/* Isometric cube */}
-        <polygon points="200,50 232,61 200,72 168,61" fill="rgba(245,158,11,0.1)" stroke="#f59e0b" strokeWidth="1.2" strokeOpacity="0.72" />
-        <polygon points="168,61 200,72 200,97 168,86" fill="rgba(245,158,11,0.055)" stroke="#f59e0b" strokeWidth="1.2" strokeOpacity="0.52" />
-        <polygon points="232,61 200,72 200,97 232,86" fill="rgba(245,158,11,0.03)" stroke="#f59e0b" strokeWidth="1.2" strokeOpacity="0.4" />
-        <text x="200" y="59" fontFamily="JetBrains Mono, monospace" fontSize="5.8" fill="#fbbf24" textAnchor="middle" fillOpacity="0.72" letterSpacing="1">THREE.JS 3D</text>
-        <text x="200" y="107" fontFamily="JetBrains Mono, monospace" fontSize="4.8" fill="#f59e0b" textAnchor="middle" fillOpacity="0.38">Raum {'\u00b7'} Kamera {'\u00b7'} Hotspots</text>
-      </g>
-
-      {/* Arrow: 3D browser → Chess */}
-      <line x1="308" y1="71" x2="316" y2="71" stroke="#f59e0b" strokeWidth="1" strokeOpacity="0.52" markerEnd="url(#pf-arr)" />
-
-      {/* Right panel: Chess */}
-      <g filter="url(#pf-glow)">
-        <rect x="316" y="33" width="78" height="76" rx="3" fill="rgba(245,158,11,0.05)" stroke="#f59e0b" strokeWidth="0.9" strokeOpacity="0.48" />
-        <rect x="316" y="33" width="78" height="11" rx="3" fill="rgba(245,158,11,0.09)" />
-        <line x1="316" y1="44" x2="394" y2="44" stroke="#f59e0b" strokeWidth="0.5" strokeOpacity="0.28" />
-        <text x="355" y="41.5" fontFamily="JetBrains Mono, monospace" fontSize="4.8" fill="#fcd34d" textAnchor="middle" letterSpacing="0.6">SCHACHSPIEL</text>
-        {/* Chess board 4x4 centered in panel */}
-        <rect x="335" y="48" width="10" height="10" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" strokeWidth="0.3" strokeOpacity="0.3" />
-        <rect x="345" y="48" width="10" height="10" fill="rgba(245,158,11,0.04)" stroke="#f59e0b" strokeWidth="0.3" strokeOpacity="0.2" />
-        <rect x="355" y="48" width="10" height="10" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" strokeWidth="0.3" strokeOpacity="0.3" />
-        <rect x="365" y="48" width="10" height="10" fill="rgba(245,158,11,0.04)" stroke="#f59e0b" strokeWidth="0.3" strokeOpacity="0.2" />
-        <rect x="335" y="58" width="10" height="10" fill="rgba(245,158,11,0.04)" stroke="#f59e0b" strokeWidth="0.3" strokeOpacity="0.2" />
-        <rect x="345" y="58" width="10" height="10" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" strokeWidth="0.3" strokeOpacity="0.3" />
-        <rect x="355" y="58" width="10" height="10" fill="rgba(245,158,11,0.04)" stroke="#f59e0b" strokeWidth="0.3" strokeOpacity="0.2" />
-        <rect x="365" y="58" width="10" height="10" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" strokeWidth="0.3" strokeOpacity="0.3" />
-        <rect x="335" y="68" width="10" height="10" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" strokeWidth="0.3" strokeOpacity="0.3" />
-        <rect x="345" y="68" width="10" height="10" fill="rgba(245,158,11,0.04)" stroke="#f59e0b" strokeWidth="0.3" strokeOpacity="0.2" />
-        <rect x="355" y="68" width="10" height="10" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" strokeWidth="0.3" strokeOpacity="0.3" />
-        <rect x="365" y="68" width="10" height="10" fill="rgba(245,158,11,0.04)" stroke="#f59e0b" strokeWidth="0.3" strokeOpacity="0.2" />
-        <rect x="335" y="78" width="10" height="10" fill="rgba(245,158,11,0.04)" stroke="#f59e0b" strokeWidth="0.3" strokeOpacity="0.2" />
-        <rect x="345" y="78" width="10" height="10" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" strokeWidth="0.3" strokeOpacity="0.3" />
-        <rect x="355" y="78" width="10" height="10" fill="rgba(245,158,11,0.04)" stroke="#f59e0b" strokeWidth="0.3" strokeOpacity="0.2" />
-        <rect x="365" y="78" width="10" height="10" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" strokeWidth="0.3" strokeOpacity="0.3" />
-        {/* Pawn piece on board */}
-        <circle cx="360" cy="62" r="3.5" fill="none" stroke="#fbbf24" strokeWidth="1.2" strokeOpacity="0.88" />
-        <line x1="360" y1="58.5" x2="360" y2="55" stroke="#fbbf24" strokeWidth="1.2" strokeOpacity="0.75" />
-        <circle cx="360" cy="53.5" r="2" fill="#fbbf24" fillOpacity="0.72" />
-        <text x="355" y="102" fontFamily="JetBrains Mono, monospace" fontSize="4.8" fill="#fbbf24" textAnchor="middle" fillOpacity="0.42">{'\u265f'} 3D Chess</text>
-      </g>
-
-      {/* ── CONNECTOR ── */}
-      <line x1="200" y1="113" x2="200" y2="127" stroke="#fbbf24" strokeWidth="1.2" strokeOpacity="0.6" strokeDasharray="3 2" markerEnd="url(#pf-arr)" />
-      <text x="213" y="123" fontFamily="JetBrains Mono, monospace" fontSize="4.5" fill="#fbbf24" fillOpacity="0.42">embeds</text>
-
-      {/* ── BOTTOM ROW: REACT APP ── */}
-
-      {/* Left bottom: Portfolio */}
-      <g filter="url(#pf-glow)">
-        <rect x="6" y="130" width="78" height="80" rx="3" fill="rgba(245,158,11,0.04)" stroke="#f59e0b" strokeWidth="0.9" strokeOpacity="0.38" />
-        <rect x="6" y="130" width="78" height="11" rx="3" fill="rgba(245,158,11,0.07)" />
-        <line x1="6" y1="141" x2="84" y2="141" stroke="#f59e0b" strokeWidth="0.5" strokeOpacity="0.22" />
-        <text x="45" y="138.5" fontFamily="JetBrains Mono, monospace" fontSize="4.8" fill="#fcd34d" textAnchor="middle" letterSpacing="0.6">PORTFOLIO</text>
-        <rect x="10" y="145" width="70" height="16" rx="2" fill="rgba(245,158,11,0.07)" stroke="#f59e0b" strokeWidth="0.6" strokeOpacity="0.32" />
-        <line x1="14" y1="149" x2="74" y2="149" stroke="#fbbf24" strokeWidth="0.6" strokeOpacity="0.3" />
-        <line x1="14" y1="154" x2="62" y2="154" stroke="#f59e0b" strokeWidth="0.5" strokeOpacity="0.2" />
-        <line x1="14" y1="158" x2="55" y2="158" stroke="#f59e0b" strokeWidth="0.4" strokeOpacity="0.15" />
-        <rect x="10" y="164" width="70" height="16" rx="2" fill="rgba(245,158,11,0.05)" stroke="#f59e0b" strokeWidth="0.6" strokeOpacity="0.24" />
-        <line x1="14" y1="168" x2="74" y2="168" stroke="#fbbf24" strokeWidth="0.5" strokeOpacity="0.22" />
-        <line x1="14" y1="173" x2="58" y2="173" stroke="#f59e0b" strokeWidth="0.4" strokeOpacity="0.16" />
-        <line x1="14" y1="177" x2="50" y2="177" stroke="#f59e0b" strokeWidth="0.4" strokeOpacity="0.12" />
-        <rect x="10" y="183" width="70" height="14" rx="2" fill="rgba(245,158,11,0.03)" stroke="#f59e0b" strokeWidth="0.5" strokeOpacity="0.18" />
-        <line x1="14" y1="187" x2="68" y2="187" stroke="#f59e0b" strokeWidth="0.4" strokeOpacity="0.15" />
-        <line x1="14" y1="191" x2="52" y2="191" stroke="#f59e0b" strokeWidth="0.4" strokeOpacity="0.11" />
-      </g>
-
-      {/* Arrow: React browser → Portfolio */}
-      <line x1="92" y1="170" x2="84" y2="170" stroke="#f59e0b" strokeWidth="1" strokeOpacity="0.42" markerEnd="url(#pf-arr)" />
-
-      {/* Center bottom: React App browser */}
-      <g filter="url(#pf-glow)">
-        <rect x="92" y="128" width="216" height="82" rx="4" fill="rgba(245,158,11,0.055)" stroke="#fbbf24" strokeWidth="1.1" strokeOpacity="0.52" />
-        <rect x="92" y="128" width="216" height="14" rx="4" fill="rgba(245,158,11,0.08)" />
-        <line x1="92" y1="142" x2="308" y2="142" stroke="#f59e0b" strokeWidth="0.7" strokeOpacity="0.26" />
-        <circle cx="104" cy="135" r="2.5" fill="#ef4444" opacity="0.55" />
-        <circle cx="113" cy="135" r="2.5" fill="#f59e0b" opacity="0.55" />
-        <circle cx="122" cy="135" r="2.5" fill="#22c55e" opacity="0.55" />
-        <text x="200" y="138.5" fontFamily="JetBrains Mono, monospace" fontSize="5.2" fill="rgba(255,215,130,0.38)" textAnchor="middle">p-keminer.github.io</text>
-        <text x="200" y="163" fontFamily="JetBrains Mono, monospace" fontSize="9.5" fill="#fcd34d" textAnchor="middle" fillOpacity="0.84">&lt;React App /&gt;</text>
-        <text x="200" y="177" fontFamily="JetBrains Mono, monospace" fontSize="5" fill="#fbbf24" textAnchor="middle" fillOpacity="0.38">Framer Motion {'\u00b7'} TypeScript {'\u00b7'} Vite</text>
-        <text x="200" y="202" fontFamily="JetBrains Mono, monospace" fontSize="4.5" fill="#f59e0b" textAnchor="middle" fillOpacity="0.28">embedded via iframe</text>
-      </g>
-
-      {/* Arrow: React browser → Minispiele */}
-      <line x1="308" y1="170" x2="316" y2="170" stroke="#f59e0b" strokeWidth="1" strokeOpacity="0.42" markerEnd="url(#pf-arr)" />
-
-      {/* Right bottom: Mini-Spiele */}
-      <g filter="url(#pf-glow)">
-        <rect x="316" y="130" width="78" height="80" rx="3" fill="rgba(245,158,11,0.04)" stroke="#f59e0b" strokeWidth="0.9" strokeOpacity="0.38" />
-        <rect x="316" y="130" width="78" height="11" rx="3" fill="rgba(245,158,11,0.07)" />
-        <line x1="316" y1="141" x2="394" y2="141" stroke="#f59e0b" strokeWidth="0.5" strokeOpacity="0.22" />
-        <text x="355" y="138.5" fontFamily="JetBrains Mono, monospace" fontSize="4.8" fill="#fcd34d" textAnchor="middle" letterSpacing="0.6">MINI-SPIELE</text>
-        <rect x="320" y="146" width="24" height="18" rx="2" fill="rgba(245,158,11,0.09)" stroke="#fbbf24" strokeWidth="0.7" strokeOpacity="0.48" />
-        <rect x="348" y="146" width="24" height="18" rx="2" fill="rgba(245,158,11,0.07)" stroke="#f59e0b" strokeWidth="0.7" strokeOpacity="0.38" />
-        <circle cx="332" cy="154" r="3" fill="none" stroke="#fbbf24" strokeWidth="0.9" strokeOpacity="0.72" />
-        <line x1="332" y1="151" x2="332" y2="148" stroke="#fbbf24" strokeWidth="0.9" strokeOpacity="0.65" />
-        <line x1="350" y1="149" x2="350" y2="162" stroke="#fbbf24" strokeWidth="1" strokeOpacity="0.6" />
-        <circle cx="360" cy="155" r="2" fill="#fbbf24" fillOpacity="0.55" />
-        <line x1="370" y1="149" x2="370" y2="162" stroke="#fbbf24" strokeWidth="1" strokeOpacity="0.5" />
-        <rect x="320" y="168" width="24" height="18" rx="2" fill="rgba(245,158,11,0.06)" stroke="#f59e0b" strokeWidth="0.7" strokeOpacity="0.3" />
-        <rect x="348" y="168" width="24" height="18" rx="2" fill="rgba(245,158,11,0.05)" stroke="#f59e0b" strokeWidth="0.7" strokeOpacity="0.25" />
-        <path d="M323 171 L323 182 L332 182" stroke="#fbbf24" strokeWidth="0.8" fill="none" strokeOpacity="0.5" />
-        <path d="M327 171 L327 178 L335 178" stroke="#fbbf24" strokeWidth="0.8" fill="none" strokeOpacity="0.38" />
-        <text x="360" y="179.5" fontFamily="JetBrains Mono, monospace" fontSize="8" fill="#fbbf24" textAnchor="middle" fillOpacity="0.5">6+</text>
-        <text x="355" y="201" fontFamily="JetBrains Mono, monospace" fontSize="4.8" fill="#fbbf24" textAnchor="middle" fillOpacity="0.36">6 Minispiele</text>
-      </g>
-
-      {/* Header */}
       <rect width="400" height="30" fill="rgba(14,10,4,0.28)" />
       <text x="18" y="20" fontFamily="JetBrains Mono, monospace" fontSize="10" fill="#fde68a" letterSpacing="2">3D PORTFOLIO</text>
     </svg>
@@ -381,6 +344,8 @@ const COVER_MAP = {
   github: GithubCover,
   robotics: RoboticsCover,
   education: EducationCover,
+  thesis: ThesisCover,
+  organizer: OrganizerCover,
   portfolio: PortfolioCover,
 } as const;
 
@@ -442,7 +407,7 @@ export default function ProjectCard({ project, isActive, isHovered }: ProjectCar
         pointerEvents: "none",
       }} />
 
-      {/* ── Screen area ── */}
+      {/* â”€â”€ Screen area â”€â”€ */}
       <div
         style={{
           width: "100%",
@@ -476,7 +441,7 @@ export default function ProjectCard({ project, isActive, isHovered }: ProjectCar
           zIndex: 19,
         }} />
 
-        {/* Cover art — top section */}
+        {/* Cover art â€” top section */}
         <div style={{
           flexShrink: 0,
           height: 248,
@@ -493,7 +458,7 @@ export default function ProjectCard({ project, isActive, isHovered }: ProjectCar
           </div>
         </div>
 
-        {/* Divider line — project's accent color */}
+        {/* Divider line â€” project's accent color */}
         <div style={{
           flexShrink: 0,
           height: 1,

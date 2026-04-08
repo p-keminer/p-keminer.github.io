@@ -3,7 +3,7 @@ export interface Project {
   title: string;
   description: string;
   link: string;
-  coverVariant: "logic" | "iot" | "github" | "robotics" | "education" | "portfolio";
+  coverVariant: "logic" | "iot" | "github" | "robotics" | "education" | "thesis" | "organizer" | "portfolio";
   tags: string[];
 }
 
@@ -21,7 +21,7 @@ export const projects: Project[] = [
     id: "iot-alarm",
     title: "IoT-Alarmsystem",
     description:
-      "IoT-basiertes Alarmsystem mit ESP8266-Nodes, Raspberry-Pi-Integration, eigenen PCBs und 3D-gedruckten Gehäusen.",
+      "IoT-basiertes Alarmsystem mit ESP8266-Nodes, Raspberry-Pi-Integration, eigenen PCBs und 3D-gedruckten Gehaeusen.",
     link: "https://github.com/p-keminer/iot-alarm-system",
     coverVariant: "iot",
     tags: ["ESP8266", "Raspberry Pi", "Sicherheit", "C++"],
@@ -30,25 +30,34 @@ export const projects: Project[] = [
     id: "logic-simulator",
     title: "Logic Simulator Studio",
     description:
-      "Browserbasierter Simulator für digitale Logikschaltungen mit Timing-Analyse, FSM-Workflows und HDL-Export.",
+      "Browserbasierter Simulator fuer digitale Logikschaltungen mit Timing-Analyse, FSM-Workflows und HDL-Export.",
     link: "https://github.com/p-keminer/logic-simulator-studio",
     coverVariant: "logic",
     tags: ["TypeScript", "Simulation", "HDL"],
   },
   {
-    id: "cs50x-harvard",
-    title: "CS50x Harvard",
+    id: "techthesis-navigator",
+    title: "TechThesis Navigator",
     description:
-      "Übungsrepo zum Harvard-Kurs CS50x mit Aufgaben, Lösungen und dokumentiertem Lernfortschritt in den Grundlagen der Informatik.",
-    link: "https://github.com/p-keminer/cs50x-26",
-    coverVariant: "education",
-    tags: ["CS50x", "Harvard", "Informatik"],
+      "Gefuehrte Thesis-App mit 5 Phasen, 10 methodischen Schritten, Gates, Checklisten und visueller Planung fuer technische Bachelorarbeiten.",
+    link: "https://github.com/p-keminer/techthesis-navigator",
+    coverVariant: "thesis",
+    tags: ["React", "TypeScript", "Zustand", "ECharts", "React Flow"],
+  },
+  {
+    id: "studienorganisator",
+    title: "Studienorganisator",
+    description:
+      "Lokale Desktop-App zur PDF-Extraktion und Strukturierung von Studiendaten mit Wochenplaner fuer THGA-Dokumente und erweiterbarer Parser-Logik.",
+    link: "https://github.com/p-keminer/studienorganisator-thga-bochum-bid-bii",
+    coverVariant: "organizer",
+    tags: ["Tauri", "React", "FastAPI", "SQLite", "PDF Parsing"],
   },
   {
     id: "portfolio-site",
     title: "3D Portfolio",
     description:
-      "Interaktive 3D-Portfolio-Website mit begehbarem Cyberpunk-Raum, spielbarem Schachspiel und eingebetteter React-App.",
+      "Interaktive 3D-Portfolio-Website mit begehbarem Cyberpunk-Raum, TV-Sektion, spielbarem Schachspiel und eingebetteter React-App.",
     link: "https://github.com/p-keminer/p-keminer.github.io",
     coverVariant: "portfolio",
     tags: ["Three.js", "React", "TypeScript", "Vite", "Framer Motion"],
