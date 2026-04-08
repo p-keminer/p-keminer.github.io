@@ -8,6 +8,11 @@
     <style>
       *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
+      :root {
+        --comic-frame-left: 0px;
+        --comic-frame-width: 100vw;
+      }
+
       html, body {
         height: 100%;
         min-height: 100dvh;
@@ -203,6 +208,24 @@
       }
 
       /* ─── Responsive ───────────────────────────────────────────── */
+
+      @media (min-width: 768px) {
+        .timeline {
+          left: var(--comic-frame-left);
+          width: var(--comic-frame-width);
+          right: auto;
+          padding-left: 0;
+          padding-right: 0;
+        }
+
+        .nav-arrows {
+          left: var(--comic-frame-left);
+          width: var(--comic-frame-width);
+          right: auto;
+          padding-left: 10px;
+          padding-right: 10px;
+        }
+      }
 
       @media (max-width: 480px) {
         .timeline { padding: 0 max(10px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(10px, env(safe-area-inset-left)); height: calc(52px + env(safe-area-inset-bottom)); }
@@ -522,6 +545,18 @@
           { cx: x + bw * 0.18, cy: cy - ry - 28 * s, r: 5 * s },
           { cx: x + bw * 0.24, cy: cy - ry - 40 * s, r: 3 * s },
         ];
+      } else if (trailDir === 'left') {
+        trail = [
+          { cx: cx - rx - 10 * s, cy: cy + ry * 0.18, r: 9 * s },
+          { cx: cx - rx - 26 * s, cy: cy + ry * 0.34 + 10 * s, r: 6 * s },
+          { cx: cx - rx - 40 * s, cy: cy + ry * 0.52 + 16 * s, r: 4 * s },
+        ];
+      } else if (trailDir === 'bottom-left-tight') {
+        trail = [
+          { cx: cx - rx * 0.46, cy: cy + ry + 5 * s, r: 8 * s },
+          { cx: cx - rx * 0.60, cy: cy + ry + 14 * s, r: 5.5 * s },
+          { cx: cx - rx * 0.73, cy: cy + ry + 21 * s, r: 3.5 * s },
+        ];
       } else {
         trail = [
           { cx: x + bw * 0.15, cy: cy + ry + 14 * s, r: 9 * s },
@@ -732,7 +767,52 @@
 
         ctx.save();
         ctx.globalAlpha = alpha;
-        drawCaptionBox(ctx, w * 0.03, h * 0.05, 'Parkhotel Herne\nRestaurantfachmann - IHK Abschluss', s);
+        drawCaptionBox(ctx, w * 0.03, h * 0.05, `Parkhotel Herne
+Restaurantfachmann - IHK Abschluss`, s);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // ── Speech bubble (older gentleman): 7s–10s (progress 0.463–0.661), fade in/out ──
+      if (progress >= 0.463 && progress <= 0.661) {
+        var alpha = 1;
+        if (progress < 0.490) alpha = (progress - 0.463) / 0.027;
+        else if (progress > 0.634) alpha = 1 - (progress - 0.634) / 0.027;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawSpeechBubble(ctx, w * 0.47, h * 0.18, `Herzlichen Glückwunsch!
+zum vorzeitigen Abschluss`, s * 0.95, 'left', 12);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // ── Speech bubble (younger person): 8.5s–11.5s (progress 0.562–0.760), fade in/out ──
+      if (progress >= 0.562 && progress <= 0.760) {
+        var alpha = 1;
+        if (progress < 0.589) alpha = (progress - 0.562) / 0.027;
+        else if (progress > 0.733) alpha = 1 - (progress - 0.733) / 0.027;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawSpeechBubble(ctx, w * 0.66, h * 0.24, 'Vielen Dank!', s * 0.9, 'right', 13);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // ── Thought bubble (younger person): after 11.5s (progress 0.760–1.0), fade in ──
+      if (progress >= 0.760) {
+        var alpha = 1;
+        if (progress < 0.787) alpha = (progress - 0.760) / 0.027;
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawThoughtBubble(ctx, w * 0.90, h * 0.17, `Endlich die
+Hochschulzugangs-
+berechtigung!`, s * 0.42, 'bottom-left-tight');
         ctx.globalAlpha = 1;
         ctx.restore();
       }
@@ -1026,6 +1106,24 @@
       }
     }
 
+    var lastDesktopUiRectKey = '';
+
+    function syncDesktopUiToVideoRect(x, width, canvasWidth) {
+      var left = 0;
+      var clipWidth = canvasWidth;
+
+      if (window.innerWidth >= 768) {
+        left = Math.max(0, Math.round(x));
+        clipWidth = Math.max(0, Math.round(width));
+      }
+
+      var key = left + ':' + clipWidth;
+      if (key === lastDesktopUiRectKey) return;
+      lastDesktopUiRectKey = key;
+      document.documentElement.style.setProperty('--comic-frame-left', left + 'px');
+      document.documentElement.style.setProperty('--comic-frame-width', clipWidth + 'px');
+    }
+
     function syncSceneVideoBuffer(snapshot) {
       var keep = {};
       var primaryIndex = snapshot.state === 'TRANSITIONING'
@@ -1095,19 +1193,37 @@
       }
       if (video) {
         if (video.readyState >= 2) {
-          // On portrait phones, keep the full frame visible instead of cropping to the center.
+          // Keep the full frame visible while softly filling any leftover space.
+          // This avoids desktop cropping without showing hard black side bars.
           var vw = video.videoWidth || 1920;
           var vh = video.videoHeight || 1080;
-          var useContainFit = h > w * 1.02;
-          if (useContainFit) {
-            ctx.fillStyle = '#04060b';
-            ctx.fillRect(0, 0, w, h);
-          }
-          var scale = useContainFit ? Math.min(w / vw, h / vh) : Math.max(w / vw, h / vh);
+          var scale = Math.min(w / vw, h / vh);
           var dw = vw * scale;
           var dh = vh * scale;
           var dx = (w - dw) / 2;
           var dy = (h - dh) / 2;
+
+          syncDesktopUiToVideoRect(dx, dw, w);
+
+          ctx.fillStyle = '#04060b';
+          ctx.fillRect(0, 0, w, h);
+
+          if (dw < w || dh < h) {
+            var bgScale = Math.max(w / vw, h / vh);
+            var bgw = vw * bgScale;
+            var bgh = vh * bgScale;
+            var bgx = (w - bgw) / 2;
+            var bgy = (h - bgh) / 2;
+
+            ctx.save();
+            ctx.filter = 'blur(28px) brightness(0.5)';
+            ctx.drawImage(video, bgx, bgy, bgw, bgh);
+            ctx.restore();
+
+            ctx.fillStyle = 'rgba(4, 6, 11, 0.18)';
+            ctx.fillRect(0, 0, w, h);
+          }
+
           ctx.drawImage(video, dx, dy, dw, dh);
 
           // Draw overlays relative to the visible video rect so bubbles stay aligned

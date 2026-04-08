@@ -541,6 +541,96 @@ export function mountGame(root: HTMLDivElement): MountedGame {
 
   document.addEventListener('click', handleGlobalLegalClick);
 
+  const syncEmbeddedVideoNav = (): void => {
+    const activeNav = roomHotspotsRoot.querySelector<HTMLElement>(
+      '.comic-screen-overlay .web-embed-nav, .horror-screen-overlay .web-embed-nav'
+    );
+    const activeFrame = roomHotspotsRoot.querySelector<HTMLIFrameElement>(
+      '.comic-screen-overlay iframe, .horror-screen-overlay iframe'
+    );
+
+    if (!activeNav || !activeFrame || window.innerWidth < 768) {
+      if (activeNav) {
+        activeNav.style.left = '';
+        activeNav.style.right = '';
+        activeNav.style.width = '';
+        activeNav.style.maxWidth = '';
+        activeNav.style.transform = '';
+      }
+      return;
+    }
+
+    const applyPosition = (): void => {
+      const frameRect = activeFrame.getBoundingClientRect();
+      let clipLeft = 0;
+      let clipWidth = frameRect.width;
+
+      try {
+        const frameWindow = activeFrame.contentWindow;
+        const frameDocument = activeFrame.contentDocument;
+        if (frameWindow && frameDocument?.documentElement) {
+          const frameStyles = frameWindow.getComputedStyle(frameDocument.documentElement);
+          const leftRaw = (
+            frameStyles.getPropertyValue('--media-frame-left') ||
+            frameStyles.getPropertyValue('--comic-frame-left') ||
+            '0px'
+          ).trim();
+          const widthRaw = (
+            frameStyles.getPropertyValue('--media-frame-width') ||
+            frameStyles.getPropertyValue('--comic-frame-width') ||
+            ''
+          ).trim();
+
+          if (leftRaw.endsWith('px')) {
+            const leftValue = parseFloat(leftRaw);
+            if (Number.isFinite(leftValue)) {
+              clipLeft = leftValue;
+            }
+          }
+
+          if (widthRaw.endsWith('px')) {
+            const widthValue = parseFloat(widthRaw);
+            if (Number.isFinite(widthValue) && widthValue > 0) {
+              clipWidth = widthValue;
+            }
+          }
+        }
+      } catch {
+        // Same-origin iframes expose sizing data; if not available we keep the default nav layout.
+      }
+
+      if (clipWidth >= frameRect.width - 4) {
+        activeNav.style.left = '';
+        activeNav.style.right = '';
+        activeNav.style.width = '';
+        activeNav.style.maxWidth = '';
+        activeNav.style.transform = '';
+        return;
+      }
+
+      const insetX = 56;
+      const alignedWidth = Math.max(0, clipWidth - insetX);
+      activeNav.style.left = `${Math.round(frameRect.left + clipLeft + insetX)}px`;
+      activeNav.style.right = 'auto';
+      activeNav.style.width = `${Math.round(alignedWidth)}px`;
+      activeNav.style.maxWidth = `${Math.round(alignedWidth)}px`;
+      activeNav.style.transform = 'none';
+    };
+
+    if (activeFrame.dataset.navSyncBound !== '1') {
+      activeFrame.dataset.navSyncBound = '1';
+      activeFrame.addEventListener('load', () => {
+        window.requestAnimationFrame(applyPosition);
+        window.setTimeout(applyPosition, 120);
+        window.setTimeout(applyPosition, 320);
+      });
+    }
+
+    window.requestAnimationFrame(applyPosition);
+  };
+
+  window.addEventListener('resize', syncEmbeddedVideoNav);
+
   const syncPanels = (): void => {
     if (startFlowState !== 'roomExplore') {
       hoveredRoomHotspot = null;
@@ -603,6 +693,8 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     document.querySelectorAll<HTMLButtonElement>('[data-legal-tab]').forEach(btn => {
       btn.disabled = !legalFooterActive;
     });
+
+    syncEmbeddedVideoNav();
   };
 
   const preview = createBoardPreviewScene({

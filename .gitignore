@@ -67,3 +67,5 @@ archive/
 
 # ── AI assistant local config (machine-specific launch / settings) ────────────
 .claude/
+# ── Local working notes ────────────────────────────────────────────────────────
+progress.md

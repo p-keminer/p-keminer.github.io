@@ -8,6 +8,10 @@
       :root {
         color-scheme: dark;
         font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+        --media-frame-left: 0px;
+        --media-frame-top: 0px;
+        --media-frame-width: 100vw;
+        --media-frame-height: 100dvh;
       }
 
       * {
@@ -34,15 +38,49 @@
         height: 100%;
         min-height: 100dvh;
         background: #000;
+        overflow: hidden;
       }
 
       .horror-player__video {
+        position: absolute;
+        inset: 0;
         width: 100%;
         height: 100%;
         display: block;
         object-fit: cover;
         object-position: center;
         background: #000;
+      }
+
+      .horror-player__video--backdrop {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 220ms ease;
+      }
+
+      .horror-player__video--foreground {
+        z-index: 1;
+      }
+
+      .horror-player__frame-glass {
+        position: absolute;
+        left: var(--media-frame-left);
+        top: var(--media-frame-top);
+        width: var(--media-frame-width);
+        height: var(--media-frame-height);
+        border-radius: 28px;
+        border: 1px solid rgba(214, 231, 255, 0.14);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 16%, rgba(255, 255, 255, 0) 84%, rgba(9, 13, 24, 0.12)),
+          linear-gradient(135deg, rgba(255, 184, 132, 0.08), transparent 28%, transparent 72%, rgba(124, 156, 255, 0.06));
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.08),
+          inset 0 -18px 42px rgba(3, 6, 16, 0.16),
+          0 26px 56px rgba(0, 0, 0, 0.22);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 220ms ease;
+        z-index: 2;
       }
 
       .horror-player__video::-webkit-media-controls,
@@ -60,6 +98,7 @@
         padding: calc(env(safe-area-inset-top) + 18px) max(16px, calc(env(safe-area-inset-right) + 16px)) 0 max(16px, calc(env(safe-area-inset-left) + 16px));
         background: linear-gradient(180deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0));
         pointer-events: none;
+        z-index: 3;
       }
 
       .horror-player__controls {
@@ -143,6 +182,43 @@
         }
       }
 
+      @media (min-width: 768px) {
+        .horror-player {
+          background:
+            radial-gradient(circle at 50% 16%, rgba(255, 128, 92, 0.16), transparent 30%),
+            linear-gradient(180deg, rgba(6, 9, 18, 0.96), rgba(4, 7, 15, 0.98));
+        }
+
+        .horror-player__video--backdrop {
+          display: block;
+          object-fit: cover;
+          filter: blur(26px) saturate(1.1) brightness(0.6);
+          transform: scale(1.08);
+          z-index: 0;
+        }
+
+        .horror-player__video--foreground {
+          object-fit: contain;
+          background: transparent;
+        }
+
+        .horror-player--ready .horror-player__video--backdrop {
+          opacity: 1;
+        }
+
+        .horror-player--ready .horror-player__frame-glass {
+          opacity: 1;
+        }
+
+        .horror-player__topbar {
+          left: var(--media-frame-left);
+          right: auto;
+          width: var(--media-frame-width);
+          padding-left: 20px;
+          padding-right: 20px;
+        }
+      }
+
       @media (max-width: 640px) {
         .horror-player__topbar {
           padding: calc(env(safe-area-inset-top) + 14px) max(12px, calc(env(safe-area-inset-right) + 12px)) 0 max(12px, calc(env(safe-area-inset-left) + 12px));
@@ -164,7 +240,8 @@
         }
 
         .horror-player__topbar,
-        .horror-player__video {
+        .horror-player__video,
+        .horror-player__frame-glass {
           visibility: hidden;
           pointer-events: none;
         }
@@ -174,9 +251,22 @@
   <body>
     <main class="horror-player">
       <video
-        class="horror-player__video"
+        class="horror-player__video horror-player__video--backdrop"
+        id="trailer-backdrop"
+        src="/horror-film/trailer.mp4"
+        muted
+        playsinline
+        preload="metadata"
+        disablepictureinpicture
+        disableremoteplayback
+        aria-hidden="true"
+        tabindex="-1"
+      ></video>
+      <video
+        class="horror-player__video horror-player__video--foreground"
         id="trailer"
         src="/horror-film/trailer.mp4"
+        poster="/horror-film/cover.webp"
         autoplay
         playsinline
         preload="auto"
@@ -184,6 +274,7 @@
         disableremoteplayback
         data-source-kind="stream"
       ></video>
+      <div class="horror-player__frame-glass" aria-hidden="true"></div>
       <div class="horror-player__topbar">
         <div class="horror-player__controls">
           <button class="horror-player__control" id="seek-backward" type="button">-10s</button>
@@ -199,6 +290,9 @@
     <script>
       const TRAILER_SRC = '/horror-film/trailer.mp4';
       const video = document.getElementById('trailer');
+      const backdropVideo = document.getElementById('trailer-backdrop');
+      const player = document.querySelector('.horror-player');
+      const root = document.documentElement;
       const muteToggle = document.getElementById('mute-toggle');
       const playToggle = document.getElementById('play-toggle');
       const seekBackward = document.getElementById('seek-backward');
@@ -250,6 +344,83 @@
         return Math.min(duration, Math.max(0, timeSeconds));
       };
 
+      const isDesktopTrailerView = () => window.innerWidth >= 768;
+
+      const syncReadyState = () => {
+        player.classList.toggle('horror-player--ready', isDesktopTrailerView() && video.readyState >= 2 && video.videoWidth > 0);
+      };
+
+      const syncDesktopFrameMetrics = () => {
+        const playerRect = video.getBoundingClientRect();
+        let frameLeft = 0;
+        let frameTop = 0;
+        let frameWidth = playerRect.width;
+        let frameHeight = playerRect.height;
+
+        if (window.innerWidth >= 768) {
+          const vw = video.videoWidth || 0;
+          const vh = video.videoHeight || 0;
+          if (vw > 0 && vh > 0) {
+            const scale = Math.min(playerRect.width / vw, playerRect.height / vh);
+            frameWidth = vw * scale;
+            frameHeight = vh * scale;
+            frameLeft = (playerRect.width - frameWidth) / 2;
+            frameTop = (playerRect.height - frameHeight) / 2;
+          }
+        }
+
+        root.style.setProperty('--media-frame-left', `${Math.max(0, frameLeft)}px`);
+        root.style.setProperty('--media-frame-top', `${Math.max(0, frameTop)}px`);
+        root.style.setProperty('--media-frame-width', `${Math.max(0, frameWidth)}px`);
+        root.style.setProperty('--media-frame-height', `${Math.max(0, frameHeight)}px`);
+      };
+
+      const syncBackdropSource = async () => {
+        if (!backdropVideo || !isDesktopTrailerView()) return;
+        const source = video.currentSrc || video.src || TRAILER_SRC;
+        if (backdropVideo.currentSrc !== source && backdropVideo.src !== source) {
+          backdropVideo.src = source;
+          backdropVideo.load();
+        }
+        if (backdropVideo.readyState === 0) {
+          await waitForEvent(backdropVideo, 'loadedmetadata', 2500);
+        }
+      };
+
+      const syncBackdropPlayback = async ({ preserveState = false } = {}) => {
+        if (!backdropVideo) return;
+        if (!isDesktopTrailerView() || video.readyState < 2) {
+          backdropVideo.pause();
+          return;
+        }
+
+        const targetTime = clampTime(video.currentTime);
+        await syncBackdropSource();
+
+        if (Math.abs(backdropVideo.currentTime - targetTime) > 0.15) {
+          try {
+            backdropVideo.currentTime = targetTime;
+          } catch (_) {
+            // Ignore timing sync failures; the foreground video remains authoritative.
+          }
+        }
+
+        if (preserveState && (video.paused || video.ended || landscapeLockQuery.matches)) {
+          backdropVideo.pause();
+          return;
+        }
+
+        if (!video.paused && !video.ended && !landscapeLockQuery.matches) {
+          try {
+            await backdropVideo.play();
+          } catch (_) {
+            // Backdrop is decorative, so playback errors can be ignored safely.
+          }
+        } else {
+          backdropVideo.pause();
+        }
+      };
+
       const ensureSeekBlobReady = async () => {
         if (seekBlobUrl) return seekBlobUrl;
         if (!seekBlobPromise) {
@@ -291,6 +462,11 @@
         if (landscapeLockQuery.matches && !video.paused) {
           video.pause();
         }
+        if (landscapeLockQuery.matches) {
+          backdropVideo.pause();
+        } else {
+          void syncBackdropPlayback({ preserveState: true });
+        }
         syncPlayButton();
       };
 
@@ -315,6 +491,8 @@
           video.load();
 
           await waitForEvent(video, 'loadedmetadata', 2500);
+          await syncBackdropSource();
+          syncDesktopFrameMetrics();
 
           const finalTarget = clampTime(targetTime);
           if (typeof video.fastSeek === 'function') {
@@ -329,6 +507,7 @@
           await waitForEvent(video, 'seeked', 1200);
 
           video.muted = wasMuted;
+          await syncBackdropPlayback({ preserveState: !shouldResume });
           if (shouldResume && !landscapeLockQuery.matches) {
             try {
               await video.play();
@@ -383,6 +562,7 @@
           }
         }
         syncPlayButton();
+        await syncBackdropPlayback();
       };
 
       const ensurePlayback = async () => {
@@ -408,6 +588,7 @@
 
         syncMuteButton();
         syncPlayButton();
+        await syncBackdropPlayback();
       };
 
       muteToggle.addEventListener('click', () => {
@@ -422,6 +603,7 @@
 
         if (!video.paused && !video.ended) {
           video.pause();
+          backdropVideo.pause();
           syncPlayButton();
           return;
         }
@@ -435,6 +617,7 @@
         } catch (_) {
           // Keep button state in sync even if playback is blocked.
         }
+        await syncBackdropPlayback();
         syncPlayButton();
       });
 
@@ -446,14 +629,50 @@
         await seekBy(10);
       });
 
-      video.addEventListener('volumechange', syncMuteButton);
-      video.addEventListener('play', syncPlayButton);
-      video.addEventListener('pause', syncPlayButton);
-      video.addEventListener('ended', syncPlayButton);
-      video.addEventListener('loadedmetadata', () => {
-        syncPlayButton();
+      video.addEventListener('loadstart', () => {
+        player.classList.remove('horror-player--ready');
       });
-      video.addEventListener('seeked', syncPlayButton);
+      video.addEventListener('volumechange', syncMuteButton);
+      video.addEventListener('play', () => {
+        syncPlayButton();
+        void syncBackdropPlayback();
+      });
+      video.addEventListener('pause', () => {
+        syncPlayButton();
+        backdropVideo.pause();
+      });
+      video.addEventListener('ended', () => {
+        syncPlayButton();
+        backdropVideo.pause();
+      });
+      video.addEventListener('loadedmetadata', () => {
+        syncDesktopFrameMetrics();
+        syncReadyState();
+        syncPlayButton();
+        void syncBackdropPlayback({ preserveState: true });
+      });
+      video.addEventListener('loadeddata', () => {
+        syncReadyState();
+      });
+      video.addEventListener('canplay', () => {
+        syncReadyState();
+      });
+      video.addEventListener('seeked', () => {
+        syncPlayButton();
+        void syncBackdropPlayback({ preserveState: true });
+      });
+      video.addEventListener('timeupdate', () => {
+        if (!backdropVideo || backdropVideo.paused) return;
+        if (Math.abs(backdropVideo.currentTime - video.currentTime) > 0.3) {
+          backdropVideo.currentTime = clampTime(video.currentTime);
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        syncDesktopFrameMetrics();
+        syncReadyState();
+        void syncBackdropPlayback({ preserveState: true });
+      });
 
       document.addEventListener('keydown', (event) => {
         if (event.key.toLowerCase() !== 'm') return;
@@ -476,6 +695,8 @@
 
       syncMuteButton();
       syncPlayButton();
+      syncDesktopFrameMetrics();
+      syncReadyState();
       syncLandscapeLock();
       void ensurePlayback();
     </script>

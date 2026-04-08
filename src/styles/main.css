@@ -664,33 +664,76 @@ body.web-embed-active .web-embed-overlay {
   gap: 8px;
   max-width: calc(100% - 40px);
   z-index: 20;
-  pointer-events: auto;
+  pointer-events: none;
+  transition: left 180ms ease, width 180ms ease, max-width 180ms ease;
 }
 
 .web-embed-nav__btn {
-  background: rgba(10, 4, 4, 0.82);
-  border: 1px solid rgba(200, 55, 55, 0.32);
-  border-radius: 9px;
-  color: rgba(255, 200, 200, 0.80);
+  background: rgba(8, 12, 22, 0.72);
+  border: 1px solid rgba(173, 198, 255, 0.18);
+  border-radius: 999px;
+  color: rgba(238, 244, 255, 0.86);
   cursor: pointer;
-  font: 600 10px / 1.2 'Inter', 'Segoe UI', system-ui, sans-serif;
-  letter-spacing: 0.07em;
-  padding: 8px 18px;
+  font: 700 0.76rem / 1 'JetBrains Mono', 'Segoe UI', monospace;
+  letter-spacing: 0.14em;
+  padding: 12px 16px;
   text-align: center;
   text-transform: uppercase;
-  transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
-  backdrop-filter: blur(6px);
+  pointer-events: auto;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
-.web-embed-nav__btn:hover {
-  background: rgba(35, 8, 8, 0.94);
-  border-color: rgba(255, 90, 90, 0.60);
-  box-shadow: 0 0 12px rgba(220, 60, 60, 0.22);
+.web-embed-nav__btn:hover,
+.web-embed-nav__btn:focus-visible {
+  background: rgba(14, 19, 34, 0.92);
+  border-color: rgba(255, 174, 118, 0.34);
+  box-shadow: 0 0 18px rgba(255, 124, 84, 0.18);
+  color: #fff1dd;
+  transform: translateY(-1px);
+}
+
+.web-embed-nav__btn:focus-visible {
+  outline: 2px solid rgba(255, 184, 132, 0.92);
+  outline-offset: 4px;
 }
 
 .comic-screen-overlay .web-embed-nav {
   bottom: 70px;
   left: 70px;
+}
+
+.comic-screen-overlay .web-embed-nav__btn {
+  background: linear-gradient(170deg, #fdf4d0 0%, #f5e6a3 60%, #e8d48b 100%);
+  border: 3px solid #1a1200;
+  border-radius: 7px;
+  color: #2a1f00;
+  font: italic 800 0.72rem / 1 'Inter', 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  box-shadow: 2px 2px 0 rgba(42, 31, 0, 0.35);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.comic-screen-overlay .web-embed-nav__btn:hover,
+.comic-screen-overlay .web-embed-nav__btn:focus-visible {
+  background: linear-gradient(170deg, #fff8e0 0%, #fdf4d0 60%, #f5e6a3 100%);
+  border-color: #1a1200;
+  box-shadow: 3px 3px 0 rgba(42, 31, 0, 0.4);
+  color: #0a0800;
+  transform: translateY(-1px);
+}
+
+.comic-screen-overlay .web-embed-nav__btn:focus-visible {
+  outline: 2px solid rgba(245, 230, 163, 0.95);
+  outline-offset: 3px;
 }
 
 /* ──── Comic-Screen Overlay ─────────────────────────────────────────────── */

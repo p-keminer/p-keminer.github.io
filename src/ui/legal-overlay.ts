@@ -41,6 +41,15 @@ const DATENSCHUTZ_TEXT = `
      target="_blank" rel="noopener">GitHub Privacy Statement</a>
 </p>
 
+<h3>Schriften, Styles und eingebettete Medien</h3>
+<p>
+  Die auf dieser Website verwendeten Schriftdateien, Stylesheets, Bilder und Videos
+  werden zusammen mit der Website über GitHub Pages ausgeliefert. Für die TV-Auswahl,
+  den Comic-Bereich und den KI-Trailer werden keine externen Video-Plattformen,
+  Font-CDNs oder Analyse-Dienste eingebunden. Ausgenommen hiervon ist ausschließlich
+  die nachfolgend beschriebene technische Einbindung des Draco-Decoders im 3D-Bereich.
+</p>
+
 <h3>3D-Modell-Dekompression</h3>
 <p>
   Beim Laden des 3D-Bereichs wird einmalig ein technischer Decoder von
@@ -53,19 +62,31 @@ const DATENSCHUTZ_TEXT = `
   <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a>
 </p>
 
-<h3>Drittlandübermittlung</h3>
+<h3>Drittlandbezug</h3>
 <p>
-  Durch die Nutzung von GitHub Pages und des Draco-Decoders (Google) werden Daten
-  in die USA übermittelt. Beide Anbieter sind unter dem
-  <strong>EU-U.S. Data Privacy Framework</strong> zertifiziert, das ein angemessenes
-  Datenschutzniveau gemäß Art.&nbsp;45 DSGVO gewährleistet.
+  Bei der technischen Bereitstellung über GitHub Pages und beim Abruf des
+  Draco-Decoders kann es zu einer Verarbeitung personenbezogener Daten außerhalb
+  der EU bzw. des EWR, insbesondere in den USA, kommen. Informationen zu den
+  dabei eingesetzten Garantien, Rechtsgrundlagen und etwaigen aktuellen
+  Zertifizierungen entnehmen Sie bitte den Datenschutzhinweisen der jeweiligen Anbieter.
 </p>
 
 <h3>Keine Cookies, kein Tracking</h3>
 <p>
-  Diese Website verwendet keine Cookies, kein Tracking und keine Analyse-Tools.
-  Es werden keine personenbezogenen Daten über die oben genannten technischen
-  Zugriffsdaten hinaus erhoben oder gespeichert.
+  Diese Website setzt selbst keine Cookies, kein Tracking und keine Analyse-Tools ein.
+  Es werden durch den Seitenbetreiber keine personenbezogenen Daten über die für
+  das Hosting technisch erforderlichen Zugriffsdaten hinaus erhoben, gespeichert
+  oder zu Profilen zusammengeführt. Unabhängig davon kann GitHub als Hoster im
+  Rahmen der technischen Bereitstellung Daten nach der oben verlinkten
+  Datenschutzerklärung verarbeiten.
+</p>
+
+<h3>Externe Links</h3>
+<p>
+  Diese Website enthält Links zu externen Angeboten, insbesondere zu GitHub und
+  LinkedIn. Erst wenn Sie einen solchen Link aktiv anklicken, wird eine Verbindung
+  zum jeweiligen Anbieter hergestellt. Ab diesem Zeitpunkt gilt die
+  Datenschutzerklärung des jeweiligen Betreibers.
 </p>
 
 <h3>Ihre Rechte</h3>
@@ -76,11 +97,11 @@ const DATENSCHUTZ_TEXT = `
   und Widerspruch (Art.&nbsp;21).
 </p>
 <p>
-  Da diese Website selbst keine personenbezogenen Daten speichert, liegen
-  Zugriffsdaten ausschließlich bei den genannten Drittanbietern (GitHub, Google).
-  Anfragen zur Auskunft oder Löschung dieser Daten richten Sie bitte direkt an
-  den jeweiligen Anbieter. Bei allgemeinen Fragen zum Datenschutz dieser Website
-  können Sie sich an die oben genannte E-Mail-Adresse wenden.
+  Soweit im Rahmen des Hostings oder beim Abruf externer technischer Ressourcen
+  personenbezogene Daten verarbeitet werden, können Betroffenenrechte grundsätzlich
+  auch gegenüber den jeweils beteiligten Anbietern geltend gemacht werden.
+  Bei allgemeinen Fragen zum Datenschutz dieser Website können Sie sich an die
+  oben genannte E-Mail-Adresse wenden.
 </p>
 
 <h3>Aufsichtsbehörde</h3>
