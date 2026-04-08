@@ -1217,23 +1217,7 @@ berechtigung!`, s * 0.42, 'bottom-left-tight');
             var bgy = (h - bgh) / 2;
 
             if (isCompactViewport) {
-              var blurOffsets = [
-                [-24, 0], [24, 0], [0, -24], [0, 24],
-                [-18, -18], [18, -18], [-18, 18], [18, 18],
-                [-10, 0], [10, 0], [0, -10], [0, 10],
-              ];
-
-              ctx.save();
-              ctx.globalAlpha = 0.12;
-              for (var i = 0; i < blurOffsets.length; i += 1) {
-                var offset = blurOffsets[i];
-                ctx.drawImage(video, bgx + offset[0], bgy + offset[1], bgw, bgh);
-              }
-              ctx.globalAlpha = 0.28;
-              ctx.drawImage(video, bgx, bgy, bgw, bgh);
-              ctx.restore();
-
-              ctx.fillStyle = 'rgba(4, 6, 11, 0.46)';
+              ctx.fillStyle = '#04060b';
               ctx.fillRect(0, 0, w, h);
             } else {
               ctx.save();

@@ -1205,6 +1205,25 @@ body.web-embed-active .web-embed-overlay {
   }
 }
 
+@media (max-width: 920px) and (min-width: 681px) {
+  .tv-select-track {
+    width: min(100%, 592px);
+  }
+
+  .tv-select-carousel {
+    width: min(100%, 592px);
+    min-height: clamp(430px, 56vh, 560px);
+  }
+
+  .tv-select-card {
+    width: clamp(282px, 37vw, 332px);
+  }
+
+  .tv-select-card--standby {
+    width: clamp(222px, 28vw, 264px);
+  }
+}
+
 @media (max-width: 680px) {
   .tv-select-overlay {
     overflow-x: hidden;
