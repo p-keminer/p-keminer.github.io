@@ -1215,20 +1215,35 @@ berechtigung!`, s * 0.42, 'bottom-left-tight');
             var bgh = vh * bgScale;
             var bgx = (w - bgw) / 2;
             var bgy = (h - bgh) / 2;
-            var backdropBlur = isCompactViewport ? 68 : 28;
-            var backdropBrightness = isCompactViewport ? 0.24 : 0.5;
-            var backdropOverlayAlpha = isCompactViewport ? 0.52 : 0.18;
-            var backdropPasses = isCompactViewport ? 2 : 1;
 
-            ctx.save();
-            ctx.filter = 'blur(' + backdropBlur + 'px) brightness(' + backdropBrightness + ')';
-            for (var i = 0; i < backdropPasses; i += 1) {
+            if (isCompactViewport) {
+              var blurOffsets = [
+                [-24, 0], [24, 0], [0, -24], [0, 24],
+                [-18, -18], [18, -18], [-18, 18], [18, 18],
+                [-10, 0], [10, 0], [0, -10], [0, 10],
+              ];
+
+              ctx.save();
+              ctx.globalAlpha = 0.12;
+              for (var i = 0; i < blurOffsets.length; i += 1) {
+                var offset = blurOffsets[i];
+                ctx.drawImage(video, bgx + offset[0], bgy + offset[1], bgw, bgh);
+              }
+              ctx.globalAlpha = 0.28;
               ctx.drawImage(video, bgx, bgy, bgw, bgh);
-            }
-            ctx.restore();
+              ctx.restore();
 
-            ctx.fillStyle = 'rgba(4, 6, 11, ' + backdropOverlayAlpha + ')';
-            ctx.fillRect(0, 0, w, h);
+              ctx.fillStyle = 'rgba(4, 6, 11, 0.46)';
+              ctx.fillRect(0, 0, w, h);
+            } else {
+              ctx.save();
+              ctx.filter = 'blur(28px) brightness(0.5)';
+              ctx.drawImage(video, bgx, bgy, bgw, bgh);
+              ctx.restore();
+
+              ctx.fillStyle = 'rgba(4, 6, 11, 0.18)';
+              ctx.fillRect(0, 0, w, h);
+            }
           }
 
           ctx.drawImage(video, dx, dy, dw, dh);
