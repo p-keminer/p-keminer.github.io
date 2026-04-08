@@ -1202,6 +1202,7 @@ berechtigung!`, s * 0.42, 'bottom-left-tight');
           var dh = vh * scale;
           var dx = (w - dw) / 2;
           var dy = (h - dh) / 2;
+          var isCompactViewport = window.innerWidth < 768;
 
           syncDesktopUiToVideoRect(dx, dw, w);
 
@@ -1214,13 +1215,16 @@ berechtigung!`, s * 0.42, 'bottom-left-tight');
             var bgh = vh * bgScale;
             var bgx = (w - bgw) / 2;
             var bgy = (h - bgh) / 2;
+            var backdropBlur = isCompactViewport ? 44 : 28;
+            var backdropBrightness = isCompactViewport ? 0.38 : 0.5;
+            var backdropOverlayAlpha = isCompactViewport ? 0.34 : 0.18;
 
             ctx.save();
-            ctx.filter = 'blur(28px) brightness(0.5)';
+            ctx.filter = 'blur(' + backdropBlur + 'px) brightness(' + backdropBrightness + ')';
             ctx.drawImage(video, bgx, bgy, bgw, bgh);
             ctx.restore();
 
-            ctx.fillStyle = 'rgba(4, 6, 11, 0.18)';
+            ctx.fillStyle = 'rgba(4, 6, 11, ' + backdropOverlayAlpha + ')';
             ctx.fillRect(0, 0, w, h);
           }
 
