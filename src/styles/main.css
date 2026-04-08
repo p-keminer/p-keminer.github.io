@@ -1224,6 +1224,17 @@ body.web-embed-active .web-embed-overlay {
   }
 }
 
+@media (max-width: 920px) and (min-width: 681px) and (orientation: portrait) {
+  .tv-select-header {
+    padding-left: clamp(14px, 2.2vw, 22px);
+  }
+
+  .tv-select-overlay .web-embed-nav {
+    left: clamp(34px, 5.4vw, 54px);
+    bottom: clamp(28px, 4vw, 44px);
+  }
+}
+
 @media (max-width: 680px) {
   .tv-select-overlay {
     overflow-x: hidden;
