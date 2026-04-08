@@ -1215,13 +1215,16 @@ berechtigung!`, s * 0.42, 'bottom-left-tight');
             var bgh = vh * bgScale;
             var bgx = (w - bgw) / 2;
             var bgy = (h - bgh) / 2;
-            var backdropBlur = isCompactViewport ? 44 : 28;
-            var backdropBrightness = isCompactViewport ? 0.38 : 0.5;
-            var backdropOverlayAlpha = isCompactViewport ? 0.34 : 0.18;
+            var backdropBlur = isCompactViewport ? 68 : 28;
+            var backdropBrightness = isCompactViewport ? 0.24 : 0.5;
+            var backdropOverlayAlpha = isCompactViewport ? 0.52 : 0.18;
+            var backdropPasses = isCompactViewport ? 2 : 1;
 
             ctx.save();
             ctx.filter = 'blur(' + backdropBlur + 'px) brightness(' + backdropBrightness + ')';
-            ctx.drawImage(video, bgx, bgy, bgw, bgh);
+            for (var i = 0; i < backdropPasses; i += 1) {
+              ctx.drawImage(video, bgx, bgy, bgw, bgh);
+            }
             ctx.restore();
 
             ctx.fillStyle = 'rgba(4, 6, 11, ' + backdropOverlayAlpha + ')';
