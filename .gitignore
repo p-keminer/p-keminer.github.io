@@ -69,3 +69,9 @@ archive/
 .claude/
 # ── Local working notes ────────────────────────────────────────────────────────
 progress.md
+
+# ── Root-only local docs / analysis artefacts ───────────────────────────────
+AGENTS.md
+CLAUDE.md
+lighthouse-desktop-baseline.json
+optimizing.md
