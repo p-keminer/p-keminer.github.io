@@ -1414,7 +1414,7 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
     snapshot.startFlow.currentRoomFocusTarget === 'webEmbed'
       ? `<div class="web-embed-overlay">
            <iframe src="/portfolio/index.html" title="Portfolio" allowfullscreen></iframe>
-           <div class="web-embed-nav">
+           <div class="web-embed-nav web-embed-nav--portfolio">
              <button class="web-embed-nav__btn" data-control="back-from-web-embed" type="button">Zurück</button>
              <button class="web-embed-nav__btn" data-control="return-to-menu-from-focus" type="button">Zum Hauptmenü</button>
            </div>

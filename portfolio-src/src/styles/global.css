@@ -203,6 +203,13 @@ body {
   }
 }
 
+@media (max-width: 900px) and (pointer: coarse) {
+  .portfolio-app[data-minigame-open="true"] .cards-toggle-btn,
+  .portfolio-app[data-minigame-open="true"] .chiptune-btn {
+    display: none !important;
+  }
+}
+
 /* ── Aurora drifts ── */
 @keyframes aurora-drift {
   0%   { transform: translate(0px, 0px) scale(1);      opacity: 0.6; }

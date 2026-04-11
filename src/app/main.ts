@@ -8,6 +8,29 @@ interface TestableWindow extends Window {
 }
 
 const rootElement = document.querySelector<HTMLDivElement>('#app');
+const PORTFOLIO_MINIGAME_ACTIVE_CLASS = 'portfolio-minigame-active';
+
+function setPortfolioMinigameActive(active: boolean): void {
+  document.body.classList.toggle(PORTFOLIO_MINIGAME_ACTIVE_CLASS, active);
+}
+
+function handlePortfolioMessage(event: MessageEvent): void {
+  if (event.origin !== window.location.origin) {
+    return;
+  }
+
+  const data = event.data;
+  if (
+    !data ||
+    typeof data !== 'object' ||
+    data.source !== 'portfolio-app' ||
+    data.type !== 'portfolio:minigame-visibility'
+  ) {
+    return;
+  }
+
+  setPortfolioMinigameActive(Boolean(data.hideShellControls));
+}
 
 if (!rootElement) {
   throw new Error('Missing #app root element.');
@@ -70,6 +93,8 @@ const hideIntroOverlay = typeof document !== 'undefined' ? createIntroOverlay() 
 
 // ── App boot ──────────────────────────────────────────────────────────────────
 
+window.addEventListener('message', handlePortfolioMessage);
+
 function boot(): void {
   app?.destroy();
   app = mountGame(appRoot);
@@ -99,6 +124,8 @@ app!.assetsReady.then(hideIntroOverlay);
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     app?.destroy();
+    window.removeEventListener('message', handlePortfolioMessage);
+    setPortfolioMinigameActive(false);
 
     const testWindow = window as TestableWindow;
     delete testWindow.advanceTime;

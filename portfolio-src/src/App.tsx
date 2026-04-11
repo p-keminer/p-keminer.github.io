@@ -342,9 +342,56 @@ export default function App() {
   const [isWeldSolderOpen, setIsWeldSolderOpen] = useState(false);
   const [isWeldSolderDone, setIsWeldSolderDone] = useState(false);
   const [isCheatSuiteOpen, setIsCheatSuiteOpen] = useState(false);
+  const isAnyMinigameOpen =
+    isLaserRescueOpen ||
+    isInspectorLatchOpen ||
+    isSha256Open ||
+    isWifiOpen ||
+    isFlugbahnOpen ||
+    isGreifarmOpen ||
+    isWeldSolderOpen ||
+    isCheatSuiteOpen;
+
+  useEffect(() => {
+    if (typeof window === "undefined" || window.parent === window) {
+      return;
+    }
+
+    const handsetQuery = window.matchMedia("(max-width: 900px) and (pointer: coarse)");
+
+    const notifyParent = () => {
+      window.parent.postMessage(
+        {
+          source: "portfolio-app",
+          type: "portfolio:minigame-visibility",
+          hideShellControls: isAnyMinigameOpen && handsetQuery.matches,
+        },
+        window.location.origin,
+      );
+    };
+
+    notifyParent();
+
+    const handleViewportChange = () => notifyParent();
+    handsetQuery.addEventListener("change", handleViewportChange);
+
+    return () => {
+      window.parent.postMessage(
+        {
+          source: "portfolio-app",
+          type: "portfolio:minigame-visibility",
+          hideShellControls: false,
+        },
+        window.location.origin,
+      );
+      handsetQuery.removeEventListener("change", handleViewportChange);
+    };
+  }, [isAnyMinigameOpen]);
 
   return (
     <div
+      className="portfolio-app"
+      data-minigame-open={isAnyMinigameOpen ? "true" : "false"}
       style={{
         minHeight: "100vh",
         display: "flex",
