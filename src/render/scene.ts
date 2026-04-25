@@ -371,6 +371,97 @@ const PICTURE_FRAME_ANCHORS: ReadonlyArray<{ id: string; anchor: THREE.Vector3; 
   { id: 'frame7', anchor: new THREE.Vector3(-28.4, 3.2, -4.05), label: 'Zertifikat' }
 ];
 
+function createSemesterOneFrameTexture(renderer: THREE.WebGLRenderer): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 640;
+  canvas.height = 900;
+
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    const background = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    background.addColorStop(0, '#151515');
+    background.addColorStop(1, '#050505');
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const labelCenterX = canvas.width / 2 - 94;
+    const labelOffsetY = -84;
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '800 54px Segoe UI, sans-serif';
+    ctx.fillText('SEMESTER', labelCenterX, 424 + labelOffsetY);
+    ctx.font = '800 78px Segoe UI, sans-serif';
+    ctx.fillText('1', labelCenterX, 528 + labelOffsetY);
+
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.flipY = false;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy());
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function attachSemesterOneFrameTexture(roomRoot: THREE.Object3D, texture: THREE.CanvasTexture): void {
+  const frameMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      baseColor: { value: new THREE.Color('#050505') },
+      frameMap: { value: texture },
+      yMax: { value: 5.98 },
+      yMin: { value: 4.42 },
+      zMax: { value: -4.10 },
+      zMin: { value: -5.60 }
+    },
+    vertexShader: `
+      varying vec3 vLocalPosition;
+
+      void main() {
+        vLocalPosition = position;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 baseColor;
+      uniform sampler2D frameMap;
+      uniform float yMax;
+      uniform float yMin;
+      uniform float zMax;
+      uniform float zMin;
+      varying vec3 vLocalPosition;
+
+      void main() {
+        float inside =
+          step(yMin, vLocalPosition.y) *
+          step(vLocalPosition.y, yMax) *
+          step(zMin, vLocalPosition.z) *
+          step(vLocalPosition.z, zMax);
+
+        vec2 uv = vec2(
+          1.0 - ((vLocalPosition.z - zMin) / (zMax - zMin)),
+          1.0 - ((vLocalPosition.y - yMin) / (yMax - yMin))
+        );
+        vec4 mapped = texture2D(frameMap, clamp(uv, 0.0, 1.0));
+        vec3 color = mix(baseColor, mapped.rgb, inside);
+
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `,
+    side: THREE.DoubleSide,
+    toneMapped: false
+  });
+
+  roomRoot.traverse((node) => {
+    if (!(node instanceof THREE.Mesh)) return;
+    if (node.name !== 'merged_cert_mat_back') return;
+    node.material = frameMaterial;
+  });
+}
+
 export function createBoardPreviewScene({
   container,
   onStateChange,
@@ -1163,6 +1254,7 @@ function createStageScene(
   scene.add(lights.group);
   scene.add(board.group);
   scene.add(pieceLayer.group);
+  const semesterOnePreviewTexture = createSemesterOneFrameTexture(renderer);
 
   // PMREM Umwelt-Kartierung auf metallische Oberflächen anwenden.
   // Niedriges Sigma (0.04) behält scharfe Reflexionen auf polierten Oberflächen.
@@ -1208,6 +1300,7 @@ function createStageScene(
         }
       });
       cctvScreen.attach(roomGroup);
+      attachSemesterOneFrameTexture(roomGroup, semesterOnePreviewTexture);
       renderer.shadowMap.needsUpdate = true;
       onDirty?.();
       onStateChange?.();
@@ -1286,4 +1379,3 @@ function swingLerpCameraPreset(from: CameraPreset, to: CameraPreset, t: number):
     }
   };
 }
-

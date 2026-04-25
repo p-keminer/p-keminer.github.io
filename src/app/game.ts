@@ -1392,11 +1392,27 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
     frame0: 1, frame2: 2, frame3: 3, frame4: 4,
     frame1: 5, frame5: 6, frame6: 7, frame7: 8
   };
+  const FRAME_DOCUMENTS: Record<string, { alt: string; src: string; title: string }> = {
+    frame0: {
+      alt: 'Notenspiegel Semester 1',
+      src: '/assets/leistungsnachweise/notenspiegel-semester-1.png',
+      title: 'Notenspiegel Semester 1'
+    }
+  };
   const pictureFrameDetailOverlay =
     !snapshot.startFlow.roomFocusTransitionActive &&
     snapshot.startFlow.currentRoomFocusTarget === 'pictureFrameDetail'
       ? (() => {
           const semester = FRAME_SEMESTER[snapshot.startFlow.activePictureFrameDetailId] ?? '?';
+          const document = FRAME_DOCUMENTS[snapshot.startFlow.activePictureFrameDetailId];
+          if (document) {
+            return `
+            <div class="document-viewer-overlay">
+              <div class="document-viewer-shell" role="dialog" aria-label="${document.title}">
+                <img class="document-viewer-image" src="${document.src}" alt="${document.alt}" loading="eager" decoding="async" />
+              </div>
+            </div>`;
+          }
           return `
             <div class="frame-detail-overlay">
               <p class="frame-detail-semester">Semester ${semester}</p>
@@ -1431,8 +1447,6 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
             ariaLabel: string;
             channel: string;
             cta: string;
-            description: string;
-            guideLabel: string;
             meta: string;
             playControl: string;
             posterSrc: string;
@@ -1443,8 +1457,6 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
               ariaLabel: 'Ueber mich abspielen',
               channel: 'CH 01 - Persoenlich',
               cta: 'Jetzt ansehen',
-              description: 'Ein stilisierter Blick auf Stationen, Entscheidungen und Wendepunkte meines Weges.',
-              guideLabel: 'CH 01 Ueber mich',
               meta: 'Comic-Flow - 10 Szenen - ca. 3 Min.',
               playControl: 'select-comic-from-tv',
               posterSrc: '/comic-film/cover.webp',
@@ -1455,8 +1467,6 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
               ariaLabel: 'KI-Trailer abspielen',
               channel: 'CH 02 - Genre',
               cta: 'Trailer starten',
-              description: 'Dunkle Trailer-Energie mit synthetischer Bildsprache, Suspense und schnellem Schnitt.',
-              guideLabel: 'CH 02 KI-Trailer',
               meta: 'Horror-Trailer - 1:36 Min. - Cinematic',
               playControl: 'select-horror-from-tv',
               posterSrc: '/horror-film/cover.webp',
@@ -1485,7 +1495,6 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
                   <span class="tv-select-card__channel">${program.channel}</span>
                   <span class="tv-select-card__title">${program.title}</span>
                   <span class="tv-select-card__meta">${program.meta}</span>
-                  <span class="tv-select-card__description">${program.description}</span>
                   <span class="tv-select-card__cta">${isActive ? program.cta : 'Zum Kanal'}</span>
                 </span>
               </button>`;
@@ -1497,7 +1506,6 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
             </div>
             <div class="tv-select-shell">
               <div class="tv-select-header">
-                <p class="tv-select-kicker">TV Senderauswahl</p>
                 <h2 class="tv-select-title">Heute im Showcase</h2>
               </div>
               <div class="tv-select-track" aria-label="Programmauswahl">
@@ -1505,11 +1513,6 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
                   ${renderTvCard(activeProgram, 'active')}
                   ${renderTvCard(standbyProgram, 'standby')}
                 </div>
-              </div>
-              <div class="tv-select-guide" aria-label="Senderliste">
-
-                <button class="tv-select-guide__pill ${activeId === 'comic' ? 'is-active' : ''}" data-control="activate-comic-from-tv" type="button" ${activeId === 'comic' ? 'disabled' : ''}>${tvPrograms.comic.guideLabel}</button>
-                <button class="tv-select-guide__pill ${activeId === 'horror' ? 'is-active' : ''}" data-control="activate-horror-from-tv" type="button" ${activeId === 'horror' ? 'disabled' : ''}>${tvPrograms.horror.guideLabel}</button>
               </div>
             </div>
             <div class="web-embed-nav">

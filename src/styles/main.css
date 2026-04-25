@@ -511,12 +511,12 @@ select {
   border-radius: 3px;
   box-shadow: none;
   cursor: pointer;
-  height: 182px;
+  height: 132px;
   pointer-events: auto;
   position: absolute;
-  transform: translate(calc(-50% - 16px), calc(-50% + 36px));
+  transform: translate(calc(-50% - 16px), calc(-50% + 24px));
   transition: border-color 180ms ease, box-shadow 180ms ease;
-  width: 112px;
+  width: 90px;
 }
 
 /* hover highlight intentionally removed — frames navigate silently */
@@ -550,6 +550,44 @@ select {
   color: rgba(220, 245, 255, 0.55);
   font: 400 13px / 1.6 'Segoe UI', system-ui, sans-serif;
   margin: 0;
+}
+
+.document-viewer-overlay {
+  align-items: flex-start;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(50, 86, 96, 0.18), transparent 42%),
+    rgba(3, 6, 9, 0.94);
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  left: 0;
+  overflow: auto;
+  padding: 34px clamp(12px, 2vw, 30px) 92px;
+  pointer-events: auto;
+  position: fixed;
+  right: 0;
+  top: 64px;
+  z-index: 18;
+}
+
+.document-viewer-shell {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(1160px, 98vw);
+  width: 100%;
+}
+
+.document-viewer-image {
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 24px 90px rgba(0, 0, 0, 0.48);
+  display: block;
+  height: auto;
+  max-width: none;
+  object-fit: contain;
+  width: min(1120px, calc(100vw - 40px));
 }
 
 /* ── Canvas HUD Controls ──────────────────────────────────────────────── */
@@ -694,6 +732,14 @@ body.portfolio-minigame-active .web-embed-nav--portfolio {
   -webkit-backdrop-filter: blur(12px);
 }
 
+.web-embed-nav--portfolio .web-embed-nav__btn {
+  height: 32px;
+  min-height: 0;
+  padding: 0 14px;
+  font-size: 0.64rem;
+  line-height: 1;
+}
+
 .web-embed-nav__btn:hover,
 .web-embed-nav__btn:focus-visible {
   background: rgba(14, 19, 34, 0.92);
@@ -797,7 +843,7 @@ body.portfolio-minigame-active .web-embed-nav--portfolio {
 }
 
 .tv-select-overlay::after {
-  content: '';
+  content: none;
   position: absolute;
   inset: 22px;
   border: 1px solid rgba(190, 214, 255, 0.1);
@@ -977,6 +1023,34 @@ body.portfolio-minigame-active .web-embed-nav--portfolio {
   filter: saturate(0.96) brightness(0.98);
 }
 
+@media (min-width: 921px) {
+  .tv-select-shell {
+    grid-template-areas: 'header track';
+    align-content: center;
+    align-items: center;
+    padding-top: clamp(72px, 8vh, 108px);
+    padding-bottom: clamp(74px, 8vh, 112px);
+  }
+
+  .tv-select-header {
+    padding-top: 0;
+    margin-top: 0;
+    transform: translateY(-42px);
+  }
+
+  .tv-select-track {
+    padding-top: 0;
+  }
+
+  .tv-select-carousel {
+    margin-top: 0;
+  }
+
+  .tv-select-card--standby {
+    right: 68px;
+  }
+}
+
 .tv-select-card__poster {
   position: absolute;
   inset: 0;
@@ -1045,6 +1119,24 @@ body.portfolio-minigame-active .web-embed-nav--portfolio {
   background: linear-gradient(135deg, rgba(96, 154, 255, 0.24), rgba(255, 255, 255, 0.12));
 }
 
+.tv-select-card--standby .tv-select-card__channel {
+  font-size: 0.56rem;
+  letter-spacing: 0.14em;
+}
+
+.tv-select-card--standby .tv-select-card__title {
+  font-size: clamp(1rem, 1.25vw, 1.36rem);
+}
+
+.tv-select-card--standby .tv-select-card__meta {
+  font-size: 0.62rem;
+}
+
+.tv-select-card--standby .tv-select-card__cta {
+  padding: 8px 10px;
+  font-size: 0.58rem;
+}
+
 .tv-select-guide {
   grid-area: guide;
   display: flex;
@@ -1088,6 +1180,11 @@ body.portfolio-minigame-active .web-embed-nav--portfolio {
 }
 
 .tv-select-overlay .web-embed-nav__btn {
+  height: 32px;
+  min-height: 0;
+  padding: 0 14px;
+  font-size: 0.64rem;
+  line-height: 1;
   background: rgba(8, 12, 22, 0.72);
   border-color: rgba(173, 198, 255, 0.18);
   color: rgba(238, 244, 255, 0.86);
