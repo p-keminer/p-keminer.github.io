@@ -44,9 +44,9 @@ const DATENSCHUTZ_TEXT = `
 <h3>Schriften, Styles und eingebettete Medien</h3>
 <p>
   Die auf dieser Website verwendeten Schriftdateien, Stylesheets, Bilder und Videos
-  werden zusammen mit der Website über GitHub Pages ausgeliefert. Für die TV-Auswahl,
-  den Comic-Bereich und den KI-Trailer werden keine externen Video-Plattformen,
-  Font-CDNs oder Analyse-Dienste eingebunden. Ausgenommen hiervon ist ausschließlich
+  werden zusammen mit der Website über GitHub Pages ausgeliefert. Für den
+  Über-mich-Film und optionale lokale Trailer-Bereiche werden keine externen
+  Video-Plattformen, Font-CDNs oder Analyse-Dienste eingebunden. Ausgenommen hiervon ist ausschließlich
   die nachfolgend beschriebene technische Einbindung des Draco-Decoders im 3D-Bereich.
 </p>
 

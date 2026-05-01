@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import type { BoardSquare, ChessPieceColor, ChessPieceState, ChessPieceType } from '../chess/state';
+import { ENABLE_TV_SHOWCASE } from '../config/feature-flags';
 import { createChessboard, type ChessboardMesh } from './board';
 import {
   createBoardCameraControls,
@@ -331,9 +332,9 @@ const ROOM_HOTSPOT_DEFINITIONS: ReadonlyArray<{
   },
   {
     anchor: new THREE.Vector3(0, 9.5, -4),
-    focusTarget: 'tvSelect',
-    id: 'tvSelect',
-    label: 'TV'
+    focusTarget: ENABLE_TV_SHOWCASE ? 'tvSelect' : 'comicEmbed',
+    id: ENABLE_TV_SHOWCASE ? 'tvSelect' : 'comicEmbed',
+    label: ENABLE_TV_SHOWCASE ? 'TV' : 'Über mich'
   },
   {
     anchor: new THREE.Vector3(-15.5, 5.22, 2.29),

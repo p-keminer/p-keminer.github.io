@@ -600,20 +600,6 @@
     SCENE_OVERLAYS[0] = function(ctx, progress, w, h) {
       var s = Math.min(w / 800, h / 500);
 
-      // ── Caption box: 1s–4s (progress 0.071–0.283), fade in/out ──
-      if (progress >= 0.071 && progress <= 0.283) {
-        var a = 1;
-        if (progress < 0.1) a = (progress - 0.071) / 0.029;
-        else if (progress > 0.25) a = 1 - (progress - 0.25) / 0.033;
-        a = Math.max(0, Math.min(1, a));
-
-        ctx.save();
-        ctx.globalAlpha = a;
-        drawCaptionBox(ctx, w * 0.03, h * 0.05, '  Der Spielzeugladen -  \n  wo alles begann  ', s);
-        ctx.globalAlpha = 1;
-        ctx.restore();
-      }
-
       // ── Thought bubble: 3.5s–7s (progress 0.248–0.496) ──
       if (progress >= 0.248 && progress <= 0.496) {
         var alpha = 1;
@@ -648,24 +634,24 @@
     SCENE_OVERLAYS[1] = function(ctx, progress, w, h) {
       var s = Math.min(w / 800, h / 500);
 
-      // ── First thought bubble: 0–2s (progress 0–0.16), fade in/out within ──
-      if (progress <= 0.16) {
+      // ── First thought bubble: before the decision bubble, with full fade out ──
+      if (progress >= 0.465 && progress <= 0.725) {
         var a = 1;
-        if (progress < 0.04) a = progress / 0.04;
-        else if (progress > 0.12) a = 1 - (progress - 0.12) / 0.04;
+        if (progress < 0.505) a = (progress - 0.465) / 0.04;
+        else if (progress > 0.665) a = 1 - (progress - 0.665) / 0.06;
         a = Math.max(0, Math.min(1, a));
 
         ctx.save();
         ctx.globalAlpha = a;
-        drawThoughtBubble(ctx, w * 0.15, h * 0.22, 'Bis heute habe ich diesen\nRoboter nicht bekommen..', s * 0.75);
+        drawThoughtBubble(ctx, w * 0.32, h * 0.22, 'Bis heute habe ich diesen\nRoboter nicht bekommen..', s * 0.75);
         ctx.globalAlpha = 1;
         ctx.restore();
       }
 
-      // ── Thought bubble: 8s–end (progress 0.66–1.0) ──
-      if (progress >= 0.66) {
+      // ── Thought bubble: delayed 1s after the first timing pass ──
+      if (progress >= 0.739) {
         var alpha = 1;
-        if (progress < 0.70) alpha = (progress - 0.66) / 0.04;
+        if (progress < 0.779) alpha = (progress - 0.739) / 0.04;
         alpha = Math.max(0, Math.min(1, alpha));
 
         ctx.save();
@@ -1053,9 +1039,29 @@ berechtigung!`, s * 0.42, 'bottom-left-tight');
       9: 'szene10.mp4',
     };
 
+    var SCENE_VIDEO_START_TIMES = {
+      1: 0.5,
+    };
+
     // Loaded <video> elements keyed by scene index
     var videoElements = {};
     var activeVideoIndex = -1;
+
+    function getSceneVideoStartTime(sceneIndex) {
+      return SCENE_VIDEO_START_TIMES[sceneIndex] || 0;
+    }
+
+    function seekSceneVideoToStart(video, sceneIndex) {
+      var startTime = getSceneVideoStartTime(sceneIndex);
+
+      try {
+        video.currentTime = startTime;
+      } catch {
+        video.addEventListener('loadedmetadata', function() {
+          video.currentTime = startTime;
+        }, { once: true });
+      }
+    }
 
     function createSceneVideo(sceneIndex, preloadMode) {
       var idx = String(sceneIndex);
@@ -1163,13 +1169,13 @@ berechtigung!`, s * 0.42, 'bottom-left-tight');
       Object.keys(videoElements).forEach(function(k) {
         if (k !== idx) {
           videoElements[k].pause();
-          videoElements[k].currentTime = 0;
+          seekSceneVideoToStart(videoElements[k], Number(k));
         }
       });
       // Play the target video from start
       var v = ensureSceneVideo(sceneIndex, 'auto');
       if (v) {
-        v.currentTime = 0;
+        seekSceneVideoToStart(v, sceneIndex);
         v.play().catch(function() {}); // autoplay might need user gesture
         activeVideoIndex = sceneIndex;
       }

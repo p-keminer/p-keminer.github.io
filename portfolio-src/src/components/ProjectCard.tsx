@@ -8,8 +8,10 @@ const GLOW: Record<string, { strong: string; soft: string; line: string; led: st
   robotics: { strong: "rgba(50, 220, 190, 0.36)",  soft: "rgba(50, 220, 190, 0.11)",  line: "rgba(60, 225, 195, 0.7)",  led: "#34d399" },
   education:{ strong: "rgba(232, 84, 107, 0.36)",  soft: "rgba(232, 84, 107, 0.11)",  line: "rgba(245, 118, 138, 0.7)", led: "#fca5a5" },
   thesis:   { strong: "rgba(76, 212, 164, 0.34)",  soft: "rgba(76, 212, 164, 0.11)",  line: "rgba(110, 235, 191, 0.72)", led: "#6ee7b7" },
-  organizer:{ strong: "rgba(96, 165, 250, 0.34)",  soft: "rgba(96, 165, 250, 0.11)",  line: "rgba(147, 197, 253, 0.72)", led: "#93c5fd" },
+  organizer:{ strong: "rgba(244, 114, 182, 0.34)", soft: "rgba(244, 114, 182, 0.12)", line: "rgba(251, 146, 203, 0.7)", led: "#f472b6" },
   portfolio:{ strong: "rgba(245, 158, 11, 0.36)",  soft: "rgba(245, 158, 11, 0.11)",  line: "rgba(251, 191, 36, 0.7)",  led: "#fbbf24" },
+  irremote: { strong: "rgba(244, 114, 182, 0.34)", soft: "rgba(244, 114, 182, 0.12)", line: "rgba(251, 146, 203, 0.7)", led: "#f472b6" },
+  english:  { strong: "rgba(96, 165, 250, 0.34)",  soft: "rgba(96, 165, 250, 0.12)",  line: "rgba(125, 211, 252, 0.72)", led: "#7dd3fc" },
 };
 
 function LogicCover() {
@@ -239,14 +241,18 @@ function ThesisCover() {
         <line x1="72" y1="98" x2="120" y2="98" stroke="#6ee7b7" strokeWidth="1.6" strokeLinecap="round" strokeOpacity="0.85" />
         <line x1="72" y1="114" x2="112" y2="114" stroke="#6ee7b7" strokeWidth="1.6" strokeLinecap="round" strokeOpacity="0.72" />
         <line x1="138" y1="110" x2="186" y2="110" stroke="#6ee7b7" strokeWidth="1.2" strokeDasharray="4 4" strokeOpacity="0.48" />
-        <path d="M192 116 L202 126 L220 106" fill="none" stroke="#a7f3d0" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
-        <line x1="224" y1="110" x2="272" y2="110" stroke="#6ee7b7" strokeWidth="1.2" strokeDasharray="4 4" strokeOpacity="0.42" />
-        <path d="M268 62 Q289 52 310 62 L310 158 Q289 148 268 158 Z" fill="rgba(110,231,183,0.08)" stroke="#6ee7b7" strokeWidth="1.25" strokeOpacity="0.72" />
-        <path d="M310 62 Q331 52 352 62 L352 158 Q331 148 310 158 Z" fill="rgba(110,231,183,0.14)" stroke="#a7f3d0" strokeWidth="1.25" strokeOpacity="0.78" />
-        <line x1="287" y1="86" x2="332" y2="86" stroke="#d1fae5" strokeWidth="1.2" strokeLinecap="round" />
-        <line x1="287" y1="98" x2="332" y2="98" stroke="#6ee7b7" strokeWidth="1.05" strokeLinecap="round" strokeOpacity="0.68" />
-        <line x1="287" y1="110" x2="332" y2="110" stroke="#6ee7b7" strokeWidth="1.05" strokeLinecap="round" strokeOpacity="0.58" />
-        <text x="310" y="136" fontFamily="JetBrains Mono, monospace" fontSize="6.6" fill="#d1fae5" textAnchor="middle" letterSpacing="1.3">THESIS</text>
+        <line x1="224" y1="108" x2="270" y2="108" stroke="#6ee7b7" strokeWidth="1.2" strokeDasharray="4 4" strokeOpacity="0.42" />
+        <circle cx="204" cy="108" r="15" fill="rgba(110,231,183,0.05)" stroke="#a7f3d0" strokeWidth="1.45" strokeOpacity="0.82" />
+        <path d="M197 108 L202 113 L213 101" fill="none" stroke="#a7f3d0" strokeWidth="2.35" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M262 56 Q287 45 312 56 L312 166 Q287 154 262 166 Z" fill="rgba(110,231,183,0.08)" stroke="#6ee7b7" strokeWidth="1.25" strokeOpacity="0.72" />
+        <path d="M312 56 Q337 45 362 56 L362 166 Q337 154 312 166 Z" fill="rgba(110,231,183,0.14)" stroke="#a7f3d0" strokeWidth="1.25" strokeOpacity="0.78" />
+        <line x1="275" y1="84" x2="301" y2="84" stroke="#d1fae5" strokeWidth="1.2" strokeLinecap="round" />
+        <line x1="275" y1="96" x2="299" y2="96" stroke="#6ee7b7" strokeWidth="1.05" strokeLinecap="round" strokeOpacity="0.68" />
+        <line x1="275" y1="108" x2="298" y2="108" stroke="#6ee7b7" strokeWidth="1.05" strokeLinecap="round" strokeOpacity="0.58" />
+        <line x1="323" y1="84" x2="349" y2="84" stroke="#d1fae5" strokeWidth="1.2" strokeLinecap="round" />
+        <line x1="323" y1="96" x2="347" y2="96" stroke="#6ee7b7" strokeWidth="1.05" strokeLinecap="round" strokeOpacity="0.68" />
+        <line x1="323" y1="108" x2="346" y2="108" stroke="#6ee7b7" strokeWidth="1.05" strokeLinecap="round" strokeOpacity="0.58" />
+        <text x="288" y="135" fontFamily="JetBrains Mono, monospace" fontSize="6.4" fill="#d1fae5" textAnchor="middle" letterSpacing="1.1">THESIS</text>
       </g>
       <rect width="400" height="30" fill="rgba(8,24,20,0.26)" />
       <text x="18" y="20" fontFamily="JetBrains Mono, monospace" fontSize="10" fill="#d1fae5" letterSpacing="2">TECHTHESIS NAVIGATOR</text>
@@ -259,8 +265,8 @@ function OrganizerCover() {
     <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%", display: "block" }}>
       <defs>
         <linearGradient id="org-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#0a1224" />
-          <stop offset="100%" stopColor="#0d1f36" />
+          <stop offset="0%" stopColor="#190a16" />
+          <stop offset="100%" stopColor="#2a1021" />
         </linearGradient>
         <filter id="org-glow">
           <feGaussianBlur stdDeviation="3" result="coloredBlur" />
@@ -269,25 +275,25 @@ function OrganizerCover() {
       </defs>
       <rect width="400" height="220" fill="url(#org-bg)" />
       {[70, 110, 150].map((y, i) => (
-        <line key={i} x1="38" y1={y} x2="362" y2={y} stroke="#29466d" strokeWidth="0.8" strokeOpacity={0.26 + i * 0.08} />
+        <line key={i} x1="38" y1={y} x2="362" y2={y} stroke="#6b214f" strokeWidth="0.8" strokeOpacity={0.26 + i * 0.08} />
       ))}
       {[94, 146, 198, 250, 302].map((x, i) => (
-        <line key={`v${i}`} x1={x} y1="44" x2={x} y2="190" stroke="#29466d" strokeWidth="0.75" strokeOpacity={0.16 + i * 0.05} />
+        <line key={`v${i}`} x1={x} y1="44" x2={x} y2="190" stroke="#6b214f" strokeWidth="0.75" strokeOpacity={0.16 + i * 0.05} />
       ))}
       <g filter="url(#org-glow)">
-        <rect x="60" y="58" width="120" height="94" rx="12" fill="rgba(147,197,253,0.08)" stroke="#93c5fd" strokeWidth="1.3" strokeOpacity="0.75" />
-        <rect x="78" y="78" width="84" height="12" rx="5" fill="rgba(147,197,253,0.18)" />
-        <rect x="78" y="98" width="56" height="8" rx="4" fill="rgba(147,197,253,0.16)" />
-        <rect x="78" y="112" width="72" height="8" rx="4" fill="rgba(96,165,250,0.15)" />
-        <rect x="226" y="62" width="108" height="118" rx="10" fill="rgba(147,197,253,0.06)" stroke="#60a5fa" strokeWidth="1.2" strokeOpacity="0.68" />
+        <rect x="60" y="58" width="120" height="94" rx="12" fill="rgba(251,207,232,0.08)" stroke="#f9a8d4" strokeWidth="1.3" strokeOpacity="0.75" />
+        <rect x="78" y="78" width="84" height="12" rx="5" fill="rgba(251,207,232,0.18)" />
+        <rect x="78" y="98" width="56" height="8" rx="4" fill="rgba(251,207,232,0.16)" />
+        <rect x="78" y="112" width="72" height="8" rx="4" fill="rgba(244,114,182,0.15)" />
+        <rect x="226" y="62" width="108" height="118" rx="10" fill="rgba(251,207,232,0.06)" stroke="#f9a8d4" strokeWidth="1.2" strokeOpacity="0.68" />
         {[0,1,2].map((row) => (
           [0,1,2].map((col) => (
-            <rect key={`${row}-${col}`} x={244 + col * 24} y={84 + row * 24} width="16" height="16" rx="3" fill={row === 1 && col === 1 ? 'rgba(110,231,183,0.28)' : 'rgba(147,197,253,0.12)'} stroke="rgba(147,197,253,0.24)" strokeWidth="0.6" />
+            <rect key={`${row}-${col}`} x={244 + col * 24} y={84 + row * 24} width="16" height="16" rx="3" fill={row === 1 && col === 1 ? 'rgba(251,113,133,0.28)' : 'rgba(244,114,182,0.12)'} stroke="rgba(249,168,212,0.24)" strokeWidth="0.6" />
           ))
         ))}
       </g>
-      <rect width="400" height="30" fill="rgba(10,18,36,0.28)" />
-      <text x="18" y="20" fontFamily="JetBrains Mono, monospace" fontSize="10" fill="#dbeafe" letterSpacing="2">STUDIENORGANISATOR</text>
+      <rect width="400" height="30" fill="rgba(36,8,28,0.3)" />
+      <text x="18" y="20" fontFamily="JetBrains Mono, monospace" fontSize="10" fill="#fce7f3" letterSpacing="2">STUDIENORGANISATOR</text>
     </svg>
   );
 }
@@ -338,6 +344,102 @@ function PortfolioCover() {
   );
 }
 
+function IrRemoteCover() {
+  return (
+    <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%", display: "block" }}>
+      <defs>
+        <linearGradient id="ir-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#190a16" />
+          <stop offset="100%" stopColor="#2a1021" />
+        </linearGradient>
+        <linearGradient id="ir-remote" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="rgba(251,146,203,0.18)" />
+          <stop offset="100%" stopColor="rgba(244,114,182,0.05)" />
+        </linearGradient>
+        <filter id="ir-glow">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+          <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      <rect width="400" height="220" fill="url(#ir-bg)" />
+      {[56, 94, 132, 170].map((y, i) => (
+        <line key={i} x1="42" y1={y} x2="358" y2={y} stroke="#6b214f" strokeWidth="0.8" strokeOpacity={0.16 + i * 0.05} />
+      ))}
+      {[82, 140, 198, 256, 314].map((x, i) => (
+        <line key={`v${i}`} x1={x} y1="34" x2={x} y2="188" stroke="#6b214f" strokeWidth="0.7" strokeOpacity={0.08 + i * 0.04} />
+      ))}
+      <g filter="url(#ir-glow)">
+        <rect x="76" y="68" width="78" height="118" rx="16" fill="url(#ir-remote)" stroke="#f9a8d4" strokeWidth="1.5" strokeOpacity="0.82" />
+        <circle cx="115" cy="86" r="7" fill="rgba(244,114,182,0.22)" stroke="#fbcfe8" strokeWidth="1.2" />
+        <rect x="96" y="102" width="38" height="18" rx="5" fill="rgba(251,207,232,0.12)" stroke="#fbcfe8" strokeWidth="1" strokeOpacity="0.72" />
+        {[0, 1, 2].map((row) => (
+          [0, 1].map((col) => (
+            <circle
+              key={`${row}-${col}`}
+              cx={103 + col * 24}
+              cy={136 + row * 16}
+              r="5"
+              fill="rgba(244,114,182,0.18)"
+              stroke="#f9a8d4"
+              strokeWidth="0.9"
+              strokeOpacity="0.72"
+            />
+          ))
+        ))}
+        <rect x="214" y="72" width="106" height="68" rx="10" fill="rgba(251,207,232,0.08)" stroke="#f9a8d4" strokeWidth="1.3" strokeOpacity="0.74" />
+        <rect x="230" y="90" width="74" height="22" rx="5" fill="rgba(244,114,182,0.16)" stroke="#fbcfe8" strokeWidth="1" strokeOpacity="0.66" />
+        <line x1="214" y1="156" x2="320" y2="156" stroke="#f9a8d4" strokeWidth="1.1" strokeOpacity="0.55" />
+        <line x1="214" y1="170" x2="296" y2="170" stroke="#f9a8d4" strokeWidth="1.1" strokeOpacity="0.38" />
+        <path d="M160 92 Q188 70 216 82" fill="none" stroke="#f9a8d4" strokeWidth="2.1" strokeLinecap="round" strokeOpacity="0.82" />
+        <path d="M168 106 Q194 92 220 100" fill="none" stroke="#fbcfe8" strokeWidth="1.6" strokeLinecap="round" strokeOpacity="0.72" />
+        <path d="M175 120 Q197 112 220 116" fill="none" stroke="#fdf2f8" strokeWidth="1.3" strokeLinecap="round" strokeOpacity="0.66" />
+      </g>
+      <rect width="400" height="30" fill="rgba(36,8,28,0.3)" />
+      <text x="18" y="20" fontFamily="JetBrains Mono, monospace" fontSize="10" fill="#fce7f3" letterSpacing="2">UNIVERSAL IR REMOTE</text>
+    </svg>
+  );
+}
+
+function EnglishAppCover() {
+  return (
+    <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%", display: "block" }}>
+      <defs>
+        <linearGradient id="eng-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#071425" />
+          <stop offset="100%" stopColor="#0c1f39" />
+        </linearGradient>
+        <linearGradient id="eng-screen" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="rgba(125,211,252,0.2)" />
+          <stop offset="100%" stopColor="rgba(96,165,250,0.06)" />
+        </linearGradient>
+        <filter id="eng-glow">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+          <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      <rect width="400" height="220" fill="url(#eng-bg)" />
+      {[50, 84, 118, 152, 186].map((y, i) => (
+        <line key={i} x1="36" y1={y} x2="364" y2={y} stroke="#1d4f7f" strokeWidth="0.8" strokeOpacity={0.14 + i * 0.04} />
+      ))}
+      <g filter="url(#eng-glow)">
+        <rect x="58" y="56" width="120" height="110" rx="12" fill="rgba(125,211,252,0.06)" stroke="#7dd3fc" strokeWidth="1.3" strokeOpacity="0.78" />
+        <path d="M74 84 Q96 70 118 84 L118 146 Q96 132 74 146 Z" fill="rgba(125,211,252,0.2)" stroke="#bae6fd" strokeWidth="1.1" strokeOpacity="0.85" />
+        <path d="M118 84 Q140 70 162 84 L162 146 Q140 132 118 146 Z" fill="rgba(96,165,250,0.15)" stroke="#93c5fd" strokeWidth="1.1" strokeOpacity="0.72" />
+        <line x1="118" y1="84" x2="118" y2="146" stroke="#e0f2fe" strokeWidth="1" strokeOpacity="0.82" />
+        <line x1="84" y1="98" x2="108" y2="98" stroke="#e0f2fe" strokeWidth="1.4" strokeLinecap="round" />
+        <line x1="84" y1="110" x2="106" y2="110" stroke="#7dd3fc" strokeWidth="1.1" strokeLinecap="round" strokeOpacity="0.82" />
+        <line x1="128" y1="98" x2="152" y2="98" stroke="#e0f2fe" strokeWidth="1.4" strokeLinecap="round" />
+        <line x1="128" y1="110" x2="148" y2="110" stroke="#7dd3fc" strokeWidth="1.1" strokeLinecap="round" strokeOpacity="0.82" />
+        <path d="M224 70 H304 Q320 70 320 86 V124 Q320 140 304 140 H252 L226 158 V140 H224 Q208 140 208 124 V86 Q208 70 224 70 Z" fill="url(#eng-screen)" stroke="#7dd3fc" strokeWidth="1.3" strokeOpacity="0.78" />
+        <text x="264" y="98" fontFamily="JetBrains Mono, monospace" fontSize="16" fill="#e0f2fe" textAnchor="middle">EN</text>
+        <text x="264" y="119" fontFamily="JetBrains Mono, monospace" fontSize="9" fill="#7dd3fc" textAnchor="middle">app</text>
+      </g>
+      <rect width="400" height="30" fill="rgba(5,17,33,0.3)" />
+      <text x="18" y="20" fontFamily="JetBrains Mono, monospace" fontSize="10" fill="#dbeafe" letterSpacing="2">TECHNICAL ENGLISH APP</text>
+    </svg>
+  );
+}
+
 const COVER_MAP = {
   logic: LogicCover,
   iot: IotCover,
@@ -347,6 +449,8 @@ const COVER_MAP = {
   thesis: ThesisCover,
   organizer: OrganizerCover,
   portfolio: PortfolioCover,
+  irremote: IrRemoteCover,
+  english: EnglishAppCover,
 } as const;
 
 interface ProjectCardProps {

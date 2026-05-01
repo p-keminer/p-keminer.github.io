@@ -3,7 +3,7 @@ export interface Project {
   title: string;
   description: string;
   link: string;
-  coverVariant: "logic" | "iot" | "github" | "robotics" | "education" | "thesis" | "organizer" | "portfolio";
+  coverVariant: "logic" | "iot" | "github" | "robotics" | "education" | "thesis" | "organizer" | "portfolio" | "irremote" | "english";
   tags: string[];
 }
 
@@ -16,6 +16,15 @@ export const projects: Project[] = [
     link: "https://github.com/p-keminer/remote-controlled-robot-arm",
     coverVariant: "robotics",
     tags: ["ESP32", "ESP-NOW", "IMU", "Robotik", "C++"],
+  },
+  {
+    id: "universal-ir-remote",
+    title: "Universelle IR-Fernbedienung",
+    description:
+      "ESP32-S3-basierte IR-Fernbedienung mit LCD1602, dokumentiertem Hardware-Aufbau und vorbereitetem Code-Katalog fuer TV- und Media-Profile.",
+    link: "https://github.com/p-keminer/universal-ir-fernbedienung",
+    coverVariant: "irremote",
+    tags: ["ESP32-S3", "IR", "Embedded", "LCD1602", "C++"],
   },
   {
     id: "iot-alarm",
@@ -52,6 +61,15 @@ export const projects: Project[] = [
     link: "https://github.com/p-keminer/studienorganisator-thga-bochum-bid-bii",
     coverVariant: "organizer",
     tags: ["Tauri", "React", "FastAPI", "SQLite", "PDF Parsing"],
+  },
+  {
+    id: "technical-english-app",
+    title: "Technical English App",
+    description:
+      "Lokale Expo- und React-Native-Lernapp für technisches Englisch.",
+    link: "https://github.com/p-keminer/technical-english-app",
+    coverVariant: "english",
+    tags: ["Expo", "React Native", "TypeScript", "Lernapp"],
   },
   {
     id: "portfolio-site",

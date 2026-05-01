@@ -3,6 +3,7 @@ import { createCombatSfxController } from '../audio/combat-sfx';
 import { createSoundController } from '../audio/sound';
 import { createChessEngine } from '../chess/engine';
 import type { BoardSquare, ChessGameSnapshot, ChessPieceType } from '../chess/state';
+import { ENABLE_TV_SHOWCASE } from '../config/feature-flags';
 import type { CombatPresentationEventInput } from '../render/combat-presentation';
 import {
   DEFAULT_PIECE_ASSET_SET,
@@ -82,19 +83,32 @@ interface GameSnapshot extends BoardPreviewSnapshot {
 
 const START_FLOW_INTRO_DURATION_MS = 1400;
 const ROOM_FOCUS_TRANSITION_DURATION_MS = 700;
+const ROOM_TV_SHOWCASE_TARGETS = new Set<RoomFocusTargetId>(['comicScreen', 'horrorEmbed', 'tvSelect']);
 const ROOM_FOCUS_TARGET_OPTIONS: ReadonlyArray<{ id: RoomFocusTargetId; label: string }> = [
   { id: 'overview', label: 'Room Overview' },
   { id: 'displayCase', label: 'Zertifikate' },
   { id: 'board', label: 'Schachbrett' },
   { id: 'workbench', label: 'Workbench' },
   { id: 'pictureFrame', label: 'Leistungsnachweise' },
-  { id: 'comicScreen', label: 'TV' },
   { id: 'comicEmbed', label: 'Über mich' },
-  { id: 'tvSelect', label: 'TV' },
-  { id: 'horrorEmbed', label: 'KI-Trailer' },
+  ...(ENABLE_TV_SHOWCASE
+    ? [
+        { id: 'comicScreen', label: 'TV' },
+        { id: 'tvSelect', label: 'TV' },
+        { id: 'horrorEmbed', label: 'KI-Trailer' }
+      ] satisfies ReadonlyArray<{ id: RoomFocusTargetId; label: string }>
+    : []),
   { id: 'pictureFrameDetail', label: 'Certificate Detail' },
   { id: 'webEmbed', label: 'Portfolio Website' }
 ];
+
+function normalizePublicRoomFocusTarget(target: RoomFocusTargetId): RoomFocusTargetId {
+  if (!ENABLE_TV_SHOWCASE && ROOM_TV_SHOWCASE_TARGETS.has(target)) {
+    return 'comicEmbed';
+  }
+
+  return target;
+}
 
 export function mountGame(root: HTMLDivElement): MountedGame {
   const engine = createChessEngine();
@@ -248,18 +262,22 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     if (action === 'back-from-comic-embed') {
       if (startFlowState === 'roomExplore' && roomFocusTarget === 'comicEmbed' && !isRoomFocusTransitionActive()) {
         activeTvSelection = 'comic';
-        // Sofort zur?ck zur TV-Auswahl ohne Kamerafahrt
-        roomFocusFromTarget = 'tvSelect';
-        roomFocusTarget = 'tvSelect';
-        roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
-        syncStartFlowToPreview();
+        if (ENABLE_TV_SHOWCASE) {
+          // Sofort zurück zur TV-Auswahl ohne Kamerafahrt.
+          roomFocusFromTarget = 'tvSelect';
+          roomFocusTarget = 'tvSelect';
+          roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
+          syncStartFlowToPreview();
+        } else {
+          jumpRoomFocusTarget('overview');
+        }
       }
 
       return;
     }
 
     if (action === 'activate-comic-from-tv') {
-      if (startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
+      if (ENABLE_TV_SHOWCASE && startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
         activeTvSelection = 'comic';
         syncPanels();
       }
@@ -268,7 +286,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     }
 
     if (action === 'activate-horror-from-tv') {
-      if (startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
+      if (ENABLE_TV_SHOWCASE && startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
         activeTvSelection = 'horror';
         syncPanels();
       }
@@ -277,7 +295,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     }
 
     if (action === 'toggle-tv-selection') {
-      if (startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
+      if (ENABLE_TV_SHOWCASE && startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
         activeTvSelection = activeTvSelection === 'comic' ? 'horror' : 'comic';
         syncPanels();
       }
@@ -286,7 +304,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     }
 
     if (action === 'select-comic-from-tv') {
-      if (startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
+      if (ENABLE_TV_SHOWCASE && startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
         activeTvSelection = 'comic';
         // Sofort umschalten ohne Kamerafahrt
         roomFocusFromTarget = 'comicEmbed';
@@ -299,7 +317,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     }
 
     if (action === 'select-horror-from-tv') {
-      if (startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
+      if (ENABLE_TV_SHOWCASE && startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
         activeTvSelection = 'horror';
         // Sofort umschalten ohne Kamerafahrt
         roomFocusFromTarget = 'horrorEmbed';
@@ -312,7 +330,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     }
 
     if (action === 'back-from-tv-select') {
-      if (startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
+      if (ENABLE_TV_SHOWCASE && startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
         focusRoomTarget('overview');
       }
 
@@ -320,9 +338,9 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     }
 
     if (action === 'back-from-horror-embed') {
-      if (startFlowState === 'roomExplore' && roomFocusTarget === 'horrorEmbed' && !isRoomFocusTransitionActive()) {
+      if (ENABLE_TV_SHOWCASE && startFlowState === 'roomExplore' && roomFocusTarget === 'horrorEmbed' && !isRoomFocusTransitionActive()) {
         activeTvSelection = 'horror';
-        // Sofort zur?ck zur TV-Auswahl ohne Kamerafahrt
+        // Sofort zurück zur TV-Auswahl ohne Kamerafahrt.
         roomFocusFromTarget = 'tvSelect';
         roomFocusTarget = 'tvSelect';
         roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
@@ -669,7 +687,8 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     const currentTarget = snapshot.startFlow.currentRoomFocusTarget;
     const isComicEmbed =
       !snapshot.startFlow.roomFocusTransitionActive &&
-      (currentTarget === 'comicEmbed' || currentTarget === 'tvSelect' || currentTarget === 'horrorEmbed');
+      (currentTarget === 'comicEmbed' ||
+        (ENABLE_TV_SHOWCASE && (currentTarget === 'tvSelect' || currentTarget === 'horrorEmbed')));
     document.body.classList.toggle('comic-embed-active', isComicEmbed);
 
     // Landscape-Stylesheet in den Portfolio-iframe injizieren (same-origin)
@@ -1008,6 +1027,15 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   }
 
   function beginStartFlowTransitionToTarget(target: Exclude<RoomFocusTargetId, 'overview'>): void {
+    const publicTarget = normalizePublicRoomFocusTarget(target) as Exclude<RoomFocusTargetId, 'overview'>;
+
+    if (!ENABLE_TV_SHOWCASE && publicTarget === 'comicEmbed') {
+      startFlowState = 'roomExplore';
+      hoveredRoomHotspot = null;
+      jumpRoomFocusTarget(publicTarget);
+      return;
+    }
+
     // Animiere direkt von Übersicht (= Menü-Kamera) zum gegebenen Ziel ohne
     // zuerst bei der Übersicht-Freikamera-Status anzuhalten. Das vermeidet den
     // Eingangs/Ausgangs-Animations-Konflikt der auftritt wenn beginStartFlowTransition
@@ -1015,7 +1043,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     startFlowState = 'roomExplore';
     hoveredRoomHotspot = null;
     roomFocusFromTarget = 'overview';
-    roomFocusTarget = target;
+    roomFocusTarget = publicTarget;
     roomFocusElapsedMs = 0;
     syncStartFlowToPreview();
     ensureStartFlowLoop();
@@ -1212,15 +1240,32 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   }
 
   function focusRoomTarget(nextTarget: RoomFocusTargetId): void {
-    if (startFlowState !== 'roomExplore' || isRoomFocusTransitionActive() || nextTarget === roomFocusTarget) {
+    const publicTarget = normalizePublicRoomFocusTarget(nextTarget);
+
+    if (startFlowState !== 'roomExplore' || isRoomFocusTransitionActive() || publicTarget === roomFocusTarget) {
+      return;
+    }
+
+    if (!ENABLE_TV_SHOWCASE && publicTarget === 'comicEmbed') {
+      jumpRoomFocusTarget(publicTarget);
       return;
     }
 
     roomFocusFromTarget = roomFocusTarget;
-    roomFocusTarget = nextTarget;
+    roomFocusTarget = publicTarget;
     roomFocusElapsedMs = 0;
     syncStartFlowToPreview();
     ensureStartFlowLoop();
+  }
+
+  function jumpRoomFocusTarget(nextTarget: RoomFocusTargetId): void {
+    const publicTarget = normalizePublicRoomFocusTarget(nextTarget);
+    roomFocusFromTarget = publicTarget;
+    roomFocusTarget = publicTarget;
+    roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
+    syncStartFlowToPreview();
+    stopStartFlowLoop();
+    syncPanels();
   }
 
   function enterBoardFocus(): void {
@@ -1439,6 +1484,7 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
 
   // TV-Auswahl-Overlay (tvSelect Fokus)
   const tvSelectOverlay =
+    ENABLE_TV_SHOWCASE &&
     !snapshot.startFlow.roomFocusTransitionActive &&
     snapshot.startFlow.currentRoomFocusTarget === 'tvSelect'
       ? (() => {
@@ -1523,21 +1569,27 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
         })()
       : '';
 
+  const comicEmbedNavButtons = ENABLE_TV_SHOWCASE
+    ? `<button class="web-embed-nav__btn" data-control="back-from-comic-embed" type="button">Zurück</button>
+       <button class="web-embed-nav__btn" data-control="return-to-overview-from-tv" type="button">Zur Übersicht</button>
+       <button class="web-embed-nav__btn" data-control="return-to-menu-from-focus" type="button">Zum Hauptmenü</button>`
+    : `<button class="web-embed-nav__btn" data-control="back-from-comic-embed" type="button">Zurück</button>
+       <button class="web-embed-nav__btn" data-control="return-to-menu-from-focus" type="button">Zum Hauptmenü</button>`;
+
   const comicEmbedOverlay =
     !snapshot.startFlow.roomFocusTransitionActive &&
     snapshot.startFlow.currentRoomFocusTarget === 'comicEmbed'
       ? `<div class="comic-screen-overlay">
            <iframe src="/comic-film/index.html" title="Über mich" allowfullscreen></iframe>
            <div class="web-embed-nav">
-             <button class="web-embed-nav__btn" data-control="back-from-comic-embed" type="button">Zurück</button>
-             <button class="web-embed-nav__btn" data-control="return-to-overview-from-tv" type="button">Zur Übersicht</button>
-             <button class="web-embed-nav__btn" data-control="return-to-menu-from-focus" type="button">Zum Hauptmenü</button>
+             ${comicEmbedNavButtons}
            </div>
          </div>`
       : '';
 
   // ── Horror-Embed-Overlay (nur horrorEmbed Fokus) ────────────────────────
   const horrorEmbedOverlay =
+    ENABLE_TV_SHOWCASE &&
     !snapshot.startFlow.roomFocusTransitionActive &&
     snapshot.startFlow.currentRoomFocusTarget === 'horrorEmbed'
       ? `<div class="horror-screen-overlay">
