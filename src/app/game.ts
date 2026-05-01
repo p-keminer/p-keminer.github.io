@@ -269,7 +269,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
           roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
           syncStartFlowToPreview();
         } else {
-          jumpRoomFocusTarget('overview');
+          focusRoomTarget('overview');
         }
       }
 
@@ -1029,13 +1029,6 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   function beginStartFlowTransitionToTarget(target: Exclude<RoomFocusTargetId, 'overview'>): void {
     const publicTarget = normalizePublicRoomFocusTarget(target) as Exclude<RoomFocusTargetId, 'overview'>;
 
-    if (!ENABLE_TV_SHOWCASE && publicTarget === 'comicEmbed') {
-      startFlowState = 'roomExplore';
-      hoveredRoomHotspot = null;
-      jumpRoomFocusTarget(publicTarget);
-      return;
-    }
-
     // Animiere direkt von Übersicht (= Menü-Kamera) zum gegebenen Ziel ohne
     // zuerst bei der Übersicht-Freikamera-Status anzuhalten. Das vermeidet den
     // Eingangs/Ausgangs-Animations-Konflikt der auftritt wenn beginStartFlowTransition
@@ -1246,26 +1239,11 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       return;
     }
 
-    if (!ENABLE_TV_SHOWCASE && publicTarget === 'comicEmbed') {
-      jumpRoomFocusTarget(publicTarget);
-      return;
-    }
-
     roomFocusFromTarget = roomFocusTarget;
     roomFocusTarget = publicTarget;
     roomFocusElapsedMs = 0;
     syncStartFlowToPreview();
     ensureStartFlowLoop();
-  }
-
-  function jumpRoomFocusTarget(nextTarget: RoomFocusTargetId): void {
-    const publicTarget = normalizePublicRoomFocusTarget(nextTarget);
-    roomFocusFromTarget = publicTarget;
-    roomFocusTarget = publicTarget;
-    roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
-    syncStartFlowToPreview();
-    stopStartFlowLoop();
-    syncPanels();
   }
 
   function enterBoardFocus(): void {
