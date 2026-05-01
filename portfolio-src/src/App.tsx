@@ -224,7 +224,7 @@ function Header() {
                 flexShrink: 0,
               }}
             />
-            cs, robotics, ki & iot | tech career changer
+            IoT, Robotik, KI und CS | Technik & Digitalisierung
           </div>
         </div>
       </div>
