@@ -369,16 +369,26 @@ function IrRemoteCover() {
         <line key={`v${i}`} x1={x} y1="34" x2={x} y2="188" stroke="#6b214f" strokeWidth="0.7" strokeOpacity={0.08 + i * 0.04} />
       ))}
       <g filter="url(#ir-glow)">
-        <rect x="76" y="68" width="78" height="118" rx="16" fill="url(#ir-remote)" stroke="#f9a8d4" strokeWidth="1.5" strokeOpacity="0.82" />
-        <circle cx="115" cy="86" r="7" fill="rgba(244,114,182,0.22)" stroke="#fbcfe8" strokeWidth="1.2" />
-        <rect x="96" y="102" width="38" height="18" rx="5" fill="rgba(251,207,232,0.12)" stroke="#fbcfe8" strokeWidth="1" strokeOpacity="0.72" />
-        {[0, 1, 2].map((row) => (
-          [0, 1].map((col) => (
+        <rect x="56" y="74" width="86" height="72" rx="14" fill="url(#ir-remote)" stroke="#f9a8d4" strokeWidth="1.4" strokeOpacity="0.82" />
+        <text x="99" y="98" fontFamily="JetBrains Mono, monospace" fontSize="10" fill="#fce7f3" textAnchor="middle">ESP32-S3</text>
+        <text x="99" y="116" fontFamily="JetBrains Mono, monospace" fontSize="7" fill="#f9a8d4" textAnchor="middle">AP 192.168.4.1</text>
+        <circle cx="99" cy="132" r="4" fill="#f472b6" />
+        <path d="M74 60 Q99 42 124 60" fill="none" stroke="#f9a8d4" strokeWidth="1.6" strokeLinecap="round" strokeOpacity="0.75" />
+        <path d="M82 66 Q99 56 116 66" fill="none" stroke="#fbcfe8" strokeWidth="1.2" strokeLinecap="round" strokeOpacity="0.62" />
+        <rect x="188" y="52" width="154" height="130" rx="14" fill="rgba(251,207,232,0.08)" stroke="#f9a8d4" strokeWidth="1.4" strokeOpacity="0.78" />
+        <rect x="204" y="70" width="122" height="16" rx="5" fill="rgba(244,114,182,0.16)" stroke="#fbcfe8" strokeWidth="0.9" strokeOpacity="0.58" />
+        <text x="265" y="82" fontFamily="JetBrains Mono, monospace" fontSize="8" fill="#fce7f3" textAnchor="middle">IR REMOTE DASHBOARD</text>
+        <rect x="204" y="98" width="48" height="28" rx="7" fill="rgba(244,114,182,0.14)" stroke="#f9a8d4" strokeWidth="0.9" strokeOpacity="0.68" />
+        <rect x="260" y="98" width="48" height="28" rx="7" fill="rgba(244,114,182,0.12)" stroke="#f9a8d4" strokeWidth="0.9" strokeOpacity="0.58" />
+        <text x="228" y="114" fontFamily="JetBrains Mono, monospace" fontSize="6.5" fill="#fce7f3" textAnchor="middle">TV</text>
+        <text x="284" y="114" fontFamily="JetBrains Mono, monospace" fontSize="6.5" fill="#fce7f3" textAnchor="middle">MEDIA</text>
+        {[0, 1].map((row) => (
+          [0, 1, 2].map((col) => (
             <circle
               key={`${row}-${col}`}
-              cx={103 + col * 24}
-              cy={136 + row * 16}
-              r="5"
+              cx={218 + col * 34}
+              cy={144 + row * 18}
+              r="5.2"
               fill="rgba(244,114,182,0.18)"
               stroke="#f9a8d4"
               strokeWidth="0.9"
@@ -386,16 +396,12 @@ function IrRemoteCover() {
             />
           ))
         ))}
-        <rect x="214" y="72" width="106" height="68" rx="10" fill="rgba(251,207,232,0.08)" stroke="#f9a8d4" strokeWidth="1.3" strokeOpacity="0.74" />
-        <rect x="230" y="90" width="74" height="22" rx="5" fill="rgba(244,114,182,0.16)" stroke="#fbcfe8" strokeWidth="1" strokeOpacity="0.66" />
-        <line x1="214" y1="156" x2="320" y2="156" stroke="#f9a8d4" strokeWidth="1.1" strokeOpacity="0.55" />
-        <line x1="214" y1="170" x2="296" y2="170" stroke="#f9a8d4" strokeWidth="1.1" strokeOpacity="0.38" />
-        <path d="M160 92 Q188 70 216 82" fill="none" stroke="#f9a8d4" strokeWidth="2.1" strokeLinecap="round" strokeOpacity="0.82" />
-        <path d="M168 106 Q194 92 220 100" fill="none" stroke="#fbcfe8" strokeWidth="1.6" strokeLinecap="round" strokeOpacity="0.72" />
-        <path d="M175 120 Q197 112 220 116" fill="none" stroke="#fdf2f8" strokeWidth="1.3" strokeLinecap="round" strokeOpacity="0.66" />
+        <path d="M145 112 Q166 92 188 104" fill="none" stroke="#f9a8d4" strokeWidth="2.1" strokeLinecap="round" strokeOpacity="0.82" />
+        <path d="M152 125 Q171 112 188 116" fill="none" stroke="#fbcfe8" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.72" />
+        <path d="M145 148 Q166 166 188 154" fill="none" stroke="#fdf2f8" strokeWidth="1.3" strokeLinecap="round" strokeOpacity="0.6" />
       </g>
       <rect width="400" height="30" fill="rgba(36,8,28,0.3)" />
-      <text x="18" y="20" fontFamily="JetBrains Mono, monospace" fontSize="10" fill="#fce7f3" letterSpacing="2">UNIVERSAL IR REMOTE</text>
+      <text x="18" y="20" fontFamily="JetBrains Mono, monospace" fontSize="10" fill="#fce7f3" letterSpacing="2">IR WEB REMOTE</text>
     </svg>
   );
 }

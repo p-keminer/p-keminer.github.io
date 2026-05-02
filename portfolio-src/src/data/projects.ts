@@ -19,12 +19,12 @@ export const projects: Project[] = [
   },
   {
     id: "universal-ir-remote",
-    title: "Universelle IR-Fernbedienung",
+    title: "Universal-IR-Web-Fernbedienung",
     description:
-      "ESP32-S3-basierte IR-Fernbedienung mit LCD1602, dokumentiertem Hardware-Aufbau und vorbereitetem Code-Katalog fuer TV- und Media-Profile.",
+      "ESP32-S3-Firmware mit eigenem WLAN-Hotspot, Web-Dashboard, IR-Profilen und manuellem Diagnostic Sweep.",
     link: "https://github.com/p-keminer/universal-ir-fernbedienung",
     coverVariant: "irremote",
-    tags: ["ESP32-S3", "IR", "Embedded", "LCD1602", "C++"],
+    tags: ["ESP32-S3", "WebServer", "IR", "Dashboard", "C++"],
   },
   {
     id: "iot-alarm",
