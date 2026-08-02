@@ -5,9 +5,10 @@ export interface Project {
   link: string;
   coverVariant: "logic" | "iot" | "github" | "robotics" | "education" | "thesis" | "organizer" | "portfolio" | "irremote" | "english";
   tags: string[];
+  visible?: boolean;
 }
 
-export const projects: Project[] = [
+const projectCatalog: Project[] = [
   {
     id: "future-robotics",
     title: "Ferngesteuerter Roboterarm",
@@ -25,6 +26,7 @@ export const projects: Project[] = [
     link: "https://github.com/p-keminer/universal-ir-fernbedienung",
     coverVariant: "irremote",
     tags: ["ESP32-S3", "WebServer", "IR", "Dashboard", "C++"],
+    visible: false,
   },
   {
     id: "iot-alarm",
@@ -70,6 +72,7 @@ export const projects: Project[] = [
     link: "https://github.com/p-keminer/technical-english-app",
     coverVariant: "english",
     tags: ["Expo", "React Native", "TypeScript", "Lernapp"],
+    visible: false,
   },
   {
     id: "portfolio-site",
@@ -81,3 +84,7 @@ export const projects: Project[] = [
     tags: ["Three.js", "React", "TypeScript", "Vite", "Framer Motion"],
   },
 ];
+
+export const projects: Project[] = projectCatalog.filter(
+  (project) => project.visible !== false,
+);
