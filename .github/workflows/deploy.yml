@@ -14,33 +14,59 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+# Voruebergehender Wartungsmodus. Fuer den normalen App-Deploy wieder auf "false" setzen.
+env:
+  MAINTENANCE_MODE: "true"
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - name: Build maintenance page
+        if: env.MAINTENANCE_MODE == 'true'
+        run: |
+          rm -rf dist
+          mkdir -p dist
+          cp maintenance/index.html dist/index.html
+          cp maintenance/index.html dist/404.html
+          cp maintenance/rechtliches.html dist/rechtliches.html
+
       - name: Setup Node
+        if: env.MAINTENANCE_MODE != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Install portfolio dependencies
+        if: env.MAINTENANCE_MODE != 'true'
         working-directory: portfolio-src
         run: npm ci
 
       - name: Build portfolio
+        if: env.MAINTENANCE_MODE != 'true'
         working-directory: portfolio-src
         run: npm run build
 
       - name: Install root dependencies
+        if: env.MAINTENANCE_MODE != 'true'
         run: npm ci
 
       - name: Build 3D shell
+        if: env.MAINTENANCE_MODE != 'true'
         run: npm run build
 
       - name: Verify dist contents
-        run: ls -la dist/ && echo "---404 exists---" && test -f dist/404.html && echo "YES" || echo "NO"
+        run: |
+          ls -la dist/
+          test -f dist/index.html
+          test -f dist/404.html
+          if [ "$MAINTENANCE_MODE" = "true" ]; then
+            grep -q "Zurzeit in Bearbeitung" dist/index.html
+            test -f dist/rechtliches.html
+            test "$(find dist -type f | wc -l)" -eq 3
+          fi
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

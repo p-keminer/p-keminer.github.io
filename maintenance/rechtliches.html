@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; media-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="robots" content="noindex, follow, noarchive" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="theme-color" content="#080605" />
+    <title>Impressum und Datenschutz | Philip Keminer</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        background: #080605;
+        color: #eee6df;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        min-height: 100vh;
+        min-height: 100dvh;
+        margin: 0;
+        background:
+          radial-gradient(circle at 10% 4%, rgba(104, 160, 171, 0.07), transparent 28rem),
+          radial-gradient(circle at 90% 96%, rgba(201, 105, 54, 0.1), transparent 34rem),
+          #080605;
+      }
+
+      header,
+      main,
+      footer {
+        width: min(100% - 40px, 900px);
+        margin-inline: auto;
+      }
+
+      header {
+        display: flex;
+        min-height: 88px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        border-bottom: 1px solid rgba(244, 238, 231, 0.1);
+      }
+
+      .brand,
+      .back-link {
+        color: #eee6df;
+        font-weight: 680;
+        text-decoration: none;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border: 1px solid rgba(226, 151, 96, 0.34);
+        border-radius: 11px;
+        background: rgba(208, 111, 57, 0.1);
+        color: #f4d5bd;
+        font: 750 0.82rem/1 ui-monospace, "Cascadia Mono", monospace;
+      }
+
+      .back-link {
+        color: #a99e96;
+        font-size: 0.8rem;
+      }
+
+      a:focus-visible {
+        border-radius: 2px;
+        outline: 2px solid #dda270;
+        outline-offset: 4px;
+      }
+
+      main {
+        padding-block: clamp(54px, 9vw, 94px);
+      }
+
+      .eyebrow {
+        margin: 0 0 14px;
+        color: #d79768;
+        font: 700 0.68rem/1.3 ui-monospace, "Cascadia Mono", monospace;
+        letter-spacing: 0.17em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        color: #fffaf4;
+        font-size: clamp(2.35rem, 7vw, 4.5rem);
+        letter-spacing: -0.055em;
+        line-height: 0.98;
+      }
+
+      .section-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 28px;
+      }
+
+      .section-nav a {
+        padding: 9px 14px;
+        border: 1px solid rgba(244, 238, 231, 0.14);
+        border-radius: 999px;
+        color: #d8cec6;
+        font-size: 0.78rem;
+        font-weight: 650;
+        text-decoration: none;
+      }
+
+      section {
+        scroll-margin-top: 28px;
+        padding-top: clamp(62px, 9vw, 92px);
+      }
+
+      section + section {
+        margin-top: clamp(62px, 9vw, 92px);
+        border-top: 1px solid rgba(244, 238, 231, 0.1);
+      }
+
+      h2 {
+        margin: 0 0 34px;
+        color: #fff8f1;
+        font-size: clamp(1.7rem, 4vw, 2.45rem);
+        letter-spacing: -0.035em;
+      }
+
+      h3 {
+        margin: 34px 0 10px;
+        color: #e8ddd4;
+        font-size: 1rem;
+      }
+
+      p,
+      li {
+        color: #b9afa7;
+        font-size: 0.94rem;
+        line-height: 1.72;
+      }
+
+      p {
+        margin: 0 0 16px;
+      }
+
+      ul {
+        margin: 0 0 18px;
+        padding-left: 22px;
+      }
+
+      main a:not(.section-nav a) {
+        color: #dda270;
+        text-underline-offset: 3px;
+      }
+
+      footer {
+        display: flex;
+        min-height: 76px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        border-top: 1px solid rgba(244, 238, 231, 0.1);
+        color: #7f756e;
+        font: 600 0.68rem/1.4 ui-monospace, "Cascadia Mono", monospace;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      footer a {
+        color: #948981;
+        text-decoration: none;
+      }
+
+      @media (max-width: 620px) {
+        header,
+        main,
+        footer {
+          width: min(100% - 28px, 900px);
+        }
+
+        header {
+          min-height: 76px;
+        }
+
+        main {
+          padding-top: 50px;
+        }
+
+        footer {
+          min-height: 88px;
+          align-items: flex-start;
+          flex-direction: column;
+          justify-content: center;
+          gap: 5px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/">
+        <span class="brand-mark" aria-hidden="true">pk</span>
+        <span>p-keminer</span>
+      </a>
+      <a class="back-link" href="/">Zur Wartungsseite</a>
+    </header>
+
+    <main>
+      <p class="eyebrow">Rechtliche Informationen</p>
+      <h1>Impressum &amp;<br />Datenschutz</h1>
+      <nav class="section-nav" aria-label="Abschnitte">
+        <a href="#impressum">Impressum</a>
+        <a href="#datenschutz">Datenschutz</a>
+      </nav>
+
+      <section id="impressum">
+        <h2>Impressum</h2>
+        <p>Angaben gemäß §&nbsp;5 DDG</p>
+
+        <h3>Verantwortlich</h3>
+        <p>
+          Philip Keminer<br />
+          44627 Herne
+        </p>
+        <p>E-Mail: <a href="mailto:p.keminer@gmx.de">p.keminer@gmx.de</a></p>
+
+        <h3>Hinweis</h3>
+        <p>
+          Diese Website ist eine private, nicht-kommerzielle Portfolio-Präsentation. Sie dient ausschließlich
+          der beruflichen Selbstdarstellung und enthält kein Angebot von Dienstleistungen oder Waren.
+        </p>
+      </section>
+
+      <section id="datenschutz">
+        <h2>Datenschutzerklärung</h2>
+
+        <h3>Verantwortlicher</h3>
+        <p>
+          Philip Keminer, 44627 Herne<br />
+          E-Mail: <a href="mailto:p.keminer@gmx.de">p.keminer@gmx.de</a>
+        </p>
+
+        <h3>Hosting</h3>
+        <p>
+          Diese Website wird über <strong>GitHub Pages</strong> gehostet. Beim Abrufen der Seite verarbeitet
+          GitHub technische Zugriffsdaten einschließlich Ihrer IP-Adresse in Server-Logs. Rechtsgrundlage ist
+          Art.&nbsp;6 Abs.&nbsp;1 lit.&nbsp;f DSGVO (berechtigtes Interesse an der Bereitstellung der Website).
+        </p>
+        <p>
+          Weitere Informationen:
+          <a
+            href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement"
+            target="_blank"
+            rel="noopener noreferrer"
+          >Allgemeine Datenschutzerklärung von GitHub</a>
+        </p>
+
+        <h3>Wartungsseite</h3>
+        <p>
+          Die aktuelle Wartungsseite besteht ausschließlich aus lokalem HTML und CSS. Sie lädt keine externen
+          Schriften, Skripte, Medien, Analyse-Dienste oder Tracking-Technologien. Die 3D-Anwendung und ihre
+          Modelle werden im Wartungsmodus nicht ausgeliefert.
+        </p>
+
+        <h3>Cookies und lokale Speicherung</h3>
+        <p>
+          Die Wartungsseite setzt selbst keine Cookies und speichert keine Auswahl oder sonstigen Daten im
+          lokalen Speicher Ihres Browsers. Unabhängig davon kann GitHub als Hoster technisch erforderliche
+          Zugriffsdaten nach der oben verlinkten Datenschutzerklärung verarbeiten.
+        </p>
+
+        <h3>Drittlandbezug</h3>
+        <p>
+          Bei der technischen Bereitstellung über GitHub Pages kann es zu einer Verarbeitung personenbezogener
+          Daten außerhalb der EU beziehungsweise des EWR, insbesondere in den USA, kommen. Informationen zu den
+          eingesetzten Garantien und Rechtsgrundlagen finden Sie in den Datenschutzhinweisen von GitHub.
+        </p>
+
+        <h3>Externe Links</h3>
+        <p>
+          Diese Website enthält Links zu externen Angeboten, insbesondere zu GitHub und LinkedIn. Erst wenn Sie
+          einen solchen Link aktiv anklicken, wird eine Verbindung zum jeweiligen Anbieter hergestellt. Ab
+          diesem Zeitpunkt gilt die Datenschutzerklärung des jeweiligen Betreibers.
+        </p>
+
+        <h3>Ihre Rechte</h3>
+        <p>Sie haben gemäß DSGVO insbesondere folgende Rechte bezüglich Ihrer personenbezogenen Daten:</p>
+        <ul>
+          <li>Auskunft nach Art.&nbsp;15 DSGVO,</li>
+          <li>Berichtigung nach Art.&nbsp;16 DSGVO,</li>
+          <li>Löschung nach Art.&nbsp;17 DSGVO,</li>
+          <li>Einschränkung der Verarbeitung nach Art.&nbsp;18 DSGVO,</li>
+          <li>Datenübertragbarkeit nach Art.&nbsp;20 DSGVO und</li>
+          <li>Widerspruch nach Art.&nbsp;21 DSGVO.</li>
+        </ul>
+        <p>
+          Bei allgemeinen Fragen zum Datenschutz dieser Website können Sie sich an die oben genannte
+          E-Mail-Adresse wenden.
+        </p>
+
+        <h3>Aufsichtsbehörde</h3>
+        <p>
+          Landesbeauftragte für Datenschutz und Informationsfreiheit Nordrhein-Westfalen (LDI NRW)<br />
+          Postfach 20 04 44, 40102 Düsseldorf<br />
+          <a href="https://www.ldi.nrw.de" target="_blank" rel="noopener noreferrer">www.ldi.nrw.de</a>
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <span>p-keminer</span>
+      <a href="/">Zur Wartungsseite</a>
+    </footer>
+  </body>
+</html>
