@@ -27,9 +27,11 @@ const MIN_PHI = 0.58;
 const MAX_PHI = 1.3 - (5 * Math.PI) / 180; // letzte 5° am unteren Ende gesperrt
 const MAX_TARGET_OFFSET = 1.65;
 const MAX_TARGET_HEIGHT = 0.9;
-// Gesamtbereich der horizontalen Drehung: 170° NACH LINKS vom Standard-Startwinkel.
-// Verhindert, dass die Kamera zur Gegnerseite des Brettes orbitet.
-const THETA_LEFT_RANGE = (170 * Math.PI) / 180; // 170° in Radianten
+// Der horizontale 170°-Korridor ist asymmetrisch um die Startpose gelegt:
+// 140° zur Wandseite und 30° zur offenen Raumfront. Dadurch endet die Kamera
+// vor der rechten Wand, gewinnt auf der freien Seite aber denselben Winkel hinzu.
+const THETA_WALL_SIDE_RANGE = THREE.MathUtils.degToRad(140);
+const THETA_OPEN_SIDE_RANGE = THREE.MathUtils.degToRad(30);
 
 export function createBoardCameraControls({
   domElement,
@@ -49,10 +51,10 @@ export function createBoardCameraControls({
   // Vorberechnete Standard-Kugelwinkel — vermeidet zwei temporäre Spherical-Zuordnungen in reset().
   const defaultSpherical = new THREE.Spherical().setFromVector3(defaultOffset);
   const target = defaultTarget.clone();
-  // Theta-Begrenzung: vom Standard-Startwinkel sind nur 170° nach rechts erlaubt.
-  // Links der Ausgangsposition ist immer gesperrt.
-  const minTheta = spherical.theta - THETA_LEFT_RANGE;   // 170° nach rechts
-  const maxTheta = spherical.theta;                       // keine Drehung nach links vom Start
+  // Der Korridor bleibt insgesamt 170° breit, wird aber 30° von der Wand weg
+  // und zur offenen Raumseite hin verschoben.
+  const minTheta = spherical.theta - THETA_WALL_SIDE_RANGE;
+  const maxTheta = spherical.theta + THETA_OPEN_SIDE_RANGE;
   let controlsLocked = false;
   let gestureMode: CameraGestureMode = 'idle';
   let activePointerId: number | null = null;

@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; base-uri 'none'; object-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'none'; worker-src 'none'; frame-src 'none'; media-src 'none'; form-action 'none'; manifest-src 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      name="description"
+      content="Leistungsnachweise nach Semestern sowie Bachelor- und Masterarbeit von p-keminer."
+    />
+    <meta name="theme-color" content="#0d1117" />
+    <title>Leistungsnachweise | p-keminer</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026-08-10-chip-shield" />
+    <link rel="stylesheet" href="../monitor-pages/github-dark.css" />
+    <link rel="stylesheet" href="./styles.css?v=2026-08-10-ten-study-sections" />
+    <script type="module" src="./app.js?v=2026-08-10-ten-study-sections"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#semester-viewer">Zum Dokument springen</a>
+
+    <header class="repo-header">
+      <div class="repo-header__inner">
+        <div class="repo-path" aria-label="Repository-Pfad">
+          <span class="repo-owner">p-keminer</span>
+          <span aria-hidden="true">/</span>
+          <strong>leistungsnachweise</strong>
+          <span class="repo-visibility">Public</span>
+        </div>
+
+        <nav class="repo-tabs" aria-label="Portfolio-Bereiche">
+          <a class="repo-tab" href="/portfolio-platzhalter/">Portfolio</a>
+          <a class="repo-tab" href="/ueber-mich/">Über mich</a>
+          <a class="repo-tab" href="/leistungsnachweise/" aria-current="page">
+            Leistungsnachweise
+            <span class="repo-tab__count" aria-label="zehn Studienabschnitte">10</span>
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <div class="content-heading">
+        <h1>Semester &amp; Abschlussarbeiten</h1>
+        <p><span class="status-dot status-dot--ready" aria-hidden="true"></span>1 Dokument</p>
+      </div>
+
+      <section class="semester-browser" aria-label="Leistungsnachweise und Abschlussarbeiten">
+        <nav class="semester-panel panel" aria-label="Studienabschnitt auswählen">
+          <header class="panel-header">
+            <strong>Übersicht</strong>
+            <span class="panel-header__meta">10 Einträge</span>
+          </header>
+
+          <ol class="semester-list">
+            <li>
+              <button class="semester-row" type="button" data-semester="0" aria-pressed="true">
+                <span class="file-icon" aria-hidden="true">▣</span>
+                <span class="semester-row__name">semester-01</span>
+                <span class="semester-row__state semester-row__state--ready">Dokument</span>
+              </button>
+            </li>
+            <li>
+              <button class="semester-row" type="button" data-semester="1" aria-pressed="false">
+                <span class="file-icon" aria-hidden="true">□</span>
+                <span class="semester-row__name">semester-02</span>
+                <span class="semester-row__state">Leer</span>
+              </button>
+            </li>
+            <li>
+              <button class="semester-row" type="button" data-semester="2" aria-pressed="false">
+                <span class="file-icon" aria-hidden="true">□</span>
+                <span class="semester-row__name">semester-03</span>
+                <span class="semester-row__state">Leer</span>
+              </button>
+            </li>
+            <li>
+              <button class="semester-row" type="button" data-semester="3" aria-pressed="false">
+                <span class="file-icon" aria-hidden="true">□</span>
+                <span class="semester-row__name">semester-04</span>
+                <span class="semester-row__state">Leer</span>
+              </button>
+            </li>
+            <li>
+              <button class="semester-row" type="button" data-semester="4" aria-pressed="false">
+                <span class="file-icon" aria-hidden="true">□</span>
+                <span class="semester-row__name">semester-05</span>
+                <span class="semester-row__state">Leer</span>
+              </button>
+            </li>
+            <li>
+              <button class="semester-row" type="button" data-semester="5" aria-pressed="false">
+                <span class="file-icon" aria-hidden="true">□</span>
+                <span class="semester-row__name">semester-06</span>
+                <span class="semester-row__state">Leer</span>
+              </button>
+            </li>
+            <li>
+              <button class="semester-row" type="button" data-semester="6" aria-pressed="false">
+                <span class="file-icon" aria-hidden="true">□</span>
+                <span class="semester-row__name">semester-07</span>
+                <span class="semester-row__state">Leer</span>
+              </button>
+            </li>
+            <li>
+              <button class="semester-row" type="button" data-semester="7" aria-pressed="false">
+                <span class="file-icon" aria-hidden="true">□</span>
+                <span class="semester-row__name">semester-08</span>
+                <span class="semester-row__state">Leer</span>
+              </button>
+            </li>
+            <li>
+              <button class="semester-row" type="button" data-semester="8" aria-pressed="false">
+                <span class="file-icon" aria-hidden="true">□</span>
+                <span class="semester-row__name">Bachelorarbeit</span>
+                <span class="semester-row__state">Leer</span>
+              </button>
+            </li>
+            <li>
+              <button class="semester-row" type="button" data-semester="9" aria-pressed="false">
+                <span class="file-icon" aria-hidden="true">□</span>
+                <span class="semester-row__name">Masterarbeit</span>
+                <span class="semester-row__state">Leer</span>
+              </button>
+            </li>
+          </ol>
+        </nav>
+
+        <article
+          class="document-panel panel"
+          id="semester-viewer"
+          tabindex="-1"
+          aria-labelledby="document-path"
+        >
+          <header class="panel-header document-header">
+            <strong id="document-path">semester-01 / notenspiegel.pdf</strong>
+            <span class="document-actions">
+              <a
+                class="button"
+                id="open-document"
+                href="../assets/leistungsnachweise/notenspiegel-semester-1-redacted.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+              >Ansehen ↗</a>
+              <a
+                class="button button--primary"
+                id="download-document"
+                href="../assets/leistungsnachweise/notenspiegel-semester-1-redacted.pdf"
+                download
+              >Herunterladen</a>
+            </span>
+          </header>
+
+          <div class="document-frame" id="document-frame">
+            <img
+              class="document-preview"
+              id="document-preview"
+              src="../assets/leistungsnachweise/notenspiegel-semester-1.png"
+              alt="Vorschau des Leistungsnachweises für Semester 1"
+              width="1819"
+              height="2572"
+              decoding="sync"
+              fetchpriority="high"
+            />
+            <div class="empty-state" id="document-placeholder" hidden>
+              <div class="empty-state__inner">
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M3.75 1.75A1.75 1.75 0 0 1 5.5 0h3.086c.464 0 .909.184 1.237.513l2.664 2.664c.329.328.513.773.513 1.237v9.836A1.75 1.75 0 0 1 11.25 16h-5.5A1.75 1.75 0 0 1 4 14.25V7.5a.75.75 0 0 1 1.5 0v6.75c0 .138.112.25.25.25h5.5a.25.25 0 0 0 .25-.25V5h-2A1.5 1.5 0 0 1 8 3.5v-2H5.5a.25.25 0 0 0-.25.25V4a.75.75 0 0 1-1.5 0V1.75Zm5.75-.19V3.5h1.94L9.5 1.56ZM.22 8.72a.75.75 0 0 1 1.06 0L2.5 9.94l1.22-1.22a.75.75 0 1 1 1.06 1.06L3.56 11l1.22 1.22a.75.75 0 1 1-1.06 1.06L2.5 12.06l-1.22 1.22a.75.75 0 1 1-1.06-1.06L1.44 11 .22 9.78a.75.75 0 0 1 0-1.06Z" />
+                </svg>
+                <strong>Noch kein Dokument hinterlegt</strong>
+              </div>
+            </div>
+          </div>
+
+          <footer class="viewer-controls" aria-label="Zwischen Studienabschnitten wechseln">
+            <button
+              class="button"
+              id="previous-semester"
+              type="button"
+              aria-label="Zum vorherigen Studienabschnitt"
+              aria-keyshortcuts="ArrowLeft"
+              disabled
+            >← Zurück</button>
+            <output id="semester-status" role="status" aria-live="polite">Semester 1 · 1 von 10</output>
+            <button
+              class="button"
+              id="next-semester"
+              type="button"
+              aria-label="Zum nächsten Studienabschnitt"
+              aria-keyshortcuts="ArrowRight"
+            >Weiter →</button>
+          </footer>
+        </article>
+      </section>
+
+      <noscript>
+        <p class="noscript-message">Für die Navigation muss JavaScript aktiviert sein.</p>
+      </noscript>
+    </main>
+  </body>
+</html>

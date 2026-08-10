@@ -1,0 +1,1011 @@
+:root {
+  color-scheme: dark;
+  background: #080605;
+  font-family: Inter, "Segoe UI", system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(85, 139, 154, 0.12), transparent 34%),
+    radial-gradient(circle at 86% 92%, rgba(215, 103, 44, 0.15), transparent 36%),
+    #080605;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body.privacy-dialog-open,
+body.app-loading,
+body.orientation-gated {
+  overflow: hidden;
+}
+
+.orientation-gate {
+  align-items: center;
+  background: #000;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  text-align: center;
+  z-index: 13000;
+}
+
+.orientation-gate:focus {
+  outline: none;
+}
+
+.orientation-gate__icon {
+  fill: none;
+  height: auto;
+  margin-bottom: 18px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  width: 86px;
+}
+
+.orientation-gate__icon circle {
+  fill: currentColor;
+  stroke: none;
+}
+
+.orientation-gate h1 {
+  font: 600 1rem / 1.3 "JetBrains Mono", "Cascadia Mono", ui-monospace, monospace;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.orientation-gate p {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  margin: 10px 0 0;
+}
+
+body:not(.app-ready) #site-header,
+body:not(.app-ready) #site-footer {
+  visibility: hidden;
+}
+
+.site-header__mobile-icon {
+  color: currentColor;
+}
+
+.privacy-gate {
+  display: grid;
+  inset: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: auto;
+  padding: 16px;
+  place-items: center;
+  position: fixed;
+  z-index: 12000;
+}
+
+.privacy-gate__backdrop {
+  background: rgba(0, 0, 0, 0.96);
+  inset: 0;
+  position: fixed;
+  z-index: -1;
+}
+
+.privacy-panel {
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  border-radius: 8px;
+  color: #fff;
+  padding: 24px;
+  position: relative;
+  width: min(100%, 400px);
+}
+
+.privacy-panel__close {
+  align-items: center;
+  appearance: none;
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  font-size: 1.15rem;
+  height: 44px;
+  justify-content: center;
+  line-height: 1;
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  width: 44px;
+}
+
+.privacy-panel__close:hover {
+  background: #fff;
+  color: #000;
+}
+
+.privacy-panel h1 {
+  color: #fff;
+  font: 500 1.05rem / 1.3 "JetBrains Mono", "Cascadia Mono", monospace;
+  letter-spacing: 0.08em;
+  margin: 0;
+  padding-right: 42px;
+}
+
+.privacy-panel__lead {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  margin: 12px 0 0;
+}
+
+.privacy-summary {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.28);
+  border-top: 1px solid rgba(255, 255, 255, 0.28);
+  margin: 18px 0 0;
+}
+
+.privacy-summary div {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  min-height: 38px;
+}
+
+.privacy-summary div + div {
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.privacy-summary dt,
+.privacy-summary dd {
+  font: 500 0.68rem / 1.3 "JetBrains Mono", "Cascadia Mono", monospace;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.privacy-summary dd {
+  color: rgba(255, 255, 255, 0.68);
+  text-align: right;
+}
+
+.privacy-details {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.privacy-details summary {
+  color: #fff;
+  cursor: pointer;
+  font: 500 0.68rem / 1.3 "JetBrains Mono", "Cascadia Mono", monospace;
+  padding: 11px 0;
+  width: max-content;
+}
+
+.privacy-details p {
+  margin: 0 0 12px;
+}
+
+.privacy-actions {
+  margin-top: 16px;
+}
+
+.privacy-action,
+.intro-retry {
+  appearance: none;
+  cursor: pointer;
+  font: 600 0.7rem / 1 "JetBrains Mono", "Cascadia Mono", monospace;
+  letter-spacing: 0.08em;
+  min-height: 44px;
+  padding: 0 16px;
+  text-transform: uppercase;
+}
+
+.privacy-action {
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 4px;
+  color: #fff;
+  width: 100%;
+}
+
+.privacy-action:hover {
+  background: #fff;
+  color: #000;
+}
+
+.privacy-panel__note {
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 0.66rem;
+  line-height: 1.4;
+  margin: 10px 0 0;
+  text-align: center;
+}
+
+.privacy-panel button:focus-visible,
+.privacy-details summary:focus-visible,
+.intro-retry:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+#intro-overlay {
+  align-items: flex-start;
+  background: #000;
+  display: flex;
+  font-family: Inter, "Segoe UI", system-ui, sans-serif;
+  inset: 0;
+  justify-content: center;
+  opacity: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 24px;
+  pointer-events: all;
+  position: fixed;
+  transition: opacity 0.55s ease;
+  z-index: 11000;
+}
+
+#intro-overlay::before {
+  background-image:
+    linear-gradient(rgba(139, 148, 158, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 148, 158, 0.035) 1px, transparent 1px);
+  background-size: 32px 32px;
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+#intro-overlay::after {
+  background: linear-gradient(90deg, transparent, rgba(88, 166, 255, 0.32), transparent);
+  content: "";
+  height: 1px;
+  left: 8vw;
+  opacity: 0.45;
+  position: absolute;
+  right: 8vw;
+  top: 50%;
+}
+
+#intro-overlay.intro-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#intro-overlay::before,
+#intro-overlay::after {
+  content: none;
+}
+
+.intro-clock-loader {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin: auto;
+  min-height: min(620px, calc(100dvh - 48px));
+  position: relative;
+  width: min(100%, 520px);
+}
+
+.loading-clock {
+  color: #f6f8fa;
+  display: block;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.08));
+  height: auto;
+  overflow: visible;
+  width: clamp(92px, 9vw, 108px);
+}
+
+.loading-clock__ring {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform-box: view-box;
+  transform-origin: 120px 120px;
+  vector-effect: non-scaling-stroke;
+}
+
+.loading-clock__ring--outer {
+  animation: clock-ring-drift 18s linear infinite;
+  opacity: 0.94;
+  stroke-width: 2.5;
+}
+
+.loading-clock__ring--inner {
+  animation: clock-ring-drift-reverse 24s linear infinite;
+  opacity: 0.82;
+  stroke-width: 2.2;
+}
+
+.loading-clock__hand {
+  transform-box: view-box;
+  transform-origin: 120px 120px;
+}
+
+.loading-clock__hand path {
+  stroke-linejoin: miter;
+  transform-box: view-box;
+  transform-origin: 120px 120px;
+}
+
+.loading-clock__hand--hour path {
+  transform: scale(0.68);
+}
+
+.loading-clock__hand--hour {
+  animation: clock-hour-turn 36s linear infinite;
+  fill: #000;
+  opacity: 1;
+  stroke: currentColor;
+  stroke-width: 7;
+}
+
+.loading-clock__hand--minute {
+  animation: clock-minute-turn 6s linear infinite;
+  fill: #000;
+  stroke: currentColor;
+  stroke-width: 5;
+}
+
+.loading-clock__pin {
+  fill: #000;
+  stroke: currentColor;
+  stroke-width: 3;
+}
+
+.intro-loading-label {
+  color: #f6f8fa;
+  font: 400 clamp(0.68rem, 1vw, 0.76rem)/1.2 "JetBrains Mono", "Cascadia Mono", ui-monospace, monospace;
+  letter-spacing: 0.11em;
+  margin: 14px 0 0;
+}
+
+.intro-loading-dots span {
+  animation: loading-dot 1.2s steps(1, end) infinite;
+  opacity: 0.18;
+}
+
+.intro-loading-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.intro-loading-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.intro-progress {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.intro-progress__value {
+  color: #fff;
+  font: 400 0.64rem/1 "JetBrains Mono", "Cascadia Mono", ui-monospace, monospace;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.intro-status-assistive {
+  border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+#intro-overlay[data-load-phase="error"] .loading-clock {
+  color: #ff7b72;
+}
+
+#intro-overlay[data-load-phase="error"] .loading-clock__ring,
+#intro-overlay[data-load-phase="error"] .loading-clock__hand {
+  animation-play-state: paused;
+}
+
+#intro-overlay[data-load-phase="error"] .intro-loading-label {
+  display: none;
+}
+
+#intro-overlay[data-load-phase="error"] .intro-progress {
+  display: none;
+}
+
+#intro-overlay[data-load-phase="error"] .intro-status-assistive {
+  clip: auto;
+  clip-path: none;
+  color: #f0f6fc;
+  height: auto;
+  margin: 30px 0 0;
+  overflow: visible;
+  position: static;
+  text-align: center;
+  white-space: normal;
+  width: min(100%, 440px);
+}
+
+#intro-overlay[data-load-phase="error"] .intro-status-assistive h1 {
+  font-size: clamp(1.25rem, 4vw, 1.7rem);
+  margin: 0;
+}
+
+#intro-overlay[data-load-phase="error"] .intro-status-assistive p {
+  color: #8b949e;
+  line-height: 1.55;
+  margin: 10px 0 0;
+}
+
+#intro-overlay[data-load-phase="error"] [data-intro-phase] {
+  display: none;
+}
+
+@keyframes clock-minute-turn {
+  from {
+    transform: rotate(22deg);
+  }
+
+  to {
+    transform: rotate(382deg);
+  }
+}
+
+@keyframes clock-hour-turn {
+  from {
+    transform: rotate(-64deg);
+  }
+
+  to {
+    transform: rotate(296deg);
+  }
+}
+
+@keyframes clock-ring-drift {
+  0%, 100% {
+    transform: rotate(-0.7deg) scale(1);
+  }
+
+  50% {
+    transform: rotate(0.7deg) scale(1.006);
+  }
+}
+
+@keyframes clock-ring-drift-reverse {
+  0%, 100% {
+    transform: rotate(0.8deg) scale(1.004);
+  }
+
+  50% {
+    transform: rotate(-0.8deg) scale(0.998);
+  }
+}
+
+@keyframes loading-dot {
+  0%, 24% {
+    opacity: 0.18;
+  }
+
+  25%, 100% {
+    opacity: 1;
+  }
+}
+
+.intro-boot-layout {
+  align-items: center;
+  display: grid;
+  gap: clamp(42px, 8vw, 112px);
+  grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+  margin-block: auto;
+  max-width: 1040px;
+  position: relative;
+  width: min(100%, 1040px);
+  z-index: 1;
+}
+
+.intro-device {
+  display: grid;
+  isolation: isolate;
+  place-items: center;
+  position: relative;
+}
+
+.intro-device::after {
+  background: rgba(0, 0, 0, 0.46);
+  border-radius: 50%;
+  bottom: -34px;
+  content: "";
+  filter: blur(18px);
+  height: 34px;
+  left: 12%;
+  position: absolute;
+  right: 12%;
+  z-index: -1;
+}
+
+.mcu-board {
+  aspect-ratio: 1.7;
+  background:
+    radial-gradient(circle at 17% 24%, rgba(63, 185, 80, 0.16), transparent 20%),
+    linear-gradient(145deg, #123d2d, #0b2f24 66%, #09251d);
+  border: 1px solid #2f6f4f;
+  border-radius: 12px;
+  box-shadow:
+    0 24px 55px rgba(0, 0, 0, 0.48),
+    inset 0 0 0 1px rgba(126, 231, 135, 0.055),
+    inset 0 -18px 36px rgba(0, 0, 0, 0.16);
+  max-width: 350px;
+  position: relative;
+  width: 100%;
+}
+
+.mcu-board::before {
+  border: 1px solid rgba(126, 231, 135, 0.18);
+  border-radius: 8px;
+  content: "";
+  inset: 10px;
+  pointer-events: none;
+  position: absolute;
+}
+
+.mcu-board::after {
+  background: #3fb950;
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(63, 185, 80, 0.52);
+  content: "";
+  height: 5px;
+  left: 16px;
+  position: absolute;
+  top: 16px;
+  width: 5px;
+}
+
+.mcu-pin-bank {
+  background: repeating-linear-gradient(
+    to bottom,
+    #8c959f 0 5px,
+    #3d444d 5px 7px,
+    transparent 7px 14px
+  );
+  bottom: 18px;
+  position: absolute;
+  top: 18px;
+  width: 16px;
+}
+
+.mcu-pin-bank--left {
+  left: -12px;
+}
+
+.mcu-pin-bank--right {
+  right: -12px;
+}
+
+.mcu-usb-port {
+  background: linear-gradient(#9ba3ad, #59616a);
+  border: 3px solid #30363d;
+  border-radius: 0 0 7px 7px;
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.28);
+  height: 23px;
+  left: 50%;
+  position: absolute;
+  top: -1px;
+  transform: translateX(-50%);
+  width: 68px;
+}
+
+.mcu-board-label,
+.mcu-crystal,
+.mcu-chip,
+.mcu-led em {
+  font-family: "JetBrains Mono", "Cascadia Mono", ui-monospace, monospace;
+}
+
+.mcu-board-label {
+  color: rgba(202, 255, 211, 0.65);
+  font-size: 0.48rem;
+  left: 26px;
+  letter-spacing: 0.12em;
+  position: absolute;
+  top: 24px;
+}
+
+.mcu-chip {
+  align-items: center;
+  background: #090d12;
+  border: 1px solid #3d444d;
+  box-shadow:
+    0 0 0 5px #15251f,
+    0 10px 24px rgba(0, 0, 0, 0.34);
+  color: #f0f6fc;
+  display: flex;
+  flex-direction: column;
+  height: 76px;
+  justify-content: center;
+  left: 50%;
+  position: absolute;
+  top: 44%;
+  transform: translate(-50%, -50%);
+  width: 104px;
+}
+
+.mcu-chip::before,
+.mcu-chip::after {
+  background: repeating-linear-gradient(to bottom, #6e7681 0 3px, transparent 3px 9px);
+  bottom: 5px;
+  content: "";
+  position: absolute;
+  top: 5px;
+  width: 8px;
+}
+
+.mcu-chip::before {
+  left: -9px;
+}
+
+.mcu-chip::after {
+  right: -9px;
+}
+
+.mcu-chip strong {
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+}
+
+.mcu-chip small {
+  color: #7d8590;
+  font-size: 0.42rem;
+  letter-spacing: 0.12em;
+  margin-top: 5px;
+}
+
+.mcu-crystal {
+  background: #747c86;
+  border: 1px solid #a4acb6;
+  border-radius: 3px;
+  color: #161b22;
+  font-size: 0.36rem;
+  padding: 3px 4px;
+  position: absolute;
+  right: 33px;
+  top: 54px;
+}
+
+.mcu-trace {
+  border-color: rgba(126, 231, 135, 0.33);
+  border-style: solid;
+  position: absolute;
+}
+
+.mcu-trace--one {
+  border-width: 1px 0 0 1px;
+  height: 36px;
+  left: 28px;
+  top: 56px;
+  width: 62px;
+}
+
+.mcu-trace--two {
+  border-width: 0 1px 1px 0;
+  bottom: 46px;
+  height: 40px;
+  right: 26px;
+  width: 76px;
+}
+
+.mcu-trace--three {
+  border-width: 0 0 1px 1px;
+  bottom: 36px;
+  height: 28px;
+  left: 42px;
+  width: 66px;
+}
+
+.mcu-trace--four {
+  border-width: 1px 1px 0 0;
+  height: 31px;
+  right: 49px;
+  top: 34px;
+  width: 55px;
+}
+
+.mcu-component {
+  background: #161b22;
+  border: 1px solid #57606a;
+  height: 12px;
+  position: absolute;
+  width: 24px;
+}
+
+.mcu-component--one {
+  left: 35px;
+  top: 74px;
+}
+
+.mcu-component--two {
+  bottom: 56px;
+  right: 42px;
+  width: 16px;
+}
+
+.mcu-component--three {
+  bottom: 41px;
+  left: 52px;
+  width: 18px;
+}
+
+.mcu-led {
+  align-items: center;
+  bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  left: var(--led-x);
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+.mcu-led[data-led="boot"] { --led-x: 18%; }
+.mcu-led[data-led="core"] { --led-x: 39%; }
+.mcu-led[data-led="room"] { --led-x: 61%; }
+.mcu-led[data-led="ready"] { --led-x: 82%; }
+
+.mcu-led i {
+  background: #20262d;
+  border: 1px solid #57606a;
+  border-radius: 50%;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.65);
+  display: block;
+  height: 10px;
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  width: 10px;
+}
+
+.mcu-led em {
+  color: #7d8590;
+  font-size: 0.38rem;
+  font-style: normal;
+  letter-spacing: 0.08em;
+}
+
+#intro-overlay[data-load-phase="core"] [data-led="boot"] i,
+#intro-overlay[data-load-phase="room"] :is([data-led="boot"], [data-led="core"]) i,
+#intro-overlay[data-load-phase="ready"] .mcu-led i {
+  background: #3fb950;
+  border-color: #7ee787;
+  box-shadow: 0 0 11px rgba(63, 185, 80, 0.82);
+}
+
+#intro-overlay[data-load-phase="boot"] [data-led="boot"] i,
+#intro-overlay[data-load-phase="core"] [data-led="core"] i,
+#intro-overlay[data-load-phase="room"] [data-led="room"] i {
+  animation: mcu-led-pulse 0.9s ease-in-out infinite;
+  background: #58a6ff;
+  border-color: #a5d6ff;
+  box-shadow: 0 0 13px rgba(88, 166, 255, 0.9);
+}
+
+#intro-overlay[data-load-phase="error"] [data-led="ready"] i {
+  animation: mcu-led-pulse 0.7s ease-in-out infinite;
+  background: #f85149;
+  border-color: #ff7b72;
+  box-shadow: 0 0 13px rgba(248, 81, 73, 0.88);
+}
+
+.intro-status-copy {
+  max-width: 580px;
+}
+
+.intro-status-copy .intro-kicker {
+  color: #8b949e;
+  margin-bottom: 16px;
+}
+
+.intro-title {
+  color: #f0f6fc;
+  font-size: clamp(2rem, 5vw, 4rem);
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+  margin: 0;
+}
+
+.intro-copy {
+  color: #8b949e;
+  font-size: clamp(0.86rem, 1.5vw, 1rem);
+  line-height: 1.6;
+  margin: 18px 0 0;
+}
+
+.intro-phase {
+  align-items: center;
+  color: #c9d1d9;
+  display: flex;
+  font: 650 0.7rem/1.2 "JetBrains Mono", "Cascadia Mono", ui-monospace, monospace;
+  gap: 10px;
+  letter-spacing: 0.09em;
+  margin: 28px 0 0;
+}
+
+.intro-phase span {
+  background: #58a6ff;
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(88, 166, 255, 0.75);
+  height: 7px;
+  width: 7px;
+}
+
+.intro-retry {
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  box-shadow: none;
+  color: #f0f6fc;
+  margin-top: 22px;
+}
+
+@keyframes mcu-led-pulse {
+  0%, 100% {
+    opacity: 0.46;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 760px) {
+  .intro-boot-layout {
+    gap: 54px;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    max-width: 540px;
+  }
+
+  .mcu-board {
+    width: min(78vw, 330px);
+  }
+
+  .intro-status-copy {
+    text-align: center;
+  }
+
+  .intro-phase {
+    justify-content: center;
+  }
+}
+
+@media (max-height: 620px) and (orientation: landscape) and (min-width: 761px) {
+  .intro-boot-layout {
+    gap: 42px;
+    grid-template-columns: minmax(230px, 300px) minmax(0, 1fr);
+  }
+
+  .intro-title {
+    font-size: clamp(1.75rem, 4.5vw, 3rem);
+  }
+}
+
+@media (max-height: 820px) and (min-width: 661px) {
+  .privacy-gate {
+    padding: 12px;
+  }
+
+  .privacy-panel {
+    padding: 20px 22px;
+  }
+}
+
+@media (max-width: 660px) {
+  .privacy-gate {
+    padding: 10px;
+  }
+
+  .privacy-panel {
+    border-radius: 6px;
+    padding: 20px;
+  }
+
+  .privacy-panel h1 {
+    font-size: 1rem;
+  }
+
+  .privacy-panel__lead {
+    font-size: 0.76rem;
+  }
+
+  .privacy-details {
+    font-size: 0.68rem;
+  }
+
+  .privacy-panel__note {
+    font-size: 0.63rem;
+  }
+
+}
+
+@media (max-height: 650px) and (orientation: landscape) {
+  .privacy-gate {
+    place-items: start center;
+  }
+
+  .privacy-panel {
+    padding-block: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #intro-overlay,
+  .privacy-action,
+  .privacy-panel__close,
+  .intro-retry {
+    transition: none;
+  }
+
+  .mcu-led i {
+    animation: none !important;
+    transition: none;
+  }
+
+  .loading-clock__ring,
+  .loading-clock__hand,
+  .intro-loading-dots span {
+    animation: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .privacy-panel,
+  .privacy-action,
+  .mcu-board,
+  .mcu-chip,
+  .intro-retry {
+    border: 1px solid CanvasText;
+  }
+
+  .privacy-gate__backdrop,
+  #intro-overlay,
+  .orientation-gate {
+    background: Canvas;
+  }
+
+  .orientation-gate {
+    color: CanvasText;
+  }
+
+  .loading-clock {
+    color: CanvasText;
+    filter: none;
+  }
+
+  .intro-progress__value {
+    color: CanvasText;
+  }
+}

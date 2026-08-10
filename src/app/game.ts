@@ -36,7 +36,12 @@ export interface MountedGame {
     victimType?: ChessPieceType;
   }) => void;
   destroy: () => void;
+  enterRoom: () => void;
   renderGameToText: () => string;
+}
+
+interface MountGameOptions {
+  onLoadProgress?: (progress: number) => void;
 }
 
 interface GameInteractionControllerState {
@@ -67,12 +72,17 @@ interface GameSnapshot extends BoardPreviewSnapshot {
     lastEvent: string | null;
   };
   startFlow: {
+    activeCertificateTopicId: string;
     activePictureFrameDetailId: string;
     activeTvSelection: TvSelectionId;
+    certificateEmbedReady: boolean;
     currentRoomFocusTarget: RoomFocusTargetId | null;
     gameplayInteractionEnabled: boolean;
     hoveredRoomHotspot: RoomFocusTargetId | null;
+    aboutEmbedReady: boolean;
     introTransitionActive: boolean;
+    performanceEmbedReady: boolean;
+    portfolioEmbedReady: boolean;
     roomFocusTransitionActive: boolean;
     state: StartFlowMode;
   };
@@ -81,36 +91,58 @@ interface GameSnapshot extends BoardPreviewSnapshot {
   undoAvailable: ChessGameSnapshot['undoAvailable'];
 }
 
+type MonitorPageTarget = 'aboutEmbed' | 'certificateEmbed' | 'performanceEmbed' | 'portfolioEmbed';
+
 const START_FLOW_INTRO_DURATION_MS = 1400;
-const ROOM_FOCUS_TRANSITION_DURATION_MS = 700;
-const ROOM_TV_SHOWCASE_TARGETS = new Set<RoomFocusTargetId>(['comicScreen', 'horrorEmbed', 'tvSelect']);
+const ROOM_FOCUS_TRANSITION_DURATION_MS = 2000;
+const MONITOR_PAGE_SETTLE_DURATION_MS = 0;
+const MONITOR_ENTRY_BLACKOUT_DURATION_MS = 180;
+const MONITOR_PAGE_MIN_BLACKOUT_MS = 300;
+const ROOM_TV_SHOWCASE_TARGETS = new Set<RoomFocusTargetId>([
+  'comicEmbed',
+  'comicScreen',
+  'horrorEmbed',
+  'tvSelect'
+]);
+
+function isMonitorPageTarget(target: RoomFocusTargetId): target is MonitorPageTarget {
+  return (
+    target === 'aboutEmbed' ||
+    target === 'certificateEmbed' ||
+    target === 'performanceEmbed' ||
+    target === 'portfolioEmbed'
+  );
+}
 const ROOM_FOCUS_TARGET_OPTIONS: ReadonlyArray<{ id: RoomFocusTargetId; label: string }> = [
   { id: 'overview', label: 'Room Overview' },
   { id: 'displayCase', label: 'Zertifikate' },
   { id: 'board', label: 'Schachbrett' },
   { id: 'workbench', label: 'Workbench' },
+  { id: 'performanceEmbed', label: 'Leistungsnachweise Bildschirm' },
+  { id: 'portfolioEmbed', label: 'Portfolio Bildschirm' },
+  { id: 'aboutEmbed', label: 'Über mich Bildschirm' },
+  { id: 'certificateEmbed', label: 'Zertifikate' },
   { id: 'pictureFrame', label: 'Leistungsnachweise' },
-  { id: 'comicEmbed', label: 'Über mich' },
   ...(ENABLE_TV_SHOWCASE
     ? [
+        { id: 'comicEmbed', label: 'Über mich (Legacy-Video)' },
         { id: 'comicScreen', label: 'TV' },
         { id: 'tvSelect', label: 'TV' },
         { id: 'horrorEmbed', label: 'KI-Trailer' }
       ] satisfies ReadonlyArray<{ id: RoomFocusTargetId; label: string }>
     : []),
-  { id: 'pictureFrameDetail', label: 'Certificate Detail' },
-  { id: 'webEmbed', label: 'Portfolio Website' }
+  { id: 'pictureFrameDetail', label: 'Certificate Detail' }
 ];
 
 function normalizePublicRoomFocusTarget(target: RoomFocusTargetId): RoomFocusTargetId {
   if (!ENABLE_TV_SHOWCASE && ROOM_TV_SHOWCASE_TARGETS.has(target)) {
-    return 'comicEmbed';
+    return 'aboutEmbed';
   }
 
   return target;
 }
 
-export function mountGame(root: HTMLDivElement): MountedGame {
+export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}): MountedGame {
   const engine = createChessEngine();
   const presentationStateMachine = createPresentationStateMachine();
   const soundController = createSoundController();
@@ -126,11 +158,15 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   let startFlowLastFrameTime = 0;
   let startFlowElapsedMs = 0;
   let roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
+  let monitorPageReadyTarget: MonitorPageTarget | null = null;
+  let monitorPageSettleElapsedMs = 0;
   let roomFocusFromTarget: RoomFocusTargetId = 'overview';
   let startFlowState: StartFlowMode = 'menu';
   let roomFocusTarget: RoomFocusTargetId = 'overview';
   let hoveredRoomHotspot: RoomFocusTargetId | null = null;
   let hoveredPictureFrameId: string | null = null;
+  let hoveredCertificateTopicId: string | null = null;
+  let activeCertificateTopicId = 'cs50';
   let activePictureFrameDetailId = 'frame0';
   let activeTvSelection: TvSelectionId = 'comic';
   let pendingMenuReturn = false;
@@ -140,28 +176,37 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     selectedSquare: null
   };
 
-  // Intro-Overlay-Gate: wird aufgelöst wenn Raum-GLB zuerst geladen wurde UND erstes
-  // Figuren-Asset-Set abgeschlossen ist. Beide sind nötig damit die Szene beim Eintritt korrekt aussieht.
+  const initialLoadProgress = {
+    board: 0,
+    pieces: 0,
+    room: 0,
+    warmup: 0
+  };
+  const reportInitialLoadProgress = (
+    channel: keyof typeof initialLoadProgress,
+    progress: number
+  ): void => {
+    const clampedProgress = Math.min(1, Math.max(0, Number.isFinite(progress) ? progress : 0));
+    initialLoadProgress[channel] = Math.max(initialLoadProgress[channel], clampedProgress);
+    options.onLoadProgress?.(
+      initialLoadProgress.room * 0.65 +
+      initialLoadProgress.pieces * 0.10 +
+      initialLoadProgress.board * 0.05 +
+      initialLoadProgress.warmup * 0.20
+    );
+  };
+  options.onLoadProgress?.(0);
+
+  // Intro-Overlay-Gate: Raum, Figuren und Brett müssen vollständig vorbereitet
+  // sein. Danach wird die tatsächliche GPU-/Render-Bereitschaft geprüft.
+  let resolveBoardLoaded!: () => void;
   let resolveRoomLoaded!: () => void;
   let resolvePiecesLoaded!: () => void;
-  const assetsReady = Promise.all([
+  const coreAssetsReady = Promise.all([
+    new Promise<void>(r => { resolveBoardLoaded = r; }),
     new Promise<void>(r => { resolveRoomLoaded = r; }),
     new Promise<void>(r => { resolvePiecesLoaded = r; })
-  ]).then(() => new Promise<void>(resolve => {
-    // GLBs sind heruntergeladen und geparst — aber die GPU muss noch WebGL-Programme
-    // (Shader) kompilieren und Texturen während der ersten Render-Frames hochladen.
-    // Zähle 60 rAF-Ticks, dann warte 2 s mehr damit alle Background-Aufgaben
-    // (Shader-Kompilierung, Textur-Uploads) vollständig verteilt sind.
-    let frames = 0;
-    function tick(): void {
-      if (++frames >= 60) {
-        setTimeout(resolve, 2000);
-      } else {
-        requestAnimationFrame(tick);
-      }
-    }
-    requestAnimationFrame(tick);
-  }));
+  ]);
 
   root.innerHTML = `
     <main class="app-shell">
@@ -237,7 +282,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
 
     if (action === 'direct-to-leistungen') {
       if (startFlowState === 'menu') {
-        beginStartFlowTransitionToTarget('pictureFrame');
+        beginStartFlowTransitionToTarget('performanceEmbed');
       }
 
       return;
@@ -245,14 +290,33 @@ export function mountGame(root: HTMLDivElement): MountedGame {
 
     if (action === 'direct-to-portfolio') {
       if (startFlowState === 'menu') {
-        beginStartFlowTransitionToTarget('webEmbed');
+        beginStartFlowTransitionToTarget('portfolioEmbed');
       }
 
       return;
     }
 
-    if (action === 'direct-to-comic') {
+    if (action === 'direct-to-about') {
       if (startFlowState === 'menu') {
+        beginStartFlowTransitionToTarget('aboutEmbed');
+      }
+
+      return;
+    }
+
+    if (action === 'direct-to-certificates') {
+      if (startFlowState === 'menu') {
+        activeCertificateTopicId = 'cs50';
+        beginStartFlowTransitionToTarget('certificateEmbed');
+      }
+
+      return;
+    }
+
+    // Legacy-Einstieg für den optionalen TV-/Comic-Showcase. Der öffentliche
+    // Über-mich-Button verwendet ausschließlich den neuen aboutEmbed-Pfad.
+    if (action === 'direct-to-comic') {
+      if (ENABLE_TV_SHOWCASE && startFlowState === 'menu') {
         beginStartFlowTransitionToTarget('comicEmbed');
       }
 
@@ -350,14 +414,6 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       return;
     }
 
-    if (action === 'enter-web-embed') {
-      if (startFlowState === 'roomExplore' && roomFocusTarget === 'workbench' && !isRoomFocusTransitionActive()) {
-        focusRoomTarget('webEmbed');
-      }
-
-      return;
-    }
-
     if (action === 'legal-impressum' || action === 'legal-datenschutz') {
       if (startFlowState === 'menu' || startFlowState === 'roomExplore') {
         legalWallTab = action === 'legal-impressum' ? 'impressum' : 'datenschutz';
@@ -414,14 +470,6 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     if (action === 'return-to-menu-from-focus') {
       if (startFlowState === 'roomExplore' && !isRoomFocusTransitionActive()) {
         returnToMenuFromFocus();
-      }
-
-      return;
-    }
-
-    if (action === 'back-from-web-embed') {
-      if (startFlowState === 'roomExplore' && roomFocusTarget === 'webEmbed' && !isRoomFocusTransitionActive()) {
-        focusRoomTarget('workbench');
       }
 
       return;
@@ -493,6 +541,18 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       return;
     }
 
+    const certificateButton = target.closest<HTMLButtonElement>('[data-certificate-topic]');
+    if (
+      certificateButton &&
+      !certificateButton.disabled &&
+      roomFocusTarget === 'overview' &&
+      !isRoomFocusTransitionActive()
+    ) {
+      activeCertificateTopicId = certificateButton.dataset.certificateTopic ?? 'cs50';
+      focusRoomTarget('certificateEmbed');
+      return;
+    }
+
     const hotspotButton = target.closest<HTMLButtonElement>('[data-room-hotspot]');
 
     if (!hotspotButton || hotspotButton.disabled) {
@@ -515,6 +575,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   const handleRoomHotspotPointerLeave = (): void => {
     hoveredRoomHotspot = null;
     hoveredPictureFrameId = null;
+    hoveredCertificateTopicId = null;
   };
 
   const handleRoomHotspotPointerOver = (event: PointerEvent): void => {
@@ -523,6 +584,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     if (!(target instanceof HTMLElement)) {
       hoveredRoomHotspot = null;
       hoveredPictureFrameId = null;
+      hoveredCertificateTopicId = null;
       return;
     }
 
@@ -532,6 +594,9 @@ export function mountGame(root: HTMLDivElement): MountedGame {
 
     const frameDiv = target.closest<HTMLElement>('[data-frame-id]');
     hoveredPictureFrameId = frameDiv?.dataset.frameId ?? null;
+
+    const certificateButton = target.closest<HTMLElement>('[data-certificate-topic]');
+    hoveredCertificateTopicId = certificateButton?.dataset.certificateTopic ?? null;
   };
 
   controlsRoot.addEventListener('click', handleControlsClick);
@@ -649,14 +714,67 @@ export function mountGame(root: HTMLDivElement): MountedGame {
 
   window.addEventListener('resize', syncEmbeddedVideoNav);
 
+  const syncMonitorPageFrame = (): void => {
+    const frame = roomHotspotsRoot.querySelector<HTMLDivElement>('.monitor-page-frame');
+    const iframe = frame?.querySelector<HTMLIFrameElement>('iframe');
+    if (!frame || !iframe || frame.dataset.loadBound === '1') {
+      return;
+    }
+
+    frame.dataset.loadBound = '1';
+    const overlay = frame.closest<HTMLDivElement>('.monitor-page-overlay');
+    const blackoutStartedAt = performance.now();
+    const revealLoadedFrame = (): void => {
+      const remainingBlackoutMs = Math.max(
+        0,
+        MONITOR_PAGE_MIN_BLACKOUT_MS - (performance.now() - blackoutStartedAt)
+      );
+      window.setTimeout(() => {
+        // Zwei Paints geben dem lokalen Dokument Zeit für sein erstes vollständiges
+        // Bild. Bis dahin deckt die schwarze Fläche auch Toolbar und Preload ab.
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => {
+            if (frame.isConnected) {
+              frame.classList.add('is-ready');
+              overlay?.classList.add('is-ready');
+            }
+          });
+        });
+      }, remainingBlackoutMs);
+    };
+
+    iframe.addEventListener('load', revealLoadedFrame, { once: true });
+  };
+
   const syncPanels = (): void => {
     if (startFlowState !== 'roomExplore') {
       hoveredRoomHotspot = null;
       hoveredPictureFrameId = null;
-    } else if (roomFocusTarget !== 'pictureFrame') {
-      hoveredPictureFrameId = null;
+      hoveredCertificateTopicId = null;
+    } else {
+      if (roomFocusTarget !== 'pictureFrame') {
+        hoveredPictureFrameId = null;
+      }
+      if (roomFocusTarget !== 'overview') {
+        hoveredCertificateTopicId = null;
+      }
     }
     const snapshot = buildGameSnapshot();
+    const currentTarget = snapshot.startFlow.currentRoomFocusTarget;
+    const activeMonitorPageKey =
+      snapshot.startFlow.certificateEmbedReady && currentTarget === 'certificateEmbed'
+        ? `certificateEmbed:${encodeURIComponent(snapshot.startFlow.activeCertificateTopicId)}`
+        : snapshot.startFlow.performanceEmbedReady && currentTarget === 'performanceEmbed'
+          ? 'performanceEmbed'
+          : snapshot.startFlow.aboutEmbedReady && currentTarget === 'aboutEmbed'
+            ? 'aboutEmbed'
+            : snapshot.startFlow.portfolioEmbedReady && currentTarget === 'portfolioEmbed'
+              ? 'portfolioEmbed'
+              : null;
+    const mountedMonitorPageKey =
+      roomHotspotsRoot
+        .querySelector<HTMLElement>('[data-monitor-page-key]')
+        ?.dataset.monitorPageKey ?? null;
 
     controlsRoot.innerHTML =
       snapshot.startFlow.state === 'boardFocus'
@@ -672,29 +790,39 @@ export function mountGame(root: HTMLDivElement): MountedGame {
             snapshot.startFlow.currentRoomFocusTarget,
             snapshot.startFlow.roomFocusTransitionActive
           );
-    roomHotspotsRoot.innerHTML =
-      (snapshot.startFlow.state === 'roomExplore' || snapshot.startFlow.state === 'menu')
-        ? renderRoomHotspots(snapshot, hoveredRoomHotspot, hoveredPictureFrameId)
-        : '';
+    // ResizeObserver und andere Szenenupdates synchronisieren weiterhin die
+    // Shell, duerfen eine bereits geladene Monitorseite aber nicht neu mounten.
+    // Sonst wird das iframe zerstoert, der 3D-Raum blitzt durch und der
+    // Ladehinweis erscheint erneut. Bei Ziel-/Themenwechsel wird normal neu
+    // gerendert, weil sich der stabile Seitenschluessel dann aendert.
+    if (activeMonitorPageKey === null || mountedMonitorPageKey !== activeMonitorPageKey) {
+      roomHotspotsRoot.innerHTML =
+        (snapshot.startFlow.state === 'roomExplore' || snapshot.startFlow.state === 'menu')
+          ? renderRoomHotspots(snapshot, hoveredRoomHotspot, hoveredPictureFrameId, hoveredCertificateTopicId)
+          : '';
+      syncMonitorPageFrame();
+    }
 
-    // Body-Klasse umschalten damit CSS den 3D-Site-Header/Footer in webEmbed verstecken kann
-    const isWebEmbed =
-      !snapshot.startFlow.roomFocusTransitionActive &&
-      snapshot.startFlow.currentRoomFocusTarget === 'webEmbed';
-    document.body.classList.toggle('web-embed-active', isWebEmbed);
+    // Vollbild-Einbettungen blenden die 3D-Kopf- und Fußzeile vollständig aus.
+    const isPerformanceEmbed =
+      snapshot.startFlow.performanceEmbedReady && currentTarget === 'performanceEmbed';
+    const isCertificateEmbed =
+      snapshot.startFlow.certificateEmbedReady && currentTarget === 'certificateEmbed';
+    const isAboutEmbed =
+      snapshot.startFlow.aboutEmbedReady && currentTarget === 'aboutEmbed';
+    const isPortfolioEmbed =
+      snapshot.startFlow.portfolioEmbedReady && currentTarget === 'portfolioEmbed';
+    document.body.classList.toggle('performance-embed-active', isPerformanceEmbed);
+    document.body.classList.toggle('certificate-embed-active', isCertificateEmbed);
+    document.body.classList.toggle('about-embed-active', isAboutEmbed);
+    document.body.classList.toggle('portfolio-embed-active', isPortfolioEmbed);
 
     // Body-Klasse umschalten für comicEmbed/tvSelect/horrorEmbed (Header/Footer ausblenden)
-    const currentTarget = snapshot.startFlow.currentRoomFocusTarget;
     const isComicEmbed =
       !snapshot.startFlow.roomFocusTransitionActive &&
       (currentTarget === 'comicEmbed' ||
         (ENABLE_TV_SHOWCASE && (currentTarget === 'tvSelect' || currentTarget === 'horrorEmbed')));
     document.body.classList.toggle('comic-embed-active', isComicEmbed);
-
-    // Landscape-Stylesheet in den Portfolio-iframe injizieren (same-origin)
-    if (isWebEmbed) {
-      injectPortfolioLandscapeStyles();
-    }
 
     // Legal Overlay ein-/ausblenden wenn legalWall Transition abgeschlossen
     const isAtLegalWall =
@@ -718,13 +846,21 @@ export function mountGame(root: HTMLDivElement): MountedGame {
 
   const preview = createBoardPreviewScene({
     container: sceneRoot,
+    onRoomAssetProgress: progress => reportInitialLoadProgress('room', progress),
+    onRoomAssetReady: () => {
+      reportInitialLoadProgress('room', 1);
+      resolveRoomLoaded();
+    },
     onSquareClick: handleSquareClick,
     onStateChange: () => {
-      resolveRoomLoaded();
       syncPanels();
     },
     pieces: engine.getSnapshot().pieces
   });
+
+  const assetsReady = coreAssetsReady.then(() =>
+    preview.prepareInitialRender(progress => reportInitialLoadProgress('warmup', progress))
+  );
 
   syncStartFlowToPreview();
   syncSceneFromState(engine.getSnapshot(), { immediate: true });
@@ -743,12 +879,12 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     debugPreviewCombatCamera: ({
       attackerType = 'queen',
       capturedSquare = 'd5',
-      durationMs = 920,
+      durationMs = 2310,
       from = 'e4',
       mode = 'combat',
       phase = 'intro',
       phaseProgress = 0,
-      remainingMs = 920,
+      remainingMs = 2310,
       to = 'd5',
       victimType = 'rook'
     } = {}) => {
@@ -842,8 +978,21 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       roomHotspotsRoot.removeEventListener('pointerover', handleRoomHotspotPointerOver);
       document.removeEventListener('click', handleGlobalLegalClick);
       hideLegalOverlay();
+      document.body.classList.remove(
+        'performance-embed-active',
+        'certificate-embed-active',
+        'about-embed-active',
+        'portfolio-embed-active',
+        'comic-embed-active'
+      );
       preview.dispose();
       root.innerHTML = '';
+    },
+    enterRoom: () => {
+      if (startFlowState === 'menu') {
+        beginStartFlowTransition();
+        syncPanels();
+      }
     },
     renderGameToText: () => JSON.stringify(buildGameSnapshot())
   };
@@ -874,12 +1023,17 @@ export function mountGame(root: HTMLDivElement): MountedGame {
         combat: combatSfxController.getSnapshot()
       },
       startFlow: {
+        activeCertificateTopicId,
         activePictureFrameDetailId,
         activeTvSelection,
+        aboutEmbedReady: monitorPageReadyTarget === 'aboutEmbed',
+        certificateEmbedReady: monitorPageReadyTarget === 'certificateEmbed',
         currentRoomFocusTarget: startFlowState === 'menu' ? null : roomFocusTarget,
         gameplayInteractionEnabled: isGameplayInteractionEnabled(),
         hoveredRoomHotspot,
         introTransitionActive: startFlowState === 'introTransition',
+        performanceEmbedReady: monitorPageReadyTarget === 'performanceEmbed',
+        portfolioEmbedReady: monitorPageReadyTarget === 'portfolioEmbed',
         roomFocusTransitionActive: isRoomFocusTransitionActive(),
         state: startFlowState
       },
@@ -971,7 +1125,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     const requestId = ++boardAssetRequestId;
 
     try {
-      const assets = await loadBoardVisualAsset();
+      const assets = await loadBoardVisualAsset(progress => reportInitialLoadProgress('board', progress));
 
       if (isDisposed || requestId !== boardAssetRequestId) {
         return;
@@ -980,6 +1134,9 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       preview.applyBoardAsset(assets);
     } catch {
       // Asset-Laden ist optional; Platzhalter bleiben bei Fehlern aktiv.
+    } finally {
+      reportInitialLoadProgress('board', 1);
+      resolveBoardLoaded();
     }
   }
 
@@ -993,7 +1150,10 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     syncPanels();
 
     try {
-      const assets = await loadPieceVisualAssets(nextPieceAssetSet);
+      const assets = await loadPieceVisualAssets(
+        nextPieceAssetSet,
+        progress => reportInitialLoadProgress('pieces', progress)
+      );
 
       if (isDisposed || requestId !== pieceAssetRequestId) {
         return;
@@ -1006,13 +1166,20 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       if (!isDisposed && requestId === pieceAssetRequestId) {
         pieceAssetSetLoading = false;
         pendingPieceAssetSet = null;
+        reportInitialLoadProgress('pieces', 1);
         resolvePiecesLoaded();
         syncPanels();
       }
     }
   }
 
+  function resetMonitorPageReveal(): void {
+    monitorPageReadyTarget = null;
+    monitorPageSettleElapsedMs = 0;
+  }
+
   function beginStartFlowTransition(): void {
+    resetMonitorPageReveal();
     // Überspringe introTransition — die Menü-Kamera zeigt bereits die Übersicht,
     // also landen wir direkt in roomExplore in der Übersicht-Position ohne
     // Kamera-Bewegung. Der introTransition-Status und advanceStartFlow-Pfad
@@ -1028,6 +1195,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
 
   function beginStartFlowTransitionToTarget(target: Exclude<RoomFocusTargetId, 'overview'>): void {
     const publicTarget = normalizePublicRoomFocusTarget(target) as Exclude<RoomFocusTargetId, 'overview'>;
+    resetMonitorPageReveal();
 
     // Animiere direkt von Übersicht (= Menü-Kamera) zum gegebenen Ziel ohne
     // zuerst bei der Übersicht-Freikamera-Status anzuhalten. Das vermeidet den
@@ -1043,10 +1211,12 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   }
 
   function returnToMenu(): void {
+    resetMonitorPageReveal();
     // Menü-Ka mera passt zur Übersicht-Position, deshalb kein sichtbarer Sprung.
     startFlowState = 'menu';
     hoveredRoomHotspot = null;
     hoveredPictureFrameId = null;
+    hoveredCertificateTopicId = null;
     roomFocusFromTarget = 'overview';
     roomFocusTarget = 'overview';
     roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
@@ -1073,6 +1243,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
         roomFocusFromTarget = 'overview';
         roomFocusTarget = 'overview';
         roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
+        resetMonitorPageReveal();
         syncStartFlowToPreview();
         stopStartFlowLoop();
         return;
@@ -1082,25 +1253,45 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       return;
     }
 
-    if (!isRoomFocusTransitionActive()) {
-      stopStartFlowLoop();
+    const safeMs = Math.max(ms, 0);
+
+    if (isRoomFocusTransitionActive()) {
+      roomFocusElapsedMs = Math.min(roomFocusElapsedMs + safeMs, ROOM_FOCUS_TRANSITION_DURATION_MS);
+
+      if (roomFocusElapsedMs >= ROOM_FOCUS_TRANSITION_DURATION_MS) {
+        roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
+        // Am Endpunkt übernimmt der schwarze Handoff sofort; das lokale iframe
+        // wird im folgenden State-Schritt ohne zusätzliche Haltezeit gemountet.
+        syncStartFlowToPreview();
+        if (pendingMenuReturn && roomFocusTarget === 'overview') {
+          pendingMenuReturn = false;
+          returnToMenu();
+        } else if (!isMonitorPageTarget(roomFocusTarget)) {
+          stopStartFlowLoop();
+        }
+        return;
+      }
+
+      syncStartFlowToPreview();
       return;
     }
 
-    roomFocusElapsedMs = Math.min(roomFocusElapsedMs + Math.max(ms, 0), ROOM_FOCUS_TRANSITION_DURATION_MS);
+    const settlingMonitorPageTarget = getMonitorPageSettleTarget();
+    if (settlingMonitorPageTarget) {
+      monitorPageSettleElapsedMs = Math.min(
+        monitorPageSettleElapsedMs + safeMs,
+        MONITOR_PAGE_SETTLE_DURATION_MS
+      );
 
-    if (roomFocusElapsedMs >= ROOM_FOCUS_TRANSITION_DURATION_MS) {
-      roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
-      syncStartFlowToPreview();
-      stopStartFlowLoop();
-      if (pendingMenuReturn && roomFocusTarget === 'overview') {
-        pendingMenuReturn = false;
-        returnToMenu();
+      if (monitorPageSettleElapsedMs >= MONITOR_PAGE_SETTLE_DURATION_MS) {
+        monitorPageReadyTarget = settlingMonitorPageTarget;
+        stopStartFlowLoop();
+        syncPanels();
       }
       return;
     }
 
-    syncStartFlowToPreview();
+    stopStartFlowLoop();
   }
 
   function advancePresentationState(ms: number): void {
@@ -1132,19 +1323,20 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     }
 
     startFlowLastFrameTime = performance.now();
-    startFlowFrameHandle = window.setTimeout(handleStartFlowFrame, 16);
+    startFlowFrameHandle = window.requestAnimationFrame(handleStartFlowFrame);
   }
 
-  function handleStartFlowFrame(): void {
+  function handleStartFlowFrame(timestamp: number): void {
     startFlowFrameHandle = 0;
-    const timestamp = performance.now();
-    const deltaMs = Math.min(timestamp - startFlowLastFrameTime, 32);
+    // Kamerafahrten sind zeitbasiert: ausgelassene Browser-Frames dürfen die
+    // vorgesehene Dauer nicht künstlich verlängern.
+    const deltaMs = Math.max(timestamp - startFlowLastFrameTime, 0);
     startFlowLastFrameTime = timestamp;
 
     advanceStartFlow(deltaMs);
 
     if (!isDisposed && isStartFlowAnimationActive()) {
-      startFlowFrameHandle = window.setTimeout(handleStartFlowFrame, 16);
+      startFlowFrameHandle = window.requestAnimationFrame(handleStartFlowFrame);
     }
   }
 
@@ -1153,7 +1345,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
       return;
     }
 
-    window.clearTimeout(startFlowFrameHandle);
+    window.cancelAnimationFrame(startFlowFrameHandle);
     startFlowFrameHandle = 0;
   }
 
@@ -1169,7 +1361,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   function handlePresentationFrame(timestamp: number): void {
     presentationFrameHandle = 0;
 
-    const deltaMs = Math.min(timestamp - presentationLastFrameTime, 32);
+    const deltaMs = Math.max(timestamp - presentationLastFrameTime, 0);
     presentationLastFrameTime = timestamp;
 
     advancePresentationState(deltaMs);
@@ -1213,6 +1405,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
 
   function syncStartFlowToPreview(): void {
     preview.syncStartFlowState({
+      certificateTopicId: activeCertificateTopicId,
       focusFromTarget: roomFocusFromTarget,
       focusProgress: isRoomFocusTransitionActive() ? roomFocusElapsedMs / ROOM_FOCUS_TRANSITION_DURATION_MS : 1,
       focusTarget: roomFocusTarget,
@@ -1235,10 +1428,16 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   function focusRoomTarget(nextTarget: RoomFocusTargetId): void {
     const publicTarget = normalizePublicRoomFocusTarget(nextTarget);
 
-    if (startFlowState !== 'roomExplore' || isRoomFocusTransitionActive() || publicTarget === roomFocusTarget) {
+    if (
+      startFlowState !== 'roomExplore' ||
+      isRoomFocusTransitionActive() ||
+      getMonitorPageSettleTarget() !== null ||
+      publicTarget === roomFocusTarget
+    ) {
       return;
     }
 
+    resetMonitorPageReveal();
     roomFocusFromTarget = roomFocusTarget;
     roomFocusTarget = publicTarget;
     roomFocusElapsedMs = 0;
@@ -1247,6 +1446,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   }
 
   function enterBoardFocus(): void {
+    resetMonitorPageReveal();
     startFlowState = 'boardFocus';
     hoveredRoomHotspot = null;
     roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
@@ -1255,6 +1455,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   }
 
   function enterDisplayCaseFocus(): void {
+    resetMonitorPageReveal();
     startFlowState = 'displayCaseFocus';
     hoveredRoomHotspot = null;
     roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
@@ -1263,6 +1464,7 @@ export function mountGame(root: HTMLDivElement): MountedGame {
   }
 
   function returnToRoomExplore(): void {
+    resetMonitorPageReveal();
     // Leite Kamera-Ursprung für Rückkehr-Bewegung von welchem
     // Fokus-Modus gerade aktiv ist. Szene getRoomFocusTargetPreset() löst
     // 'board' zur Live-boardCameraControls-Position und 'displayCase' zur
@@ -1289,8 +1491,26 @@ export function mountGame(root: HTMLDivElement): MountedGame {
     return startFlowState === 'roomExplore' && roomFocusFromTarget !== roomFocusTarget && roomFocusElapsedMs < ROOM_FOCUS_TRANSITION_DURATION_MS;
   }
 
+  function getMonitorPageSettleTarget(): MonitorPageTarget | null {
+    if (
+      startFlowState === 'roomExplore' &&
+      roomFocusFromTarget !== roomFocusTarget &&
+      isMonitorPageTarget(roomFocusTarget) &&
+      roomFocusElapsedMs >= ROOM_FOCUS_TRANSITION_DURATION_MS &&
+      monitorPageReadyTarget !== roomFocusTarget
+    ) {
+      return roomFocusTarget;
+    }
+
+    return null;
+  }
+
   function isStartFlowAnimationActive(): boolean {
-    return startFlowState === 'introTransition' || isRoomFocusTransitionActive();
+    return (
+      startFlowState === 'introTransition' ||
+      isRoomFocusTransitionActive() ||
+      getMonitorPageSettleTarget() !== null
+    );
   }
 }
 
@@ -1330,7 +1550,12 @@ const ROOM_HOTSPOT_SUBTITLES: Record<string, string> = {
   board: 'Klicken zum Spielen'
 };
 
-function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocusTargetId | null, hoveredPictureFrameId: string | null): string {
+function renderRoomHotspots(
+  snapshot: GameSnapshot,
+  hoveredRoomHotspot: RoomFocusTargetId | null,
+  hoveredPictureFrameId: string | null,
+  hoveredCertificateTopicId: string | null
+): string {
   const isRoomExplore = snapshot.startFlow.state === 'roomExplore';
 
   if (!isRoomExplore) {
@@ -1352,6 +1577,22 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
           ? 'room-hotspot-btn--hovered'
           : '';
       const subtitle = ROOM_HOTSPOT_SUBTITLES[hotspot.id] ?? '';
+
+      if (hotspot.interactionMode === 'surface') {
+        const width = Math.max(28, hotspot.screenWidth);
+        const height = Math.max(24, hotspot.screenHeight);
+        return `
+          <button
+            aria-label="${hotspot.label} öffnen"
+            class="room-surface-hotspot ${isHovered ? 'room-surface-hotspot--hovered' : ''}"
+            data-room-hotspot="${hotspot.id}"
+            type="button"
+            style="left: ${hotspot.screenX}px; top: ${hotspot.screenY}px; width: ${width}px; height: ${height}px;"
+          >
+            <span class="visually-hidden">${hotspot.label} öffnen</span>
+          </button>
+        `;
+      }
 
       // Beschränke damit Button nie über Leinwand-Kant überströmt.
       const padX = 70;
@@ -1378,6 +1619,27 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
     })
     .join('');
 
+  const certificateButtons = showHotspots
+    ? snapshot.roomExplore.certificateFrames
+        .filter((frame) => frame.isVisible)
+        .map((frame) => {
+          const width = Math.max(22, frame.screenWidth);
+          const height = Math.max(22, frame.screenHeight);
+          return `
+            <button
+              aria-label="Zertifikatsthema ${frame.label} öffnen"
+              class="certificate-surface-hotspot ${hoveredCertificateTopicId === frame.id ? 'certificate-surface-hotspot--hovered' : ''}"
+              data-certificate-topic="${frame.id}"
+              type="button"
+              style="left: ${frame.screenX}px; top: ${frame.screenY}px; width: ${width}px; height: ${height}px;"
+            >
+              <span class="visually-hidden">${frame.label} öffnen</span>
+            </button>
+          `;
+        })
+        .join('')
+    : '';
+
   const focusedHotspot = hotspots.find((h) => h.isFocused);
   const infoPlate = focusedHotspot
     ? `
@@ -1388,6 +1650,134 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
     `
     : '';
 
+  const currentMonitorTarget = snapshot.startFlow.currentRoomFocusTarget;
+  const currentMonitorPageReady =
+    (currentMonitorTarget === 'certificateEmbed' && snapshot.startFlow.certificateEmbedReady) ||
+    (currentMonitorTarget === 'performanceEmbed' && snapshot.startFlow.performanceEmbedReady) ||
+    (currentMonitorTarget === 'aboutEmbed' && snapshot.startFlow.aboutEmbedReady) ||
+    (currentMonitorTarget === 'portfolioEmbed' && snapshot.startFlow.portfolioEmbedReady);
+  const monitorEntryBlackout =
+    currentMonitorTarget !== null &&
+    isMonitorPageTarget(currentMonitorTarget) &&
+    !currentMonitorPageReady
+      ? `<div
+           aria-hidden="true"
+           class="monitor-entry-blackout ${snapshot.startFlow.roomFocusTransitionActive ? 'monitor-entry-blackout--delayed' : 'monitor-entry-blackout--solid'}"
+           style="--monitor-entry-blackout-delay: ${Math.max(0, ROOM_FOCUS_TRANSITION_DURATION_MS - MONITOR_ENTRY_BLACKOUT_DURATION_MS)}ms; --monitor-entry-blackout-duration: ${MONITOR_ENTRY_BLACKOUT_DURATION_MS}ms;"
+         ></div>`
+      : '';
+
+  const certificateEmbedOverlay =
+    snapshot.startFlow.certificateEmbedReady &&
+    snapshot.startFlow.currentRoomFocusTarget === 'certificateEmbed'
+      ? `<div
+           class="certificate-embed-overlay monitor-page-overlay"
+           data-monitor-page-key="certificateEmbed:${encodeURIComponent(snapshot.startFlow.activeCertificateTopicId)}"
+         >
+           <div class="certificate-embed-toolbar monitor-page-toolbar" aria-label="Zertifikate verlassen">
+             <button
+               class="web-embed-nav__btn"
+               data-control="room-focus"
+               data-room-focus-target="overview"
+               type="button"
+             >Zur&uuml;ck zum Raum</button>
+             <button
+               class="web-embed-nav__btn"
+               data-control="return-to-menu-from-focus"
+               type="button"
+             >Zum Hauptmen&uuml;</button>
+           </div>
+           <div class="certificate-embed-frame monitor-page-frame">
+             <div class="certificate-embed-preload monitor-page-preload" role="status">
+               Zertifikatsbereich wird ge&ouml;ffnet&nbsp;&hellip;
+             </div>
+             <iframe
+                src="/zertifikate/index.html?thema=${encodeURIComponent(snapshot.startFlow.activeCertificateTopicId)}"
+                title="Zertifikate"
+                loading="eager"
+                referrerpolicy="no-referrer"
+                allow="accelerometer 'none'; camera 'none'; display-capture 'none'; encrypted-media 'none'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; microphone 'none'; midi 'none'; payment 'none'; picture-in-picture 'none'; publickey-credentials-get 'none'; usb 'none'"
+             ></iframe>
+           </div>
+         </div>`
+      : '';
+
+  // ── Leistungsnachweise im linken Monitor ─────────────────────────────
+  // Der neue öffentliche Ablauf ist vom alten Bilderrahmen-/Dokumentpfad
+  // getrennt. Das iframe erscheint erst nach Abschluss der Kamerafahrt.
+  const performanceEmbedOverlay =
+    snapshot.startFlow.performanceEmbedReady &&
+    snapshot.startFlow.currentRoomFocusTarget === 'performanceEmbed'
+      ? `<div
+           class="performance-embed-overlay monitor-page-overlay"
+           data-monitor-page-key="performanceEmbed"
+         >
+           <div class="performance-embed-toolbar monitor-page-toolbar" aria-label="Leistungsnachweise verlassen">
+             <button
+               class="web-embed-nav__btn"
+               data-control="room-focus"
+               data-room-focus-target="overview"
+               type="button"
+             >Zur&uuml;ck zum Raum</button>
+             <button
+               class="web-embed-nav__btn"
+               data-control="return-to-menu-from-focus"
+               type="button"
+             >Zum Hauptmen&uuml;</button>
+           </div>
+           <div class="performance-embed-frame monitor-page-frame">
+             <div class="performance-embed-preload monitor-page-preload" role="status">
+               Leistungsnachweise werden geöffnet&nbsp;&hellip;
+             </div>
+             <iframe
+                src="/leistungsnachweise/index.html?v=2026-08-10-ten-study-sections"
+                title="Leistungsnachweise"
+                loading="eager"
+                referrerpolicy="no-referrer"
+                allow="accelerometer 'none'; camera 'none'; display-capture 'none'; encrypted-media 'none'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; microphone 'none'; midi 'none'; payment 'none'; picture-in-picture 'none'; publickey-credentials-get 'none'; usb 'none'"
+             ></iframe>
+           </div>
+         </div>`
+      : '';
+
+  // ── Über mich im rechten Monitor ────────────────────────────────────
+  // Der öffentliche Pfad ist vollständig vom optionalen Comic-/Video-
+  // Showcase getrennt und verwendet dieselbe Ankunftsphase wie links.
+  const aboutEmbedOverlay =
+    snapshot.startFlow.aboutEmbedReady &&
+    snapshot.startFlow.currentRoomFocusTarget === 'aboutEmbed'
+      ? `<div
+           class="about-embed-overlay monitor-page-overlay"
+           data-monitor-page-key="aboutEmbed"
+         >
+           <div class="about-embed-toolbar monitor-page-toolbar" aria-label="Über mich verlassen">
+             <button
+               class="web-embed-nav__btn"
+               data-control="room-focus"
+               data-room-focus-target="overview"
+               type="button"
+             >Zur&uuml;ck zum Raum</button>
+             <button
+               class="web-embed-nav__btn"
+               data-control="return-to-menu-from-focus"
+               type="button"
+             >Zum Hauptmen&uuml;</button>
+           </div>
+           <div class="about-embed-frame monitor-page-frame">
+             <div class="about-embed-preload monitor-page-preload" role="status">
+               &Uuml;ber-mich-Seite wird ge&ouml;ffnet&nbsp;&hellip;
+             </div>
+             <iframe
+                src="/ueber-mich/index.html?v=2026-08-09-profile-readme-v2"
+               title="Über mich"
+                loading="eager"
+                referrerpolicy="no-referrer"
+                allow="accelerometer 'none'; camera 'none'; display-capture 'none'; encrypted-media 'none'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; microphone 'none'; midi 'none'; payment 'none'; picture-in-picture 'none'; publickey-credentials-get 'none'; usb 'none'"
+             ></iframe>
+           </div>
+         </div>`
+      : '';
+
   // ── Bilderrahmen-Glanz-Ringe (nur pictureFrame Fokus) ────────────────
   const pictureFrameGlows =
     !snapshot.startFlow.roomFocusTransitionActive &&
@@ -1395,15 +1785,16 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
       ? snapshot.roomExplore.pictureFrames
           .filter((f) => f.isVisible)
           .map(
-            (f) => `
-            <div
-              class="picture-frame-hotspot"
+            (f, index) => `
+            <button
+              class="picture-frame-hotspot ${hoveredPictureFrameId === f.id ? 'picture-frame-hotspot--hovered' : ''}"
               data-frame-id="${f.id}"
-              role="button"
-              tabindex="0"
-              aria-label="${f.label}"
+              type="button"
+              aria-label="Semester ${index + 1} öffnen"
               style="left: ${f.screenX}px; top: ${f.screenY}px;"
-            ></div>
+            >
+              <span>Semester ${index + 1}</span>
+            </button>
           `
           )
           .join('')
@@ -1447,15 +1838,40 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
         })()
       : '';
 
-  // ── Web-Embed-Overlay (nur webEmbed Fokus) ──────────────────────────────
-  const webEmbedOverlay =
-    !snapshot.startFlow.roomFocusTransitionActive &&
-    snapshot.startFlow.currentRoomFocusTarget === 'webEmbed'
-      ? `<div class="web-embed-overlay">
-           <iframe src="/portfolio/index.html" title="Portfolio" allowfullscreen></iframe>
-           <div class="web-embed-nav web-embed-nav--portfolio">
-             <button class="web-embed-nav__btn" data-control="back-from-web-embed" type="button">Zurück</button>
-             <button class="web-embed-nav__btn" data-control="return-to-menu-from-focus" type="button">Zum Hauptmenü</button>
+  // ── Portfolio im mittleren Monitor ──────────────────────────────────
+  // Der öffentliche Platzhalterpfad bleibt von der bisherigen React-App
+  // getrennt und verwendet dieselbe Ankunftsphase wie die anderen Monitore.
+  const portfolioEmbedOverlay =
+    snapshot.startFlow.portfolioEmbedReady &&
+    snapshot.startFlow.currentRoomFocusTarget === 'portfolioEmbed'
+      ? `<div
+           class="portfolio-embed-overlay monitor-page-overlay"
+           data-monitor-page-key="portfolioEmbed"
+         >
+           <div class="portfolio-embed-toolbar monitor-page-toolbar" aria-label="Portfolio verlassen">
+             <button
+               class="web-embed-nav__btn"
+               data-control="room-focus"
+               data-room-focus-target="overview"
+               type="button"
+             >Zur&uuml;ck zum Raum</button>
+             <button
+               class="web-embed-nav__btn"
+               data-control="return-to-menu-from-focus"
+               type="button"
+             >Zum Hauptmen&uuml;</button>
+           </div>
+           <div class="portfolio-embed-frame monitor-page-frame">
+             <div class="portfolio-embed-preload monitor-page-preload" role="status">
+               Portfolio wird ge&ouml;ffnet&nbsp;&hellip;
+             </div>
+             <iframe
+                src="/portfolio-platzhalter/index.html"
+                title="Portfolio"
+                loading="eager"
+                referrerpolicy="no-referrer"
+                allow="accelerometer 'none'; camera 'none'; display-capture 'none'; encrypted-media 'none'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; microphone 'none'; midi 'none'; payment 'none'; picture-in-picture 'none'; publickey-credentials-get 'none'; usb 'none'"
+             ></iframe>
            </div>
          </div>`
       : '';
@@ -1555,10 +1971,17 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
        <button class="web-embed-nav__btn" data-control="return-to-menu-from-focus" type="button">Zum Hauptmenü</button>`;
 
   const comicEmbedOverlay =
+    ENABLE_TV_SHOWCASE &&
     !snapshot.startFlow.roomFocusTransitionActive &&
     snapshot.startFlow.currentRoomFocusTarget === 'comicEmbed'
       ? `<div class="comic-screen-overlay">
-           <iframe src="/comic-film/index.html" title="Über mich" allowfullscreen></iframe>
+           <iframe
+             src="/comic-film/index.html"
+             title="Über mich"
+             referrerpolicy="no-referrer"
+             allow="fullscreen; accelerometer 'none'; camera 'none'; display-capture 'none'; encrypted-media 'none'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; microphone 'none'; midi 'none'; payment 'none'; picture-in-picture 'none'; publickey-credentials-get 'none'; usb 'none'"
+             allowfullscreen
+           ></iframe>
            <div class="web-embed-nav">
              ${comicEmbedNavButtons}
            </div>
@@ -1571,7 +1994,13 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
     !snapshot.startFlow.roomFocusTransitionActive &&
     snapshot.startFlow.currentRoomFocusTarget === 'horrorEmbed'
       ? `<div class="horror-screen-overlay">
-           <iframe src="/horror-film/index.html" title="KI-Trailer" allow="autoplay; fullscreen" allowfullscreen></iframe>
+           <iframe
+             src="/horror-film/index.html"
+             title="KI-Trailer"
+             referrerpolicy="no-referrer"
+             allow="autoplay; fullscreen; accelerometer 'none'; camera 'none'; display-capture 'none'; encrypted-media 'none'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; microphone 'none'; midi 'none'; payment 'none'; picture-in-picture 'none'; publickey-credentials-get 'none'; usb 'none'"
+             allowfullscreen
+           ></iframe>
            <div class="web-embed-nav">
              <button class="web-embed-nav__btn" data-control="back-from-horror-embed" type="button">Zurück</button>
              <button class="web-embed-nav__btn" data-control="return-to-overview-from-tv" type="button">Zur Übersicht</button>
@@ -1582,10 +2011,15 @@ function renderRoomHotspots(snapshot: GameSnapshot, hoveredRoomHotspot: RoomFocu
 
   return `
     <div class="room-hotspots-layer">
+      ${monitorEntryBlackout}
       ${hotspotButtons}
+      ${certificateButtons}
+      ${certificateEmbedOverlay}
+      ${performanceEmbedOverlay}
+      ${aboutEmbedOverlay}
+      ${portfolioEmbedOverlay}
       ${pictureFrameGlows}
       ${pictureFrameDetailOverlay}
-      ${webEmbedOverlay}
       ${tvSelectOverlay}
       ${comicEmbedOverlay}
       ${horrorEmbedOverlay}
@@ -1615,8 +2049,16 @@ function renderStartFlowControls(
 
   // ── Raum erkunden: nur Zur Übersicht + kontextuelle Aktion ────────────────
   if (startFlowState === 'roomExplore') {
-    // webEmbed: Buttons werden im web-embed-overlay div selbst gerendert
-    if (!roomFocusTransitionActive && currentRoomFocusTarget === 'webEmbed') {
+    // Vollbild-Embeds rendern ihre Navigation direkt im jeweiligen Overlay.
+    if (
+      !roomFocusTransitionActive &&
+      (
+        currentRoomFocusTarget === 'certificateEmbed' ||
+        currentRoomFocusTarget === 'performanceEmbed' ||
+        currentRoomFocusTarget === 'portfolioEmbed' ||
+        currentRoomFocusTarget === 'aboutEmbed'
+      )
+    ) {
       return '';
     }
 
@@ -1681,14 +2123,7 @@ function renderStartFlowControls(
               Spiel starten
             </button>
           </div>`
-        : !roomFocusTransitionActive && currentRoomFocusTarget === 'workbench'
-          ? `
-          <div class="control-row">
-            <button class="control-button control-button--secondary" data-control="enter-web-embed" type="button">
-              2D Webseite betreten
-            </button>
-          </div>`
-          : !roomFocusTransitionActive && currentRoomFocusTarget === 'overview'
+        : !roomFocusTransitionActive && currentRoomFocusTarget === 'overview'
             ? `
           <div class="control-row">
             <button class="control-button control-button--secondary" data-control="return-to-menu" type="button">
@@ -1730,7 +2165,7 @@ function renderStartFlowControls(
     `;
   }
 
-  // ── Menü / Intro: drei Einstiegs-Buttons ───────────────────────────────────
+  // ── Menü / Intro: direkte Einstiegs-Buttons ────────────────────────────────
   const buttonDisabled = startFlowState !== 'menu';
 
   return `
@@ -1752,8 +2187,13 @@ function renderStartFlowControls(
         </button>
       </div>
       <div class="control-row">
-        <button class="control-button control-button--secondary" data-control="direct-to-comic" type="button" ${buttonDisabled ? 'disabled' : ''}>
+        <button class="control-button control-button--secondary" data-control="direct-to-about" type="button" ${buttonDisabled ? 'disabled' : ''}>
           Über mich
+        </button>
+      </div>
+      <div class="control-row">
+        <button class="control-button control-button--secondary" data-control="direct-to-certificates" type="button" ${buttonDisabled ? 'disabled' : ''}>
+          Zertifikate
         </button>
       </div>
     </div>
@@ -1761,115 +2201,9 @@ function renderStartFlowControls(
 }
 
 function isRoomFocusTargetId(value: string | undefined): value is RoomFocusTargetId {
-  return value === 'board' || value === 'comicEmbed' || value === 'comicScreen' || value === 'displayCase' || value === 'horrorEmbed' || value === 'legalWall' || value === 'overview' || value === 'tvSelect' || value === 'workbench' || value === 'pictureFrame' || value === 'pictureFrameDetail' || value === 'webEmbed';
+  return value === 'aboutEmbed' || value === 'certificateEmbed' || value === 'portfolioEmbed' || value === 'board' || value === 'comicEmbed' || value === 'comicScreen' || value === 'displayCase' || value === 'horrorEmbed' || value === 'legalWall' || value === 'overview' || value === 'performanceEmbed' || value === 'tvSelect' || value === 'workbench' || value === 'pictureFrame' || value === 'pictureFrameDetail';
 }
 
 function isRoomHotspotId(value: string | undefined): value is Exclude<RoomFocusTargetId, 'overview'> {
-  return value === 'board' || value === 'comicEmbed' || value === 'comicScreen' || value === 'displayCase' || value === 'horrorEmbed' || value === 'pictureFrame' || value === 'tvSelect' || value === 'workbench';
+  return value === 'aboutEmbed' || value === 'portfolioEmbed' || value === 'board' || value === 'comicEmbed' || value === 'comicScreen' || value === 'displayCase' || value === 'horrorEmbed' || value === 'performanceEmbed' || value === 'pictureFrame' || value === 'tvSelect' || value === 'workbench';
 }
-
-// ── Portfolio-iframe Landscape-Stylesheet Injection ─────────────────────────
-const PORTFOLIO_LANDSCAPE_CSS = `
-@media (max-width: 900px) and (orientation: landscape) {
-  /* Viewport fest — kein Scrollen */
-  html, body {
-    height: 100vh !important;
-    overflow: hidden !important;
-  }
-  #root {
-    height: 100vh !important;
-    overflow: hidden !important;
-  }
-  /* Header dünner */
-  header {
-    height: 32px !important;
-    padding: 0 12px !important;
-  }
-  header .header-avatar {
-    width: 20px !important;
-    height: 20px !important;
-  }
-  header span, header p {
-    font-size: 0.65rem !important;
-  }
-  /* Footer dünner */
-  footer {
-    padding: 4px 12px !important;
-  }
-  footer span {
-    font-size: 0.5rem !important;
-  }
-  /* Carousel-Bereich: kleiner skalieren */
-  main {
-    transform: scale(0.35) !important;
-    transform-origin: center center !important;
-    padding: 0 !important;
-    margin-top: -10px !important;
-  }
-  /* Joystick kleiner + tiefer */
-  .scene-joystick {
-    bottom: 8px !important;
-    left: 10px !important;
-  }
-  .scene-joystick-pad {
-    width: 52px !important;
-    height: 52px !important;
-  }
-  .scene-joystick-thumb {
-    width: 20px !important;
-    height: 20px !important;
-  }
-  /* Chiptune + Cards-Toggle tiefer */
-  .chiptune-btn, .cards-toggle-btn {
-    bottom: 8px !important;
-  }
-  /* Mobile social menu kompakter */
-  .mobile-social-menu {
-    transform: scale(0.85);
-    transform-origin: top right;
-  }
-}
-`;
-
-let portfolioStyleInjected = false;
-
-function injectPortfolioLandscapeStyles(): void {
-  if (portfolioStyleInjected) return;
-
-  const iframe = document.querySelector<HTMLIFrameElement>('.web-embed-overlay iframe');
-  if (!iframe) return;
-
-  const tryInject = (): void => {
-    try {
-      const doc = iframe.contentDocument;
-      if (!doc || !doc.head) return;
-      if (doc.getElementById('landscape-override')) {
-        portfolioStyleInjected = true;
-        return;
-      }
-      const style = doc.createElement('style');
-      style.id = 'landscape-override';
-      style.textContent = PORTFOLIO_LANDSCAPE_CSS;
-      doc.head.appendChild(style);
-      portfolioStyleInjected = true;
-    } catch {
-      // Cross-origin oder noch nicht geladen — ignorieren
-    }
-  };
-
-  // Sofort versuchen + nach Load
-  tryInject();
-  if (!portfolioStyleInjected) {
-    iframe.addEventListener('load', () => {
-      tryInject();
-    }, { once: true });
-  }
-}
-
-// Reset-Flag wenn iframe entfernt wird (Focus wechselt weg von webEmbed)
-const portfolioObserver = new MutationObserver(() => {
-  if (!document.querySelector('.web-embed-overlay iframe')) {
-    portfolioStyleInjected = false;
-  }
-});
-portfolioObserver.observe(document.body, { childList: true, subtree: true });

@@ -43,11 +43,11 @@ interface CreatePresentationStateMachineOptions {
 }
 
 const DEFAULT_COMBAT_PHASE_DURATIONS_MS: Readonly<Record<CombatPresentationPhase, number>> = {
-  attack: 224,
-  impact: 168,
-  intro: 168,
-  resolve: 196,
-  return: 168
+  attack: 560,
+  impact: 420,
+  intro: 420,
+  resolve: 490,
+  return: 420
 };
 
 export function createPresentationStateMachine({

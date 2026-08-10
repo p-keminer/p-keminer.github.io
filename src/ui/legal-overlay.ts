@@ -8,7 +8,7 @@ const IMPRESSUM_TEXT = `
   44627 Herne
 </p>
 <p>
-  E-Mail: <a href="mailto:p.keminer@gmx.de">p.keminer@gmx.de</a>
+  E-Mail: <a href="mailto:keminer@gmx.de">keminer@gmx.de</a>
 </p>
 
 <h3>Hinweis</h3>
@@ -24,8 +24,7 @@ const DATENSCHUTZ_TEXT = `
 
 <h3>Verantwortlicher</h3>
 <p>
-  Philip Keminer, 44627 Herne<br>
-  E-Mail: <a href="mailto:p.keminer@gmx.de">p.keminer@gmx.de</a>
+  Verantwortlicher und Kontaktdaten: <a href="#impressum" data-legal-switch="impressum">siehe Impressum</a>.
 </p>
 
 <h3>Hosting</h3>
@@ -38,7 +37,7 @@ const DATENSCHUTZ_TEXT = `
   an der Bereitstellung der Website).<br>
   Weitere Informationen:
   <a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement"
-     target="_blank" rel="noopener">GitHub Privacy Statement</a>
+     target="_blank" rel="noopener noreferrer">GitHub Privacy Statement</a>
 </p>
 
 <h3>Schriften, Styles und eingebettete Medien</h3>
@@ -46,29 +45,24 @@ const DATENSCHUTZ_TEXT = `
   Die auf dieser Website verwendeten Schriftdateien, Stylesheets, Bilder und Videos
   werden zusammen mit der Website über GitHub Pages ausgeliefert. Für den
   Über-mich-Film und optionale lokale Trailer-Bereiche werden keine externen
-  Video-Plattformen, Font-CDNs oder Analyse-Dienste eingebunden. Ausgenommen hiervon ist ausschließlich
-  die nachfolgend beschriebene technische Einbindung des Draco-Decoders im 3D-Bereich.
+  Video-Plattformen, Font-CDNs oder Analyse-Dienste eingebunden. Auch der technische
+  Draco-Decoder für den 3D-Bereich wird zusammen mit der Website lokal ausgeliefert.
 </p>
 
 <h3>3D-Modell-Dekompression</h3>
 <p>
-  Beim Laden des 3D-Bereichs wird einmalig ein technischer Decoder von
-  <strong>gstatic.com</strong> (Google LLC, USA) eingebunden. Dies ist eine reine
-  technische Hilfsbibliothek zur Dekompression von 3D-Modellen (Draco-Codec).
-  Es findet kein Tracking statt.<br>
-  Rechtsgrundlage: Art.&nbsp;6 Abs.&nbsp;1 lit.&nbsp;f DSGVO (berechtigtes Interesse
-  an der technisch korrekten Darstellung der Inhalte).<br>
-  Datenschutzerklärung Google:
-  <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a>
+  Die zur Dekompression der 3D-Modelle benötigten Draco-Dateien werden ausschließlich
+  von dieser Website geladen. Beim Laden des 3D-Bereichs wird deshalb keine Verbindung
+  zu Google oder einem anderen externen Decoder-Anbieter hergestellt.
 </p>
 
 <h3>Drittlandbezug</h3>
 <p>
-  Bei der technischen Bereitstellung über GitHub Pages und beim Abruf des
-  Draco-Decoders kann es zu einer Verarbeitung personenbezogener Daten außerhalb
-  der EU bzw. des EWR, insbesondere in den USA, kommen. Informationen zu den
-  dabei eingesetzten Garantien, Rechtsgrundlagen und etwaigen aktuellen
-  Zertifizierungen entnehmen Sie bitte den Datenschutzhinweisen der jeweiligen Anbieter.
+  Bei der technischen Bereitstellung über GitHub Pages kann es zu einer Verarbeitung
+  personenbezogener Daten außerhalb der EU bzw. des EWR, insbesondere in den USA,
+  kommen. Informationen zu den dabei eingesetzten Garantien, Rechtsgrundlagen und
+  etwaigen aktuellen Zertifizierungen entnehmen Sie bitte den Datenschutzhinweisen
+  von GitHub.
 </p>
 
 <h3>Keine Cookies, kein Tracking</h3>
@@ -80,11 +74,17 @@ const DATENSCHUTZ_TEXT = `
   Rahmen der technischen Bereitstellung Daten nach der oben verlinkten
   Datenschutzerklärung verarbeiten.
 </p>
+<p>
+  Die Referrer-Policy dieser Website verhindert, dass beim Öffnen externer Links die
+  Adresse der zuvor besuchten Portfolio-Seite mitgesendet wird. Eine Content Security
+  Policy beschränkt automatisch geladene Skripte, Schriften und Medien auf Dateien
+  dieser Website.
+</p>
 
 <h3>Externe Links</h3>
 <p>
-  Diese Website enthält Links zu externen Angeboten, insbesondere zu GitHub und
-  LinkedIn. Erst wenn Sie einen solchen Link aktiv anklicken, wird eine Verbindung
+  Diese Website enthält Links zu externen Angeboten, insbesondere zu GitHub,
+  LinkedIn und TryHackMe. Erst wenn Sie einen solchen Link aktiv anklicken, wird eine Verbindung
   zum jeweiligen Anbieter hergestellt. Ab diesem Zeitpunkt gilt die
   Datenschutzerklärung des jeweiligen Betreibers.
 </p>
@@ -101,7 +101,7 @@ const DATENSCHUTZ_TEXT = `
   personenbezogene Daten verarbeitet werden, können Betroffenenrechte grundsätzlich
   auch gegenüber den jeweils beteiligten Anbietern geltend gemacht werden.
   Bei allgemeinen Fragen zum Datenschutz dieser Website können Sie sich an die
-  oben genannte E-Mail-Adresse wenden.
+  im Impressum genannte E-Mail-Adresse wenden.
 </p>
 
 <h3>Aufsichtsbehörde</h3>
@@ -109,7 +109,7 @@ const DATENSCHUTZ_TEXT = `
   Zuständige Aufsichtsbehörde für Datenschutzbeschwerden in NRW:<br>
   Landesbeauftragte für Datenschutz und Informationsfreiheit NRW (LDI NRW)<br>
   Postfach 20 04 44, 40102 Düsseldorf<br>
-  <a href="https://www.ldi.nrw.de" target="_blank" rel="noopener">www.ldi.nrw.de</a>
+  <a href="https://www.ldi.nrw.de" target="_blank" rel="noopener noreferrer">www.ldi.nrw.de</a>
 </p>
 `;
 
@@ -127,6 +127,7 @@ export function showLegalOverlay(tab: 'impressum' | 'datenschutz'): void {
 
   if (!isVisible) {
     isVisible = true;
+    overlay.setAttribute('aria-hidden', 'false');
     overlay.classList.add('legal-overlay--visible');
   }
 }
@@ -136,6 +137,7 @@ export function hideLegalOverlay(): void {
   const overlay = document.getElementById('legal-overlay');
   if (!overlay) return;
   isVisible = false;
+  overlay.setAttribute('aria-hidden', 'true');
   overlay.classList.remove('legal-overlay--visible');
 }
 
@@ -159,9 +161,10 @@ function renderOverlayContent(overlay: HTMLElement, activeTab: 'impressum' | 'da
     </div>
   `;
 
-  overlay.querySelectorAll<HTMLButtonElement>('[data-legal-switch]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tab = btn.dataset.legalSwitch as 'impressum' | 'datenschutz';
+  overlay.querySelectorAll<HTMLElement>('[data-legal-switch]').forEach(control => {
+    control.addEventListener('click', event => {
+      event.preventDefault();
+      const tab = control.dataset.legalSwitch as 'impressum' | 'datenschutz';
       if (tab && tab !== currentTab) {
         showLegalOverlay(tab);
       }

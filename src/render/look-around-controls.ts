@@ -1,72 +1,69 @@
 import * as THREE from 'three';
 
-// Maximaler Schwenkwinkel in jede Richtung (±45°)
 const MAX_ANGLE_RAD = THREE.MathUtils.degToRad(45);
+const MOUSE_DRAG_THRESHOLD_PX = 5;
+const TOUCH_DRAG_THRESHOLD_PX = 8;
+
+type LookPointerType = 'mouse' | 'touch';
 
 export interface LookAroundControls {
-  /** Aktueller Yaw-/Pitch-Versatz in Radiant. Nach dem Setzen der Kamera auf die Standardvorgabe anwenden. */
+  /** Current yaw/pitch offset in radians. Apply after setting the base camera preset. */
   getOffset(): { yaw: number; pitch: number };
-  /** Controller aktivieren oder deaktivieren. Setzt den Ziehzustand zurück. */
+  /** Enable or disable interaction. Disabling also cancels and releases an active gesture. */
   setEnabled(enabled: boolean): void;
-  /** Vertikales Umschauen (Pitch) zulassen oder sperren. Wenn gesperrt, wird nur Yaw angewendet. */
+  /** Allow or block vertical look. When blocked, only yaw is retained. */
   setAllowPitch(allow: boolean): void;
-  /** Maximalen Yaw-Winkel zum Blick nach links (positives Yaw) in Grad festlegen. Standard 45. */
+  /** Maximum positive yaw (looking left) in degrees. */
   setMaxYawLeft(degrees: number): void;
-  /** Maximalen Yaw-Winkel zum Blick nach rechts (negatives Yaw) in Grad festlegen. Standard 45. */
+  /** Maximum negative yaw (looking right) in degrees. */
   setMaxYawRight(degrees: number): void;
-  /** Yaw/Pitch auf Null zurücksetzen (aufrufen beim Navigieren zu einem neuen Bereich). */
+  /** Reset yaw/pitch and cancel an active gesture. */
   reset(): void;
-  /** Yaw/Pitch sanft auf Null animieren. Callback wenn fertig. */
+  /** Animate yaw/pitch back to zero. */
   animateReset(onComplete: () => void): void;
-  /** Prüft ob gerade eine Reset-Animation läuft. */
+  /** Whether a reset animation is currently active. */
   isAnimatingReset(): boolean;
-  /** Alle Event-Listener entfernen. */
+  /** Remove all event listeners. */
   dispose(): void;
 }
 
 /**
- * Umschau-Controller — nur Touch.
- * Hält die Kameraposition fest, aber lässt den Benutzer die Blickrichtung
- * durch Ziehen mit einem Finger drehen. Begrenzt auf ±45° in beiden Achsen.
+ * Fixed-position look controller for left-mouse drag and one-finger touch.
  *
- * Die Empfindlichkeit wird auf die DOM-Elementgröße normalisiert, sodass ein
- * vollständiger Breitenwisch den gesamten ±45°-Bereich abdeckt, unabhängig
- * von der Bildschirmgröße.
+ * A small movement threshold keeps taps intact. Once a real drag happened,
+ * the synthetic click generated for that same gesture is consumed on the
+ * canvas before board or raycast listeners can observe it.
  *
- * Multi-Touch wird erkannt: Wenn ein zweiter Finger landet, wird das Ziehen
- * unterbrochen, damit Pinch-to-Zoom (an anderer Stelle behandelt) keine wilden
- * Kamerasprünge verursacht.
- *
- * @param domElement  Canvas-Element zum Anhängen.
- * @param onChange    Wird bei jedem Touch-Move aufgerufen, der den Versatz ändert.
- *                    Verwenden Sie dies, um DOM-Overlays (Hotspots) mit der
- *                    gedrehten Kamera synchron zu halten, ohne auf das nächste
- *                    State-Event zu warten.
+ * A second touch marks the gesture as pinch-contaminated and restores the
+ * offset from the first touch-down. The separate room camera controller can
+ * therefore continue to own two-finger pinch zoom without a yaw jump.
  */
 export function createLookAroundControls(
   domElement: HTMLElement,
   onChange?: () => void
 ): LookAroundControls {
   let enabled = false;
-  let allowPitch = true;
-  let maxYawPositive = MAX_ANGLE_RAD;  // positives Yaw = nach links blicken
-  let maxYawNegative = MAX_ANGLE_RAD;  // negatives Yaw = nach rechts blicken
-  let yaw = 0;   // horizontaler Versatz (Radiant)
-  let pitch = 0; // vertikaler Versatz (Radiant)
+  let allowPitch = false;
+  let maxYawPositive = MAX_ANGLE_RAD;
+  let maxYawNegative = MAX_ANGLE_RAD;
+  let yaw = 0;
+  let pitch = 0;
 
-  // Aktive Touch-Pointer verfolgen, um Multi-Touch zu erkennen und Pinch-Gesten zu ignorieren.
   let primaryPointerId: number | null = null;
+  let primaryPointerType: LookPointerType | null = null;
+  let pointerCaptureActive = false;
+  let pointerStartX = 0;
+  let pointerStartY = 0;
   let lastX = 0;
   let lastY = 0;
+  let dragging = false;
+  let suppressNextClick = false;
+
   let activeTouchCount = 0;
-  // Snapshot von Yaw/Pitch, wenn der erste Finger landet. Wenn ein zweiter Finger
-  // ankommt (= Pinch-Absicht), stellen wir diese wieder her, um alle versehentlichen
-  // Umschau-Bewegungen zwischen dem ersten und zweiten Finger zu stornieren.
   let snapshotYaw = 0;
   let snapshotPitch = 0;
-  let gestureContaminated = false; // true sobald ≥2 Finger in dieser Geste gesehen wurden
+  let gestureContaminated = false;
 
-  // Reset-Animation
   const RESET_DURATION_MS = 400;
   let resetRafId = 0;
   let resetStartTime = 0;
@@ -74,105 +71,252 @@ export function createLookAroundControls(
   let resetStartPitch = 0;
   let resetOnComplete: (() => void) | null = null;
 
-  function onPointerDown(e: PointerEvent): void {
-    // Nur Touch — Maus-Ziehen auf dem Desktop wird hier nicht behandelt.
-    if (!enabled || e.pointerType !== 'touch') return;
+  function beginPrimaryPointer(event: PointerEvent, pointerType: LookPointerType): void {
+    primaryPointerId = event.pointerId;
+    primaryPointerType = pointerType;
+    pointerStartX = event.clientX;
+    pointerStartY = event.clientY;
+    lastX = event.clientX;
+    lastY = event.clientY;
+    dragging = false;
+    snapshotYaw = yaw;
+    snapshotPitch = pitch;
+    gestureContaminated = false;
 
-    activeTouchCount++;
-
-    // Nur mit dem ersten Finger beginnen zu ziehen
-    if (activeTouchCount === 1) {
-      primaryPointerId = e.pointerId;
-      lastX = e.clientX;
-      lastY = e.clientY;
-      snapshotYaw = yaw;
-      snapshotPitch = pitch;
-      gestureContaminated = false;
-      domElement.setPointerCapture(e.pointerId);
-    } else {
-      // Zweiter+ Finger angekommen → das ist ein Pinch, kein Umschauen.
-      // Machen Sie alle Versätze rückgängig, die seit dem ersten Finger angesammelt wurden.
-      if (!gestureContaminated) {
-        gestureContaminated = true;
-        const changed = yaw !== snapshotYaw || pitch !== snapshotPitch;
-        yaw = snapshotYaw;
-        pitch = snapshotPitch;
-        if (changed) onChange?.();
-      }
+    try {
+      domElement.setPointerCapture(event.pointerId);
+      pointerCaptureActive = true;
+    } catch {
+      pointerCaptureActive = false;
     }
   }
 
-  function onPointerMove(e: PointerEvent): void {
-    if (!enabled || e.pointerType !== 'touch') return;
-    // Nur Bewegungen vom primären Finger verarbeiten, nur wenn genau 1 Touch
-    // aktiv ist, und nur wenn die Geste nie ein Pinch war.
-    if (e.pointerId !== primaryPointerId || activeTouchCount !== 1 || gestureContaminated) return;
+  function releasePrimaryPointer(): void {
+    const pointerId = primaryPointerId;
+    const shouldRelease = pointerId !== null && pointerCaptureActive;
 
-    // Browser-Standard (Scroll/Pan) unterdrücken damit die Geste nicht
-    // nach wenigen Pixeln vom Browser übernommen wird.
-    e.preventDefault();
+    primaryPointerId = null;
+    primaryPointerType = null;
+    pointerCaptureActive = false;
+    dragging = false;
 
-    const dx = e.clientX - lastX;
-    const dy = e.clientY - lastY;
-    lastX = e.clientX;
-    lastY = e.clientY;
-
-    const w = Math.max(domElement.clientWidth, 1);
-    const h = Math.max(domElement.clientHeight, 1);
-
-    yaw   = THREE.MathUtils.clamp(yaw   - (dx / w) * MAX_ANGLE_RAD * 2, -maxYawNegative, maxYawPositive);
-    if (allowPitch) {
-      pitch = THREE.MathUtils.clamp(pitch - (dy / h) * MAX_ANGLE_RAD * 2, -MAX_ANGLE_RAD, MAX_ANGLE_RAD);
+    if (!shouldRelease || pointerId === null) {
+      return;
     }
 
+    try {
+      if (domElement.hasPointerCapture(pointerId)) {
+        domElement.releasePointerCapture(pointerId);
+      }
+    } catch {
+      // Capture can already be gone after a browser-level cancellation.
+    }
+  }
+
+  function cancelGesture(): void {
+    releasePrimaryPointer();
+    activeTouchCount = 0;
+    gestureContaminated = false;
+  }
+
+  function onPointerDown(event: PointerEvent): void {
+    // A new physical gesture must never inherit click suppression from an
+    // earlier drag for which the browser emitted no click.
+    suppressNextClick = false;
+
+    if (!enabled || resetOnComplete !== null) {
+      return;
+    }
+
+    if (event.pointerType === 'mouse') {
+      if (!event.isPrimary || event.button !== 0 || primaryPointerId !== null) {
+        return;
+      }
+
+      beginPrimaryPointer(event, 'mouse');
+      return;
+    }
+
+    if (event.pointerType !== 'touch') {
+      return;
+    }
+
+    activeTouchCount += 1;
+
+    if (activeTouchCount === 1 && primaryPointerId === null) {
+      beginPrimaryPointer(event, 'touch');
+      return;
+    }
+
+    if (primaryPointerType !== 'touch' || gestureContaminated) {
+      return;
+    }
+
+    gestureContaminated = true;
+    dragging = false;
+    const changed = yaw !== snapshotYaw || pitch !== snapshotPitch;
+    yaw = snapshotYaw;
+    pitch = snapshotPitch;
+    if (changed) {
+      onChange?.();
+    }
+  }
+
+  function onPointerMove(event: PointerEvent): void {
+    if (!enabled || event.pointerId !== primaryPointerId || primaryPointerType === null) {
+      return;
+    }
+
+    if (primaryPointerType === 'mouse' && (event.buttons & 1) === 0) {
+      const shouldSuppressClick = dragging;
+      releasePrimaryPointer();
+      suppressNextClick = shouldSuppressClick;
+      return;
+    }
+
+    if (
+      primaryPointerType === 'touch' &&
+      (activeTouchCount !== 1 || gestureContaminated)
+    ) {
+      return;
+    }
+
+    if (!dragging) {
+      const threshold = primaryPointerType === 'touch'
+        ? TOUCH_DRAG_THRESHOLD_PX
+        : MOUSE_DRAG_THRESHOLD_PX;
+      const distance = Math.hypot(
+        event.clientX - pointerStartX,
+        event.clientY - pointerStartY
+      );
+
+      if (distance < threshold) {
+        return;
+      }
+
+      dragging = true;
+    }
+
+    event.preventDefault();
+
+    const dx = event.clientX - lastX;
+    const dy = event.clientY - lastY;
+    lastX = event.clientX;
+    lastY = event.clientY;
+
+    const width = Math.max(domElement.clientWidth, 1);
+    const height = Math.max(domElement.clientHeight, 1);
+    const nextYaw = THREE.MathUtils.clamp(
+      yaw - (dx / width) * MAX_ANGLE_RAD * 2,
+      -maxYawNegative,
+      maxYawPositive
+    );
+    const nextPitch = allowPitch
+      ? THREE.MathUtils.clamp(
+          pitch - (dy / height) * MAX_ANGLE_RAD * 2,
+          -MAX_ANGLE_RAD,
+          MAX_ANGLE_RAD
+        )
+      : 0;
+
+    if (nextYaw === yaw && nextPitch === pitch) {
+      return;
+    }
+
+    yaw = nextYaw;
+    pitch = nextPitch;
     onChange?.();
   }
 
-  function onPointerUp(e: PointerEvent): void {
-    if (e.pointerType !== 'touch') return;
+  function onPointerUpOrCancel(event: PointerEvent): void {
+    const isTouch = event.pointerType === 'touch';
+    if (isTouch) {
+      activeTouchCount = Math.max(0, activeTouchCount - 1);
+    }
 
-    activeTouchCount = Math.max(0, activeTouchCount - 1);
+    if (event.pointerId !== primaryPointerId) {
+      return;
+    }
 
-    if (e.pointerId === primaryPointerId) {
-      primaryPointerId = null;
+    const shouldSuppressClick =
+      event.type === 'pointerup' && dragging && !gestureContaminated;
+    releasePrimaryPointer();
+    suppressNextClick = shouldSuppressClick;
+
+    if (activeTouchCount === 0) {
+      gestureContaminated = false;
     }
   }
 
-  domElement.addEventListener('pointerdown',   onPointerDown);
-  domElement.addEventListener('pointermove',   onPointerMove);
-  domElement.addEventListener('pointerup',     onPointerUp);
-  domElement.addEventListener('pointercancel', onPointerUp);
+  function onLostPointerCapture(event: PointerEvent): void {
+    if (event.pointerId !== primaryPointerId) {
+      return;
+    }
+
+    primaryPointerId = null;
+    primaryPointerType = null;
+    pointerCaptureActive = false;
+    dragging = false;
+    activeTouchCount = 0;
+    gestureContaminated = false;
+  }
+
+  function onClickCapture(event: MouseEvent): void {
+    if (!suppressNextClick || !enabled) {
+      suppressNextClick = false;
+      return;
+    }
+
+    suppressNextClick = false;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+
+  domElement.addEventListener('pointerdown', onPointerDown);
+  domElement.addEventListener('pointermove', onPointerMove);
+  domElement.addEventListener('pointerup', onPointerUpOrCancel);
+  domElement.addEventListener('pointercancel', onPointerUpOrCancel);
+  domElement.addEventListener('lostpointercapture', onLostPointerCapture);
+  domElement.addEventListener('click', onClickCapture, true);
 
   return {
     getOffset: () => ({ yaw, pitch }),
 
-    setEnabled(val: boolean): void {
-      enabled = val;
-      if (!val) {
-        primaryPointerId = null;
-        activeTouchCount = 0;
+    setEnabled(nextEnabled: boolean): void {
+      if (enabled === nextEnabled) {
+        return;
+      }
+
+      enabled = nextEnabled;
+      if (!enabled) {
+        cancelGesture();
+        suppressNextClick = false;
       }
     },
 
     setAllowPitch(allow: boolean): void {
       allowPitch = allow;
-      if (!allow && pitch !== 0) {
+      if (!allowPitch) {
         pitch = 0;
       }
     },
 
     setMaxYawLeft(degrees: number): void {
-      maxYawPositive = THREE.MathUtils.clamp(THREE.MathUtils.degToRad(degrees), 0, MAX_ANGLE_RAD);
-      if (yaw > maxYawPositive) {
-        yaw = maxYawPositive;
-      }
+      maxYawPositive = THREE.MathUtils.clamp(
+        THREE.MathUtils.degToRad(degrees),
+        0,
+        MAX_ANGLE_RAD
+      );
+      yaw = Math.min(yaw, maxYawPositive);
     },
 
     setMaxYawRight(degrees: number): void {
-      maxYawNegative = THREE.MathUtils.clamp(THREE.MathUtils.degToRad(degrees), 0, MAX_ANGLE_RAD);
-      if (yaw < -maxYawNegative) {
-        yaw = -maxYawNegative;
-      }
+      maxYawNegative = THREE.MathUtils.clamp(
+        THREE.MathUtils.degToRad(degrees),
+        0,
+        MAX_ANGLE_RAD
+      );
+      yaw = Math.max(yaw, -maxYawNegative);
     },
 
     reset(): void {
@@ -180,18 +324,19 @@ export function createLookAroundControls(
       resetOnComplete = null;
       yaw = 0;
       pitch = 0;
-      primaryPointerId = null;
-      activeTouchCount = 0;
+      suppressNextClick = false;
+      cancelGesture();
     },
 
     animateReset(onComplete: () => void): void {
-      // Schon bei 0 → sofort fertig
+      cancelGesture();
       if (Math.abs(yaw) < 0.001 && Math.abs(pitch) < 0.001) {
         yaw = 0;
         pitch = 0;
         onComplete();
         return;
       }
+
       cancelAnimationFrame(resetRafId);
       resetStartYaw = yaw;
       resetStartPitch = pitch;
@@ -206,29 +351,34 @@ export function createLookAroundControls(
 
     dispose(): void {
       cancelAnimationFrame(resetRafId);
-      domElement.removeEventListener('pointerdown',   onPointerDown);
-      domElement.removeEventListener('pointermove',   onPointerMove);
-      domElement.removeEventListener('pointerup',     onPointerUp);
-      domElement.removeEventListener('pointercancel', onPointerUp);
+      resetOnComplete = null;
+      cancelGesture();
+      domElement.removeEventListener('pointerdown', onPointerDown);
+      domElement.removeEventListener('pointermove', onPointerMove);
+      domElement.removeEventListener('pointerup', onPointerUpOrCancel);
+      domElement.removeEventListener('pointercancel', onPointerUpOrCancel);
+      domElement.removeEventListener('lostpointercapture', onLostPointerCapture);
+      domElement.removeEventListener('click', onClickCapture, true);
     }
   };
 
   function tickResetAnimation(): void {
     const elapsed = performance.now() - resetStartTime;
     const t = Math.min(elapsed / RESET_DURATION_MS, 1);
-    // Ease-Out-Kubisch für natürliches Ausschwingen
     const eased = 1 - Math.pow(1 - t, 3);
     yaw = resetStartYaw * (1 - eased);
     pitch = resetStartPitch * (1 - eased);
     onChange?.();
+
     if (t < 1) {
       resetRafId = requestAnimationFrame(tickResetAnimation);
-    } else {
-      yaw = 0;
-      pitch = 0;
-      const cb = resetOnComplete;
-      resetOnComplete = null;
-      cb?.();
+      return;
     }
+
+    yaw = 0;
+    pitch = 0;
+    const callback = resetOnComplete;
+    resetOnComplete = null;
+    callback?.();
   }
 }

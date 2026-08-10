@@ -90,11 +90,13 @@ export function createRoomCameraControls({
     },
     setLandscapeLock: (locked: boolean) => {
       landscapeLocked = locked;
+      spherical.radius = Math.min(spherical.radius, getOverviewRadius());
     },
     setPortraitMode: (portrait: boolean) => {
       // Hinweis: Dies löst kein erneutes Rendern aus sich selbst.
       // Es wird immer in resize() aufgerufen, auf das ein render()-Aufruf folgt.
       portraitMode = portrait;
+      spherical.radius = Math.min(spherical.radius, getOverviewRadius());
     },
     animateExit: (onComplete: () => void) => {
       cancelAnimationFrame(entranceRafId);
@@ -174,9 +176,11 @@ export function createRoomCameraControls({
     event.preventDefault();
     cancelAnimationFrame(entranceRafId);
 
-    // Zoom-In (deltaY < 0) oder Zoom-Out (deltaY > 0), begrenzt zwischen minZoomRadius und baseRadius
+    // Zooming out stops at the composed overview distance.  The larger
+    // unzoomed base radius exposes the ceiling and room shell, so it is kept
+    // exclusively for the entrance/exit camera animation.
     const zoomFactor = 1 + event.deltaY * 0.001;
-    spherical.radius = clamp(spherical.radius * zoomFactor, minZoomRadius, baseRadius);
+    spherical.radius = clamp(spherical.radius * zoomFactor, minZoomRadius, getOverviewRadius());
     schedulePoseUpdate();
   }
 
@@ -219,7 +223,7 @@ export function createRoomCameraControls({
 
     const currentDistance = getTouchDistance();
     const scale = pinchStartDistance / Math.max(currentDistance, 1);
-    spherical.radius = clamp(pinchStartRadius * scale, minZoomRadius, baseRadius);
+    spherical.radius = clamp(pinchStartRadius * scale, minZoomRadius, getOverviewRadius());
     schedulePoseUpdate();
     event.preventDefault();
   }
@@ -228,6 +232,16 @@ export function createRoomCameraControls({
     for (let i = 0; i < event.changedTouches.length; i++) {
       activeTouches.delete(event.changedTouches[i].identifier);
     }
+  }
+
+  function getOverviewRadius(): number {
+    if (portraitMode) {
+      return minZoomRadius;
+    }
+
+    return landscapeLocked
+      ? baseRadius * Math.pow(ZOOM_FACTOR_PER_STEP, 2)
+      : baseRadius * ZOOM_FACTOR_PER_STEP;
   }
 }
 

@@ -6,8 +6,8 @@ export interface CameraPreset {
 }
 
 export const DEFAULT_CAMERA_PRESET: CameraPreset = {
-  position: { x: 6.8, y: 8.2, z: 7.8 },
-  target: { x: 0, y: 0.2, z: 0 }
+  position: { x: -7.15, y: 8.1, z: 7.35 },
+  target: { x: 0.3, y: 0.2, z: -0.2 }
 };
 
 const BASE_FOV = 34;

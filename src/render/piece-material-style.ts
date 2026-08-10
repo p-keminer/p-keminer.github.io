@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { ChessPieceColor } from '../chess/state';
 
-export const PIECE_MATERIAL_LANGUAGE_ID = 'cyber-mech-zoned-v1';
+export const PIECE_MATERIAL_LANGUAGE_ID = 'classic-standard-v1';
 
 export interface PieceMaterialSlot {
   color: string;
@@ -124,12 +124,48 @@ export function getStarterPieceSlotPalette(color: ChessPieceColor): {
   body: PieceMaterialSlot;
   trim: PieceMaterialSlot;
 } {
-  const palette = getCyberMechZonePalette(color);
+  if (color === 'white') {
+    return {
+      accent: {
+        color: '#c5a46a',
+        metalness: 0.2,
+        roughness: 0.3,
+        toneMapped: true
+      },
+      body: {
+        color: '#e9e2d6',
+        metalness: 0.06,
+        roughness: 0.34,
+        toneMapped: true
+      },
+      trim: {
+        color: '#d5cabb',
+        metalness: 0.08,
+        roughness: 0.3,
+        toneMapped: true
+      }
+    };
+  }
 
   return {
-    accent: palette.command,
-    body: palette.armor,
-    trim: palette.frame
+    accent: {
+      color: '#9b7548',
+      metalness: 0.24,
+      roughness: 0.3,
+      toneMapped: true
+    },
+    body: {
+      color: '#2a2d31',
+      metalness: 0.08,
+      roughness: 0.32,
+      toneMapped: true
+    },
+    trim: {
+      color: '#464b51',
+      metalness: 0.1,
+      roughness: 0.3,
+      toneMapped: true
+    }
   };
 }
 

@@ -24,6 +24,7 @@ export interface BoardInteractionLayer {
   dispose: () => void;
   getState: () => BoardInteractionState;
   setEnabled: (enabled: boolean) => void;
+  setHighlightsVisible: (visible: boolean) => void;
   setHighlightState: (
     state: Pick<BoardInteractionState, 'checkedKingSquare' | 'lastMoveSquares' | 'legalTargetSquares' | 'selectedSquare'>
   ) => void;
@@ -335,6 +336,9 @@ export function createBoardInteraction({
         setHoveredSquare(null);
         domElement.style.cursor = 'default';
       }
+    },
+    setHighlightsVisible: (visible) => {
+      highlightGroup.visible = visible;
     },
     setHighlightState
   };

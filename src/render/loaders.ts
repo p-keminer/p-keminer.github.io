@@ -10,7 +10,11 @@ import {
 
 export const BOARD_MODEL_FILE = 'board.glb';
 export const BOARD_CYBER_MODEL_FILE = 'board_cyber.glb';
-export const DEFAULT_PIECE_ASSET_SET = 'blockout';
+export const DEFAULT_PIECE_ASSET_SET = 'starter';
+export const ROOM_REDESIGN_MODEL_FILE = 'room-redesign.glb';
+export const LEGACY_ROOM_MODEL_FILE = 'room.glb';
+
+const ROOM_MODEL_CANDIDATES = [ROOM_REDESIGN_MODEL_FILE, LEGACY_ROOM_MODEL_FILE] as const;
 
 // ─── Cyber-Board-Ausrichtungskonstanten ──────────────────────────────────────
 // Das Blender-Cyber-Board verwendet SQ=0,50 und GAP=0,012, sodass jeder
@@ -29,6 +33,7 @@ export const PIECE_MODEL_FILES: Record<ChessPieceType, string> = {
 };
 
 export type BoardAssetMode = 'glb' | 'placeholder';
+export type AssetLoadProgressReporter = (progress: number) => void;
 export type PieceAssetMode = 'glb' | 'mixed' | 'placeholder';
 export type PieceAssetSet = 'starter' | 'blockout';
 export type PieceAssetTemplates = Partial<Record<ChessPieceType, THREE.Group>>;
@@ -98,7 +103,8 @@ const PIECE_MAX_FOOTPRINT = 0.72;
 const BLOCKOUT_PIECE_MODEL_DIRECTORY = 'blockout';
 const BLOCKOUT_SOURCE_MATERIAL_PRESERVE_FILES = new Set(['blockout/king.glb']);
 const dracoLoader = new DRACOLoader();
-dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+dracoLoader.setDecoderPath('/draco/');
+dracoLoader.setDecoderConfig({ type: 'wasm' });
 const loader = new GLTFLoader();
 loader.setDRACOLoader(dracoLoader);
 const BLOCKOUT_TEMPLATE_TARGET_HEIGHT_OVERRIDE_BY_TYPE: Partial<Record<ChessPieceType, number>> = {
@@ -139,14 +145,69 @@ const BLOCKOUT_CANONICAL_BLACK_TRIM = '#c7a23a';
 const BLOCKOUT_CANONICAL_COMMAND_NEON = '#ff8d0d';
 const BLOCKOUT_NEON_SENSOR_INTENSITY = 1.85;
 const BLOCKOUT_NEON_CORE_INTENSITY = 2.15;
+function applyRoomRedesignMaterialOverrides(root: THREE.Object3D): void {
+  root.traverse((node) => {
+    if (!(node instanceof THREE.Mesh)) {
+      return;
+    }
+
+    if (node.name === 'Embedded_Lamp_Shade') {
+      const lampShadeMaterial = new THREE.MeshBasicMaterial({ color: 0x020203 });
+      lampShadeMaterial.name = 'MAT_Lamp_Shade_Unlit_Black';
+      node.material = lampShadeMaterial;
+      node.castShadow = true;
+      node.receiveShadow = false;
+      return;
+    }
+
+    if (node.name === 'Left_Window_Glass') {
+      const glassMaterials = Array.isArray(node.material) ? node.material : [node.material];
+      for (const material of glassMaterials) {
+        if (!(material instanceof THREE.MeshStandardMaterial)) continue;
+        material.transparent = true;
+        material.opacity = 0.18;
+        material.depthWrite = false;
+        material.side = THREE.DoubleSide;
+        material.roughness = 0.16;
+        material.metalness = 0.05;
+        material.needsUpdate = true;
+      }
+      node.renderOrder = 2;
+      node.castShadow = false;
+      node.receiveShadow = false;
+      return;
+    }
+
+    if (/^Left_Window_(?:Night_Sky|Moon|Stars)$/.test(node.name)) {
+      node.castShadow = false;
+      node.receiveShadow = false;
+    }
+  });
+}
+
 const BLOCKOUT_NEON_COMMAND_INTENSITY = 2.35;
 
-export async function loadRoomAsset(): Promise<THREE.Group | null> {
-  try {
-    return await loadModel('room.glb');
-  } catch {
-    return null;
+export async function loadRoomAsset(onProgress?: AssetLoadProgressReporter): Promise<THREE.Group | null> {
+  const reportProgress = createMonotonicProgressReporter(onProgress);
+  reportProgress(0);
+
+  for (const candidateFile of ROOM_MODEL_CANDIDATES) {
+    try {
+      const room = await loadModel(candidateFile, reportProgress);
+      if (candidateFile === ROOM_REDESIGN_MODEL_FILE) {
+        applyRoomRedesignMaterialOverrides(room);
+      }
+      room.userData.roomAssetFile = candidateFile;
+      reportProgress(1);
+      return room;
+    } catch {
+      // Das Redesign ist das primaere Asset. Der bestehende Raum bleibt als
+      // bewusst nicht-destruktiver Rueckfall erhalten.
+    }
   }
+
+  reportProgress(1);
+  return null;
 }
 
 export function getExpectedModelFiles(pieceAssetSet: PieceAssetSet = DEFAULT_PIECE_ASSET_SET): string[] {
@@ -171,12 +232,17 @@ export function getPieceAssetMode(pieceTemplates: PieceAssetTemplates): PieceAss
   return loadedCount === Object.keys(PIECE_MODEL_FILES).length ? 'glb' : 'mixed';
 }
 
-export async function loadBoardVisualAsset(): Promise<BoardVisualAssets> {
+export async function loadBoardVisualAsset(onProgress?: AssetLoadProgressReporter): Promise<BoardVisualAssets> {
+  const reportProgress = createMonotonicProgressReporter(onProgress);
+  reportProgress(0);
+
   // Versuchen Sie zuerst das Cyber-Board; Fallback zum ursprünglichen board.glb, wenn nicht vorhanden.
   for (const candidateFile of [BOARD_CYBER_MODEL_FILE, BOARD_MODEL_FILE]) {
     try {
+      const board = prepareBoardTemplate(await loadModel(candidateFile, reportProgress), candidateFile);
+      reportProgress(1);
       return {
-        board: prepareBoardTemplate(await loadModel(candidateFile), candidateFile),
+        board,
         loadedBoardFile: candidateFile
       };
     } catch {
@@ -184,26 +250,42 @@ export async function loadBoardVisualAsset(): Promise<BoardVisualAssets> {
     }
   }
 
+  reportProgress(1);
   return {
     board: null,
     loadedBoardFile: null
   };
 }
 
-export async function loadPieceVisualAssets(pieceAssetSet: PieceAssetSet = DEFAULT_PIECE_ASSET_SET): Promise<PieceVisualAssets> {
+export async function loadPieceVisualAssets(
+  pieceAssetSet: PieceAssetSet = DEFAULT_PIECE_ASSET_SET,
+  onProgress?: AssetLoadProgressReporter
+): Promise<PieceVisualAssets> {
   const loadedPieceFiles: string[] = [];
   const pieceAssetFallbacks: PieceAssetFallbackMap = {};
   const pieceAssetFiles: PieceAssetFileMap = {};
   const pieceTemplates: PieceAssetTemplates = {};
+  const pieceTypes = Object.keys(PIECE_MODEL_FILES) as ChessPieceType[];
+  const pieceProgress = new Map<ChessPieceType, number>(pieceTypes.map(pieceType => [pieceType, 0]));
+  const reportPieceProgress = (pieceType: ChessPieceType, progress: number): void => {
+    const previousProgress = pieceProgress.get(pieceType) ?? 0;
+    pieceProgress.set(pieceType, Math.max(previousProgress, clampLoadProgress(progress)));
+    const combinedProgress = pieceTypes.reduce(
+      (total, currentPieceType) => total + (pieceProgress.get(currentPieceType) ?? 0),
+      0
+    ) / pieceTypes.length;
+    onProgress?.(combinedProgress);
+  };
+
+  onProgress?.(0);
 
   await Promise.all(
-    Object.keys(PIECE_MODEL_FILES).map(async (pieceTypeValue) => {
-      const pieceType = pieceTypeValue as ChessPieceType;
+    pieceTypes.map(async pieceType => {
       const requestedFile = getRequestedPieceModelFile(pieceType, pieceAssetSet);
 
       for (const candidateFile of getPieceModelCandidateFiles(pieceType, pieceAssetSet)) {
         try {
-          const model = await loadModel(candidateFile);
+          const model = await loadModel(candidateFile, progress => reportPieceProgress(pieceType, progress));
           pieceTemplates[pieceType] = preparePieceTemplate(model, pieceType, candidateFile);
           pieceAssetFiles[pieceType] = candidateFile;
           loadedPieceFiles.push(candidateFile);
@@ -220,9 +302,12 @@ export async function loadPieceVisualAssets(pieceAssetSet: PieceAssetSet = DEFAU
           // Fehlende oder beschädigte Modelle fallen absichtlich auf den nächsten Kandidaten zurück, dann auf prozeduale Platzhalter.
         }
       }
+
+      reportPieceProgress(pieceType, 1);
     })
   );
 
+  onProgress?.(1);
   loadedPieceFiles.sort();
 
   return {
@@ -293,11 +378,37 @@ export function createPieceAssetInstance(
 }
 
 export function modelPath(fileName: string): string {
-  return `/models/${fileName}?v=7`;
+  return `/models/${fileName}?v=37`;
 }
 
-async function loadModel(fileName: string): Promise<THREE.Group> {
-  const gltf = await loader.loadAsync(modelPath(fileName));
+function clampLoadProgress(value: number): number {
+  return Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
+}
+
+function createMonotonicProgressReporter(
+  reporter?: AssetLoadProgressReporter
+): AssetLoadProgressReporter {
+  let previousProgress = 0;
+
+  return progress => {
+    previousProgress = Math.max(previousProgress, clampLoadProgress(progress));
+    reporter?.(previousProgress);
+  };
+}
+
+async function loadModel(
+  fileName: string,
+  onProgress?: AssetLoadProgressReporter
+): Promise<THREE.Group> {
+  const reportProgress = createMonotonicProgressReporter(onProgress);
+  const gltf = await loader.loadAsync(modelPath(fileName), event => {
+    if (event.total > 0) {
+      // The final six percent are reserved for GLB parsing and Draco decoding,
+      // which continue after the network transfer has completed.
+      reportProgress((event.loaded / event.total) * 0.94);
+    }
+  });
+  reportProgress(1);
   const root = new THREE.Group();
   root.name = fileName.replace('.glb', '').replace(/\//g, '-');
 

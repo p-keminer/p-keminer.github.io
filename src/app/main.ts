@@ -1,5 +1,6 @@
 import '../styles/main.css';
 import { mountGame, type MountedGame } from './game';
+import { setIntroLoadingProgress } from './intro-progress';
 
 interface TestableWindow extends Window {
   advanceTime?: (ms: number) => void;
@@ -8,29 +9,6 @@ interface TestableWindow extends Window {
 }
 
 const rootElement = document.querySelector<HTMLDivElement>('#app');
-const PORTFOLIO_MINIGAME_ACTIVE_CLASS = 'portfolio-minigame-active';
-
-function setPortfolioMinigameActive(active: boolean): void {
-  document.body.classList.toggle(PORTFOLIO_MINIGAME_ACTIVE_CLASS, active);
-}
-
-function handlePortfolioMessage(event: MessageEvent): void {
-  if (event.origin !== window.location.origin) {
-    return;
-  }
-
-  const data = event.data;
-  if (
-    !data ||
-    typeof data !== 'object' ||
-    data.source !== 'portfolio-app' ||
-    data.type !== 'portfolio:minigame-visibility'
-  ) {
-    return;
-  }
-
-  setPortfolioMinigameActive(Boolean(data.hideShellControls));
-}
 
 if (!rootElement) {
   throw new Error('Missing #app root element.');
@@ -39,65 +17,63 @@ if (!rootElement) {
 const appRoot = rootElement;
 let app: MountedGame | undefined;
 
-// ── Intro loading overlay ─────────────────────────────────────────────────────
-// Shown immediately on first page load (black screen with animated dots).
-// Removed once the room GLB and first piece set have finished loading.
+function setIntroLoadingPhase(
+  phase: 'core' | 'room' | 'ready',
+  title: string,
+  copy: string,
+  status: string
+): void {
+  const overlay = document.querySelector<HTMLElement>('#intro-overlay');
+  if (!overlay) {
+    return;
+  }
 
-const NEON_BLUE = '#00d4ff';
-const NEON_RED  = '#ff2020';
+  overlay.dataset.loadPhase = phase;
+  const titleElement = overlay.querySelector<HTMLElement>('[data-intro-title]');
+  const copyElement = overlay.querySelector<HTMLElement>('[data-intro-copy]');
+  const phaseElement = overlay.querySelector<HTMLElement>('[data-intro-phase]');
+
+  titleElement && (titleElement.textContent = title);
+  copyElement && (copyElement.textContent = copy);
+  phaseElement && (phaseElement.textContent = status);
+}
 
 function createIntroOverlay(): () => void {
-  const overlay = document.getElementById('intro-overlay') as HTMLDivElement;
-
+  const overlay = document.querySelector<HTMLElement>('#intro-overlay');
   if (!overlay) {
     throw new Error('Missing #intro-overlay element.');
   }
 
-  const dot1 = document.getElementById('idot1') as HTMLSpanElement;
-  const dot2 = document.getElementById('idot2') as HTMLSpanElement;
-  const dot3 = document.getElementById('idot3') as HTMLSpanElement;
-
-  let phase = 0;
-
-  function updateDots(): void {
-    if (phase === 0) {
-      dot1.style.color = NEON_BLUE;
-      dot2.style.color = NEON_RED;
-      dot3.style.color = NEON_BLUE;
-    } else {
-      dot1.style.color = NEON_RED;
-      dot2.style.color = NEON_BLUE;
-      dot3.style.color = NEON_RED;
-    }
-    phase = phase === 0 ? 1 : 0;
-  }
-
-  updateDots();
-  const intervalId = setInterval(updateDots, 1000);
-
-  // Ruft die Fade-out Animation auf und entfernt das Overlay.
   return function hideOverlay(): void {
-    clearInterval(intervalId);
-    overlay.classList.add('intro-hidden');
-    overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+    let overlayRemoved = false;
+    const removeOverlay = (): void => {
+      if (overlayRemoved) {
+        return;
+      }
 
-    // Reveal header + footer now that the 3D scene is rendered.
-    // They start as visibility:hidden (inline CSS in index.html) to prevent flash on load.
-    document.getElementById('site-header')?.style.setProperty('visibility', 'visible');
-    document.getElementById('site-footer')?.style.setProperty('visibility', 'visible');
+      overlayRemoved = true;
+      overlay.remove();
+    };
+
+    overlay.setAttribute('aria-busy', 'false');
+    overlay.classList.add('intro-hidden');
+    document.body.classList.remove('app-loading');
+    document.body.classList.add('app-ready');
+    window.dispatchEvent(new CustomEvent('portfolio:app-ready'));
+
+    overlay.addEventListener('transitionend', removeOverlay, { once: true });
+    window.setTimeout(removeOverlay, 700);
   };
 }
 
-// Show the overlay only on the initial page load, not on HMR reloads.
-const hideIntroOverlay = typeof document !== 'undefined' ? createIntroOverlay() : () => undefined;
-
-// ── App boot ──────────────────────────────────────────────────────────────────
-
-window.addEventListener('message', handlePortfolioMessage);
+const hideIntroOverlay =
+  typeof document !== 'undefined' ? createIntroOverlay() : () => undefined;
 
 function boot(): void {
   app?.destroy();
-  app = mountGame(appRoot);
+  app = mountGame(appRoot, {
+    onLoadProgress: progress => setIntroLoadingProgress(12 + progress * 88)
+  });
 
   const testWindow = window as TestableWindow;
   testWindow.advanceTime = app.advanceTime;
@@ -105,27 +81,57 @@ function boot(): void {
   testWindow.render_game_to_text = app.renderGameToText;
 }
 
-// Block all middle mouse button events globally (button === 1)
-// Prevents browser auto-scroll, page-back navigation, and crashes.
 (['mousedown', 'mouseup', 'click', 'auxclick', 'pointerdown', 'pointerup'] as const).forEach(type => {
-  window.addEventListener(type, (e: MouseEvent) => {
-    if (e.button === 1) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  }, { capture: true });
+  window.addEventListener(
+    type,
+    (event: MouseEvent) => {
+      if (event.button === 1) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    },
+    { capture: true }
+  );
 });
 
+setIntroLoadingPhase(
+  'core',
+  'Kernsysteme werden geladen',
+  'Renderer, Steuerung und Schachlogik werden initialisiert.',
+  'CORE · 02/04'
+);
+setIntroLoadingProgress(12);
 boot();
+window.setTimeout(() => {
+  setIntroLoadingPhase(
+    'room',
+    'Raum wird aufgebaut',
+    '3D-Raum, Licht und Schachfiguren werden lokal vorbereitet.',
+    'ROOM · 03/04'
+  );
+}, 360);
+app!.assetsReady.then(() => {
+  if (new URLSearchParams(window.location.search).get('entry') === 'room') {
+    app?.enterRoom();
+  }
 
-// Hide the intro overlay once the room model + piece assets have loaded.
-app!.assetsReady.then(hideIntroOverlay);
+  setIntroLoadingProgress(100);
+  setIntroLoadingPhase(
+    'ready',
+    'System bereit',
+    'Werkstatt und Schachbrett sind einsatzbereit.',
+    'READY · 04/04'
+  );
+  // Keep READY visible for two actual browser paints instead of delaying it
+  // by an arbitrary timeout. The room is already rendered at this point.
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(hideIntroOverlay);
+  });
+});
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     app?.destroy();
-    window.removeEventListener('message', handlePortfolioMessage);
-    setPortfolioMinigameActive(false);
 
     const testWindow = window as TestableWindow;
     delete testWindow.advanceTime;

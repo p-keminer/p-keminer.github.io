@@ -1,0 +1,4 @@
+Contact: mailto:keminer@gmx.de
+Expires: 2027-08-10T23:59:59Z
+Preferred-Languages: de, en
+Canonical: https://p-keminer.github.io/.well-known/security.txt

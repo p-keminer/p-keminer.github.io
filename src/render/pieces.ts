@@ -1,10 +1,7 @@
 import * as THREE from 'three';
 import { squareToWorld } from '../chess/mapping';
 import type { BoardSquare, ChessPieceColor, ChessPieceState, ChessPieceType } from '../chess/state';
-import {
-  createCombatFeedbackController,
-  type CombatFeedbackSnapshot
-} from './combat-feedback';
+import type { CombatFeedbackSnapshot } from './combat-feedback';
 import {
   createCombatPresentationController,
   type CombatPresentationBindings,
@@ -89,6 +86,19 @@ export interface PieceLayerAnimationSnapshot extends PieceAnimationSnapshot {
   feedback: CombatFeedbackSnapshot;
 }
 
+const PIECE_ONLY_COMBAT_FEEDBACK: Readonly<CombatFeedbackSnapshot> = {
+  active: false,
+  attackerFlavorLabel: null,
+  corePulseActive: false,
+  impactPulseActive: false,
+  phase: null,
+  progress: 0,
+  servoAccentActive: false,
+  shutdownActive: false,
+  sparkActive: false,
+  victimFlavorLabel: null
+};
+
 export interface ChessPieceLayer {
   clearCombatPresentation: (options?: { removeVictim?: boolean; snapToFinal?: boolean }) => void;
   dispose: () => void;
@@ -108,7 +118,6 @@ export function createPieceLayer(initialPieces: ChessPieceState[] = []): ChessPi
 
   let pieceTemplates: PieceAssetTemplates = {};
   let presentationElapsedMs = 0;
-  const combatFeedbackController = createCombatFeedbackController();
   const combatPresentationController = createCombatPresentationController();
   const captureAnimationController = createCaptureAnimationController();
   const moveAnimationController = createPieceAnimationController();
@@ -123,7 +132,6 @@ export function createPieceLayer(initialPieces: ChessPieceState[] = []): ChessPi
     const captureSquare = shouldSnapAll ? null : options.captureSquare ?? null;
 
     if (shouldSnapAll) {
-      combatFeedbackController.clear();
       combatPresentationController.clear();
       clearExitingPieces();
       captureAnimationController.clear();
@@ -191,7 +199,6 @@ export function createPieceLayer(initialPieces: ChessPieceState[] = []): ChessPi
   return {
     clearCombatPresentation: ({ removeVictim = false, snapToFinal = false } = {}) => {
       const clearedSnapshot = combatPresentationController.clear({ snapToFinal });
-      combatFeedbackController.clear();
 
       if (removeVictim && clearedSnapshot.victimId) {
         removeExitingPiece(clearedSnapshot.victimId);
@@ -200,7 +207,6 @@ export function createPieceLayer(initialPieces: ChessPieceState[] = []): ChessPi
       syncIdlePiecePresentations();
     },
     dispose: () => {
-      combatFeedbackController.clear();
       combatPresentationController.clear();
       clearExitingPieces();
       captureAnimationController.clear();
@@ -217,7 +223,6 @@ export function createPieceLayer(initialPieces: ChessPieceState[] = []): ChessPi
       const moveSnapshot = moveAnimationController.getSnapshot();
       const capturePieceIds = captureAnimationController.getActivePieceIds();
       const combatSnapshot = combatPresentationController.getSnapshot();
-      const feedbackSnapshot = combatFeedbackController.getSnapshot();
 
       return {
         activeCapturePieceIds: capturePieceIds,
@@ -225,8 +230,8 @@ export function createPieceLayer(initialPieces: ChessPieceState[] = []): ChessPi
         captureDurationMs: getCaptureAnimationDurationMs(),
         combat: combatSnapshot,
         durationMs: moveSnapshot.durationMs,
-        feedback: feedbackSnapshot,
-        isAnimating: moveSnapshot.isAnimating || capturePieceIds.length > 0 || combatSnapshot.active || feedbackSnapshot.active
+        feedback: PIECE_ONLY_COMBAT_FEEDBACK,
+        isAnimating: moveSnapshot.isAnimating || capturePieceIds.length > 0 || combatSnapshot.active
       };
     },
     getPresentationDebugState: () =>
@@ -248,7 +253,6 @@ export function createPieceLayer(initialPieces: ChessPieceState[] = []): ChessPi
     setPieceAssets: (nextPieceTemplates, pieces) => {
       pieceTemplates = { ...nextPieceTemplates };
       clearPieceAssetCache();
-      combatFeedbackController.clear();
       combatPresentationController.clear();
       clearExitingPieces();
       captureAnimationController.clear();
@@ -284,7 +288,6 @@ export function createPieceLayer(initialPieces: ChessPieceState[] = []): ChessPi
     syncCombatPresentation: (state) => {
       if (state.mode !== 'combat' || !state.combatEvent || !state.combatPhase) {
         const clearedSnapshot = combatPresentationController.clear({ snapToFinal: true });
-        combatFeedbackController.clear();
 
         if (clearedSnapshot.victimId) {
           removeExitingPiece(clearedSnapshot.victimId);
@@ -297,13 +300,11 @@ export function createPieceLayer(initialPieces: ChessPieceState[] = []): ChessPi
       const bindings = getCombatPresentationBindings(state.combatEvent);
 
       if (!bindings) {
-        combatFeedbackController.clear();
         combatPresentationController.clear();
         return;
       }
 
       combatPresentationController.syncState(state, bindings);
-      combatFeedbackController.syncState(state, bindings);
     },
     syncPieces
   };
@@ -539,7 +540,7 @@ function createRenderedPieceContainer(
     geometries: resources.geometries,
     materials: resources.materials,
     ownsGeometry,
-    presentation: createPieceVisualPresentationSettings(piece),
+    presentation: createPieceVisualPresentationSettings(),
     visualRoot
   };
 
@@ -610,17 +611,7 @@ function disposeRenderedPiece(renderedPiece: RenderedPiece): void {
   }
 }
 
-function createPieceVisualPresentationSettings(piece: ChessPieceState): PieceVisualPresentationSettings {
-  if (piece.type === 'knight') {
-    return {
-      hoverBaseOffset: 0.36,
-      hoverBobAmplitude: 0.03,
-      hoverBobPhase: createHoverPhase(piece.id),
-      hoverBobSpeed: 2.1,
-      isHoveringVisual: true
-    };
-  }
-
+function createPieceVisualPresentationSettings(): PieceVisualPresentationSettings {
   return {
     hoverBaseOffset: 0,
     hoverBobAmplitude: 0,
@@ -630,16 +621,8 @@ function createPieceVisualPresentationSettings(piece: ChessPieceState): PieceVis
   };
 }
 
-// Einzelne Figurentypen deren GLB-Pivot minimal versetzt ist.
-const PIECE_Y_OFFSET: Partial<Record<ChessPieceType, number>> = {
-  rook: 0.06
-};
-
 function getPieceWorldPosition(piece: ChessPieceState): THREE.Vector3 {
-  const pos = getPieceWorldPositionFromSquare(piece.square);
-  const yOff = PIECE_Y_OFFSET[piece.type];
-  if (yOff) pos.y += yOff;
-  return pos;
+  return getPieceWorldPositionFromSquare(piece.square);
 }
 
 function getPieceWorldPositionFromSquare(square: BoardSquare): THREE.Vector3 {
@@ -688,15 +671,6 @@ function getPieceVisualHoverOffset(presentation: PieceVisualPresentationSettings
   return presentation.hoverBaseOffset + bobOffset;
 }
 
-function createHoverPhase(pieceId: string): number {
-  let hash = 0;
-
-  for (let index = 0; index < pieceId.length; index += 1) {
-    hash = (hash * 31 + pieceId.charCodeAt(index)) >>> 0;
-  }
-
-  return (hash / 0xffffffff) * Math.PI * 2;
-}
 
 function getRenderedPieceColor(renderedPiece: RenderedPiece): ChessPieceColor {
   return ((renderedPiece.boardAnchor.userData as PieceGroupUserData).color ?? 'white') as ChessPieceColor;

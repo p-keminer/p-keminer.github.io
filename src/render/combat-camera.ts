@@ -35,6 +35,7 @@ export interface CombatCameraSnapshot {
 }
 
 export interface CombatCameraController {
+  getMode: () => CombatCameraMode;
   getSnapshot: () => CombatCameraSnapshot;
   reset: () => boolean;
   setInspectPose: (preset: CameraPreset) => boolean;
@@ -88,6 +89,7 @@ export function createCombatCameraController({
   applyPose(camera, currentPose);
 
   return {
+    getMode: () => mode,
     getSnapshot: () => ({
       combatSide: activeSide,
       combatSourcePosition: vectorToFixed(combatSourcePose.position),

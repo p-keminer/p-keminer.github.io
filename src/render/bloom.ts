@@ -6,7 +6,7 @@
  *   2. Schwellen-Pass  → helle Pixel extrahieren
  *   3. Horizontale Unschärfe → halb-auflösendes Unschärfe-Target
  *   4. Vertikale Unschärfe   → halb-auflösendes Unschärfe-Target
- *   5. Zusammensetzen       → Bildschirm (ACESFilmic anwenden + Bloom hinzufügen)
+ *   5. Zusammensetzen       → Bildschirm (Blender-nahes AgX + Bloom)
  *
  * Keine externen Abhängigkeiten — verwendet nur primitive THREE-Kern.
  */
@@ -51,8 +51,8 @@ void main() {
   gl_FragColor = vec4(color, 1.0);
 }`;
 
-// ─── Zusammensetzen: ACESFilmic Tone-Map auf Szene anwenden, dann Bloom hinzufügen ────────────
-// ACESFilmic Näherung (Krzysztof Narkowicz, 2015).
+// ─── Zusammensetzen: AgX Tone-Map auf Szene anwenden, dann Bloom hinzufügen ────────────
+// AgX-Näherung aus Three.js/Filament, abgestimmt auf Blenders AgX-Look.
 const COMPOSITE_FRAG = /* glsl */ `
 uniform sampler2D tScene;
 uniform sampler2D tBloom;
@@ -60,19 +60,73 @@ uniform float uStrength;
 uniform float uExposure;
 varying vec2 vUv;
 
-vec3 acesFilmic(vec3 x) {
-  return clamp(
-    (x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14),
-    0.0, 1.0
+const mat3 LINEAR_REC2020_TO_LINEAR_SRGB = mat3(
+  vec3(1.6605, -0.1246, -0.0182),
+  vec3(-0.5876, 1.1329, -0.1006),
+  vec3(-0.0728, -0.0083, 1.1187)
+);
+
+const mat3 LINEAR_SRGB_TO_LINEAR_REC2020 = mat3(
+  vec3(0.6274, 0.0691, 0.0164),
+  vec3(0.3293, 0.9195, 0.0880),
+  vec3(0.0433, 0.0113, 0.8956)
+);
+
+vec3 agxDefaultContrastApprox(vec3 x) {
+  vec3 x2 = x * x;
+  vec3 x4 = x2 * x2;
+  return 15.5 * x4 * x2
+    - 40.14 * x4 * x
+    + 31.96 * x4
+    - 6.868 * x2 * x
+    + 0.4298 * x2
+    + 0.1191 * x
+    - 0.00232;
+}
+
+vec3 agxToneMapping(vec3 color) {
+  const mat3 inset = mat3(
+    vec3(0.8566271533, 0.1373189729, 0.1118982130),
+    vec3(0.0951212405, 0.7612419906, 0.0767994186),
+    vec3(0.0482516061, 0.1014390365, 0.8113023684)
   );
+  const mat3 outset = mat3(
+    vec3(1.1271005818, -0.1413297635, -0.1413297635),
+    vec3(-0.1106066431, 1.1578237022, -0.1106066431),
+    vec3(-0.0164939387, -0.0164939387, 1.2519364066)
+  );
+  const float minEv = -12.47393;
+  const float maxEv = 4.026069;
+
+  color *= uExposure;
+  color = LINEAR_SRGB_TO_LINEAR_REC2020 * color;
+  color = inset * color;
+  color = max(color, vec3(1e-10));
+  color = clamp((log2(color) - minEv) / (maxEv - minEv), 0.0, 1.0);
+  color = agxDefaultContrastApprox(color);
+  color = outset * color;
+  color = pow(max(vec3(0.0), color), vec3(2.2));
+  return clamp(LINEAR_REC2020_TO_LINEAR_SRGB * color, 0.0, 1.0);
+}
+
+vec3 agxMediumHighContrast(vec3 color) {
+  color = agxToneMapping(color);
+  color = clamp((color - 0.18) * 1.10 + 0.18, 0.0, 1.0);
+  float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+  return clamp(mix(vec3(luma), color, 1.04), 0.0, 1.0);
+}
+
+vec3 linearToSRGB(vec3 color) {
+  vec3 low = color * 12.92;
+  vec3 high = 1.055 * pow(max(color, vec3(0.0)), vec3(1.0 / 2.4)) - 0.055;
+  return mix(low, high, step(vec3(0.0031308), color));
 }
 
 void main() {
-  vec3 hdr   = texture2D(tScene, vUv).rgb * uExposure;
+  vec3 hdr = texture2D(tScene, vUv).rgb;
   vec3 bloom = texture2D(tBloom, vUv).rgb;
-  vec3 color = acesFilmic(hdr + bloom * uStrength);
-  // Gamma-Korrektur (sRGB-Ausgabe)
-  gl_FragColor = vec4(pow(color, vec3(1.0 / 2.2)), 1.0);
+  vec3 color = agxMediumHighContrast(hdr + bloom * uStrength);
+  gl_FragColor = vec4(linearToSRGB(color), 1.0);
 }`;
 
 // ─── Öffentliche Schnittstelle ────────────────────────────────────────────────────
@@ -84,7 +138,7 @@ export interface BloomOptions {
   strength?: number;
   /** Unschärfe-Schrittskala — größer = breiterer Glanz (Standard 2,0 Pixel bei halber Auflösung). */
   blurScale?: number;
-  /** Belichtung vor ACESFilmic Tone-Mapping angewendet (Standard 1,2). */
+  /** Belichtung vor AgX Tone-Mapping angewendet (Standard 1,2). */
   exposure?: number;
 }
 
@@ -175,11 +229,12 @@ export function createBloomEffect(
 
   // ── Größenverfolgung ───────────────────────────────────────────────────────
   let fullW = 1, fullH = 1, halfW = 1, halfH = 1;
+  const bloomDiv = deviceTier === 'high' ? 3 : 4;
+  const compensatedBlurScale = blurScale * (2 / bloomDiv);
 
   function setSize(width: number, height: number): void {
     fullW = width;
     fullH = height;
-    const bloomDiv = 2;
     halfW = Math.max(1, Math.floor(width / bloomDiv));
     halfH = Math.max(1, Math.floor(height / bloomDiv));
 
@@ -213,20 +268,20 @@ export function createBloomEffect(
 
     // 3. Horizontale Unschärfe
     blurHMat.uniforms.tDiffuse.value = brightRT.texture;
-    blurHMat.uniforms.uDir.value.set(blurScale / halfW, 0);
+    blurHMat.uniforms.uDir.value.set(compensatedBlurScale / halfW, 0);
     quadMesh.material = blurHMat;
     renderer.setRenderTarget(blurHRT);
     renderer.render(quadScene, orthoCamera);
 
     // 4. Vertikale Unschärfe
     blurVMat.uniforms.tDiffuse.value = blurHRT.texture;
-    blurVMat.uniforms.uDir.value.set(0, blurScale / halfH);
+    blurVMat.uniforms.uDir.value.set(0, compensatedBlurScale / halfH);
     quadMesh.material = blurVMat;
     renderer.setRenderTarget(blurVRT);
     renderer.render(quadScene, orthoCamera);
 
     // 5. Zusammensetzen → Bildschirm.
-    //    Der Composite-Shader wendet ACESFilmic + pow(1/2.2) Gamma selbst an.
+    //    Der Composite-Shader wendet AgX und eine exakte lineare-sRGB-Ausgabe selbst an.
     //    Wir verwenden LinearSRGBColorSpace, damit der Renderer KEINE zweite sRGB-Konvertierung auf unserer bereits Gamma-korrigierten Ausgabe anwendet.
     renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
     compositeMat.uniforms.tScene.value = sceneRT.texture;

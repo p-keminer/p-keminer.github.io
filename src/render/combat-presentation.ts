@@ -100,6 +100,14 @@ interface ActiveCombatPresentation {
 
 const PIECE_BASE_HEIGHT = 0.898; // = BOARD_SURFACE_Y: Blender Z=2.4221 → Three.js Y=0.898
 
+const COMBAT_PHASE_MOTION_WINDOWS = {
+  intro: { start: 0.05, end: 0.54 },
+  attack: { start: 0.18, end: 0.68 },
+  impact: { start: 0, end: 0.6 },
+  resolve: { start: 0.05, end: 0.59 },
+  return: { start: 0, end: 0.47 }
+} satisfies Readonly<Record<CombatPresentationPhase, { start: number; end: number }>>;
+
 export function createCombatPresentationController(): CombatPresentationController {
   let activePresentation: ActiveCombatPresentation | null = null;
 
@@ -181,6 +189,7 @@ function applyCombatPhase(activePresentation: ActiveCombatPresentation): void {
     victimStyleProfile,
     victimPosition
   } = activePresentation;
+  const motionProgress = getCombatMotionProgress(phase, progress);
   const attackSign = attackDirection.x >= 0 ? 1 : -1;
   const introPreloadDistance =
     attackerMotionProfile.intro.windupDistance + attackerStyleProfile.preloadAmount * 0.075;
@@ -210,14 +219,17 @@ function applyCombatPhase(activePresentation: ActiveCombatPresentation): void {
   victimGroup.position.copy(victimPosition);
 
   if (phase === 'intro') {
-    const introPhaseProgress = sampleCombatPhaseProgress(attackerMotionProfile.intro, progress);
+    const introPhaseProgress = sampleCombatPhaseProgress(attackerMotionProfile.intro, motionProgress);
     const introProgress = sampleCyberMechProgress(introPhaseProgress, attackerStyleProfile);
-    const preloadPulse = sampleCyberMechPulse(progress, attackerStyleProfile);
+    const preloadPulse = sampleCyberMechPulse(motionProgress, attackerStyleProfile);
 
     attackerGroup.position.lerpVectors(attackerBasePose.position, windupPosition, introProgress);
-    attackerGroup.position.addScaledVector(attackDirection, sampleCyberMechSettle(progress, attackerStyleProfile) * 0.035);
+    attackerGroup.position.addScaledVector(
+      attackDirection,
+      sampleCyberMechSettle(motionProgress, attackerStyleProfile) * 0.035
+    );
     attackerGroup.position.y +=
-      Math.sin(progress * Math.PI) * (attackerMotionProfile.intro.lift + preloadPulse * 0.05);
+      Math.sin(motionProgress * Math.PI) * (attackerMotionProfile.intro.lift + preloadPulse * 0.05);
     attackerGroup.rotation.z =
       attackSign * (attackerMotionProfile.intro.roll + attackerStyleProfile.preloadAmount * 0.05) * introProgress;
     attackerGroup.rotation.x =
@@ -225,23 +237,25 @@ function applyCombatPhase(activePresentation: ActiveCombatPresentation): void {
     attackerGroup.scale.setScalar(
       THREE.MathUtils.lerp(1, attackerMotionProfile.intro.scaleTo - attackerStyleProfile.preloadAmount * 0.015, introProgress)
     );
-    victimGroup.position.y += Math.sin(progress * Math.PI) * (0.01 + victimStyleProfile.energyPulse * 0.008);
+    victimGroup.position.y +=
+      Math.sin(motionProgress * Math.PI) * (0.01 + victimStyleProfile.energyPulse * 0.008);
     return;
   }
 
   if (phase === 'attack') {
-    const attackPhaseProgress = sampleCombatPhaseProgress(attackerMotionProfile.attack, progress);
+    const attackPhaseProgress = sampleCombatPhaseProgress(attackerMotionProfile.attack, motionProgress);
     const attackProgress = sampleCyberMechProgress(attackPhaseProgress, attackerStyleProfile);
-    const servoPulse = sampleCyberMechPulse(progress, attackerStyleProfile);
-    const terminalOvershoot = sampleCyberMechOvershoot(progress, attackerStyleProfile);
+    const servoPulse = sampleCyberMechPulse(motionProgress, attackerStyleProfile);
+    const terminalOvershoot = sampleCyberMechOvershoot(motionProgress, attackerStyleProfile);
 
     attackerGroup.position.lerpVectors(windupPosition, strikePosition, attackProgress);
     attackerGroup.position.addScaledVector(
       sideDirection,
-      Math.sin(progress * Math.PI) * attackSideArc * attackSign
+      Math.sin(motionProgress * Math.PI) * attackSideArc * attackSign
     );
     attackerGroup.position.addScaledVector(attackDirection, terminalOvershoot * 0.075);
-    attackerGroup.position.y += Math.sin(progress * Math.PI) * (attackerMotionProfile.attack.lift + servoPulse * 0.07);
+    attackerGroup.position.y +=
+      Math.sin(motionProgress * Math.PI) * (attackerMotionProfile.attack.lift + servoPulse * 0.07);
     attackerGroup.rotation.z =
       attackSign *
       THREE.MathUtils.lerp(
@@ -261,22 +275,28 @@ function applyCombatPhase(activePresentation: ActiveCombatPresentation): void {
         attackProgress
       )
     );
-    victimGroup.scale.setScalar(THREE.MathUtils.lerp(1, 0.99 - victimStyleProfile.stiffness * 0.01, Math.sin(progress * Math.PI)));
+    victimGroup.scale.setScalar(
+      THREE.MathUtils.lerp(
+        1,
+        0.99 - victimStyleProfile.stiffness * 0.01,
+        Math.sin(motionProgress * Math.PI)
+      )
+    );
     return;
   }
 
   if (phase === 'impact') {
     const impactProgress = sampleCyberMechProgress(
-      sampleCombatPhaseProgress(attackerMotionProfile.impact, progress),
+      sampleCombatPhaseProgress(attackerMotionProfile.impact, motionProgress),
       attackerStyleProfile
     );
     const victimImpactProgress = sampleCyberMechProgress(
-      sampleCombatPhaseProgress(victimMotionProfile.impact, progress),
+      sampleCombatPhaseProgress(victimMotionProfile.impact, motionProgress),
       victimStyleProfile
     );
     const hitPulse = Math.sin(victimImpactProgress * Math.PI);
-    const impactSettle = sampleCyberMechSettle(progress, attackerStyleProfile);
-    const impactPulse = sampleCyberMechPulse(progress, attackerStyleProfile);
+    const impactSettle = sampleCyberMechSettle(motionProgress, attackerStyleProfile);
+    const impactPulse = sampleCyberMechPulse(motionProgress, attackerStyleProfile);
     const victimKickDistance =
       victimMotionProfile.impact.victimKickDistance +
       attackerStyleProfile.impactRecoil * 0.05 +
@@ -311,21 +331,22 @@ function applyCombatPhase(activePresentation: ActiveCombatPresentation): void {
 
   if (phase === 'resolve') {
     const resolveProgress = sampleCyberMechProgress(
-      sampleCombatPhaseProgress(attackerMotionProfile.resolve, progress),
+      sampleCombatPhaseProgress(attackerMotionProfile.resolve, motionProgress),
       attackerStyleProfile
     );
     const victimResolveProgress = sampleCyberMechProgress(
-      sampleCombatPhaseProgress(victimMotionProfile.resolve, progress),
+      sampleCombatPhaseProgress(victimMotionProfile.resolve, motionProgress),
       victimStyleProfile
     );
-    const resolveSettle = sampleCyberMechSettle(progress, attackerStyleProfile);
-    const victimResolveSettle = sampleCyberMechSettle(progress, victimStyleProfile);
-    const resolveOvershoot = sampleCyberMechOvershoot(progress, attackerStyleProfile);
+    const resolveSettle = sampleCyberMechSettle(motionProgress, attackerStyleProfile);
+    const victimResolveSettle = sampleCyberMechSettle(motionProgress, victimStyleProfile);
+    const resolveOvershoot = sampleCyberMechOvershoot(motionProgress, attackerStyleProfile);
 
     attackerGroup.position.lerpVectors(recoilPosition, attackerFinalPosition, resolveProgress);
     attackerGroup.position.addScaledVector(attackDirection, (resolveSettle + resolveOvershoot * 0.45) * 0.05);
     attackerGroup.position.y +=
-      Math.sin(progress * Math.PI) * (attackerMotionProfile.resolve.attackerLift + attackerStyleProfile.energyPulse * 0.025);
+      Math.sin(motionProgress * Math.PI) *
+      (attackerMotionProfile.resolve.attackerLift + attackerStyleProfile.energyPulse * 0.025);
     attackerGroup.rotation.z =
       attackSign *
       THREE.MathUtils.lerp(
@@ -362,7 +383,7 @@ function applyCombatPhase(activePresentation: ActiveCombatPresentation): void {
     victimGroup.scale.setScalar(THREE.MathUtils.lerp(1, victimMotionProfile.resolve.victimScaleTo, victimResolveProgress));
     setMaterialOpacity(victimMaterials, 1 - victimResolveProgress);
 
-    if (progress >= 0.999) {
+    if (motionProgress >= 0.999) {
       victimGroup.visible = false;
     }
 
@@ -370,10 +391,10 @@ function applyCombatPhase(activePresentation: ActiveCombatPresentation): void {
   }
 
   const returnProgress = sampleCyberMechProgress(
-    sampleCombatPhaseProgress(attackerMotionProfile.return, progress),
+    sampleCombatPhaseProgress(attackerMotionProfile.return, motionProgress),
     attackerStyleProfile
   );
-  const returnSettle = sampleCyberMechSettle(progress, attackerStyleProfile);
+  const returnSettle = sampleCyberMechSettle(motionProgress, attackerStyleProfile);
   applyNeutralPose(attackerGroup, attackerFinalPosition);
   attackerGroup.position.addScaledVector(attackDirection, returnSettle * 0.04);
   attackerGroup.position.y +=
@@ -544,4 +565,9 @@ function setMaterialOpacity(materialPoses: MaterialPose[], opacity: number): voi
 
 function clamp01(value: number): number {
   return Math.min(Math.max(value, 0), 1);
+}
+
+function getCombatMotionProgress(phase: CombatPresentationPhase, progress: number): number {
+  const motionWindow = COMBAT_PHASE_MOTION_WINDOWS[phase];
+  return clamp01((progress - motionWindow.start) / (motionWindow.end - motionWindow.start));
 }

@@ -1,11 +1,17 @@
 import * as THREE from 'three';
 
 const MESH_LEFT = 'mon_cctv_left';
+const MESH_CENTER = 'Monitor_02_Screen';
 const MESH_RIGHT = 'mon_cctv_right';
+const MAIN_SCREEN_MESH_NAMES = new Set([MESH_LEFT, MESH_CENTER, MESH_RIGHT]);
+const SCREEN_MATERIAL_PATTERN = /screen/i;
 const TEX_SIZE = 512;
 
 export interface CCTVScreen {
   attach(roomRoot: THREE.Object3D): void;
+  setAboutPreviewMix(mix: number): void;
+  setPerformancePreviewMix(mix: number): void;
+  setPortfolioPreviewMix(mix: number): void;
   tick(elapsedMs: number): void;
   renderToTarget(scene: THREE.Scene, renderer: THREE.WebGLRenderer): void;
   dispose(): void;
@@ -493,33 +499,93 @@ function createAnalyticsTexture(): THREE.CanvasTexture {
 // ── Factory ─────────────────────────────────────────────────────────────
 
 export function createCCTVScreen(): CCTVScreen {
-  const texLeft = createTerminalTexture();
-  const texRight = createAnalyticsTexture();
+  // Die alten Canvas-Feeds bleiben als Code erhalten, werden im Redesign aber
+  // bewusst nicht mehr erzeugt. Die generischen Anzeigen bleiben schwarz;
+  // Alle drei Hauptmonitore bekommen eigene Materialien, damit sie bei ihren
+  // jeweiligen Seitenfahrten unabhängig in die Seitenfarbe überblenden.
+  const screenOffColor = new THREE.Color(0x000000);
+  const monitorPageColor = new THREE.Color(0x0d1117);
+  const blankScreenMaterial = new THREE.MeshBasicMaterial({
+    color: screenOffColor,
+    name: 'MAT_Screen_Runtime_Black',
+    toneMapped: false
+  });
+  const performanceScreenMaterial = new THREE.MeshBasicMaterial({
+    color: screenOffColor,
+    name: 'MAT_Screen_Runtime_Performance',
+    toneMapped: false
+  });
+  const aboutScreenMaterial = new THREE.MeshBasicMaterial({
+    color: screenOffColor,
+    name: 'MAT_Screen_Runtime_About',
+    toneMapped: false
+  });
+  const portfolioScreenMaterial = new THREE.MeshBasicMaterial({
+    color: screenOffColor,
+    name: 'MAT_Screen_Runtime_Portfolio',
+    toneMapped: false
+  });
+
+  function usesScreenMaterial(material: THREE.Material | THREE.Material[]): boolean {
+    const materials = Array.isArray(material) ? material : [material];
+    return materials.some((entry) => SCREEN_MATERIAL_PATTERN.test(entry.name));
+  }
 
   function attach(roomRoot: THREE.Object3D): void {
     roomRoot.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) return;
+
       if (node.name === MESH_LEFT) {
-        node.material = new THREE.MeshBasicMaterial({
-          map: texLeft,
-          toneMapped: false
-        });
-      } else if (node.name === MESH_RIGHT) {
-        node.material = new THREE.MeshBasicMaterial({
-          map: texRight,
-          toneMapped: false
-        });
+        node.material = performanceScreenMaterial;
+        return;
+      }
+
+      if (node.name === MESH_CENTER) {
+        node.material = portfolioScreenMaterial;
+        return;
+      }
+
+      if (node.name === MESH_RIGHT) {
+        node.material = aboutScreenMaterial;
+        return;
+      }
+
+      if (MAIN_SCREEN_MESH_NAMES.has(node.name) || usesScreenMaterial(node.material)) {
+        node.material = blankScreenMaterial;
       }
     });
   }
 
   return {
     attach,
+    setAboutPreviewMix(mix): void {
+      aboutScreenMaterial.color.lerpColors(
+        screenOffColor,
+        monitorPageColor,
+        THREE.MathUtils.clamp(mix, 0, 1)
+      );
+    },
+    setPerformancePreviewMix(mix): void {
+      performanceScreenMaterial.color.lerpColors(
+        screenOffColor,
+        monitorPageColor,
+        THREE.MathUtils.clamp(mix, 0, 1)
+      );
+    },
+    setPortfolioPreviewMix(mix): void {
+      portfolioScreenMaterial.color.lerpColors(
+        screenOffColor,
+        monitorPageColor,
+        THREE.MathUtils.clamp(mix, 0, 1)
+      );
+    },
     tick(): void {},
     renderToTarget(): void {},
     dispose(): void {
-      texLeft.dispose();
-      texRight.dispose();
+      aboutScreenMaterial.dispose();
+      blankScreenMaterial.dispose();
+      performanceScreenMaterial.dispose();
+      portfolioScreenMaterial.dispose();
     }
   };
 }

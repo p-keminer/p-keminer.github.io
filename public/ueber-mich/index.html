@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; base-uri 'none'; object-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'none'; worker-src 'none'; frame-src 'none'; media-src 'none'; form-action 'none'; manifest-src 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      name="description"
+      content="Über-mich-Bereich von Philip Keminer."
+    />
+    <meta name="theme-color" content="#0d1117" />
+    <title>Über mich | p-keminer</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026-08-10-chip-shield" />
+    <link rel="stylesheet" href="../monitor-pages/github-dark.css" />
+    <link rel="stylesheet" href="./styles.css?v=2026-08-09-readme-edge-v2" />
+  </head>
+  <body>
+    <a class="skip-link" href="#about-content">Zum Inhalt springen</a>
+
+    <header class="repo-header">
+      <div class="repo-header__inner">
+        <div class="repo-path" aria-label="Repository-Pfad">
+          <span class="repo-owner">p-keminer</span>
+          <span aria-hidden="true">/</span>
+          <strong>ueber-mich</strong>
+          <span class="repo-visibility">Public</span>
+        </div>
+
+        <nav class="repo-tabs" aria-label="Portfolio-Bereiche">
+          <a class="repo-tab" href="/portfolio-platzhalter/">Portfolio</a>
+          <a class="repo-tab" href="/ueber-mich/" aria-current="page">Über mich</a>
+          <a class="repo-tab" href="/leistungsnachweise/">Leistungsnachweise</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page-shell" id="about-content">
+      <div class="about-layout">
+        <aside class="profile-summary" aria-labelledby="profile-name">
+          <div class="profile-avatar" aria-hidden="true">pk</div>
+          <h1 id="profile-name">Philip Keminer</h1>
+          <p class="profile-handle">p-keminer</p>
+          <p class="profile-focus">
+            Von der Sternegastronomie zur Informationstechnik,
+            Informationssicherheit und Cybersicherheit.
+          </p>
+
+          <nav class="profile-links" aria-label="Externe Profile">
+            <a
+              class="profile-link"
+              href="https://github.com/p-keminer"
+              target="_blank"
+              rel="noopener noreferrer"
+            >GitHub</a>
+            <a
+              class="profile-link"
+              href="https://www.linkedin.com/in/philip-keminer/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >LinkedIn</a>
+            <a
+              class="profile-link"
+              href="https://tryhackme.com/p/p.keminer"
+              target="_blank"
+              rel="noopener noreferrer"
+            >TryHackMe</a>
+          </nav>
+        </aside>
+
+        <article class="readme panel" aria-labelledby="about-title">
+          <header class="panel-header">
+            <strong id="about-title">README.md</strong>
+            <div class="language-switch" role="group" aria-label="README-Sprache">
+              <button
+                class="language-switch__button"
+                data-profile-language="de"
+                type="button"
+                aria-pressed="true"
+              >Deutsch</button>
+              <button
+                class="language-switch__button"
+                data-profile-language="en"
+                type="button"
+                aria-pressed="false"
+              >English</button>
+            </div>
+          </header>
+
+          <div class="readme-body">
+            <div class="profile-readme" data-profile-readme></div>
+            <noscript>
+              <p class="readme-fallback">
+                Die Profil-README ist auch direkt auf
+                <a href="https://github.com/p-keminer" target="_blank" rel="noopener noreferrer">GitHub</a>
+                verfügbar.
+              </p>
+            </noscript>
+          </div>
+        </article>
+      </div>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

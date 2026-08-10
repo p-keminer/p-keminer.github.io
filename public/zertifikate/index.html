@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Thematisch geordneter Zertifikatsbereich von p-keminer."
+    />
+    <meta name="theme-color" content="#212529" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; base-uri 'none'; object-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'none'; worker-src 'none'; frame-src 'none'; media-src 'none'; form-action 'none'; manifest-src 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <title>Zertifikate | p-keminer</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026-08-10-chip-shield" />
+    <link rel="stylesheet" href="./styles.css?v=7-certificates" />
+    <script type="module" src="./app.js?v=7-certificates"></script>
+  </head>
+  <body data-theme="cs50">
+    <a class="skip-link" href="#certificate-viewer">Zur Zertifikatswand springen</a>
+
+    <header class="portal-header">
+      <div class="portal-header__inner">
+        <p class="portal-path">
+          <span class="repo-owner">p-keminer</span>
+          <span aria-hidden="true">/</span>
+          <strong>zertifikate</strong>
+        </p>
+        <span class="portal-topic" id="portal-topic">CS50</span>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <nav class="topic-panel" aria-label="Zertifikatsthema auswählen">
+        <header class="topic-panel__header">
+          <strong>Themen</strong>
+          <span>4</span>
+        </header>
+
+        <ol class="topic-list">
+          <li>
+            <button class="topic-chip" type="button" data-topic="cs50" aria-pressed="true">
+              <span class="topic-swatch" aria-hidden="true"></span>
+              <span class="topic-label">CS50</span>
+              <span class="topic-number">01</span>
+            </button>
+          </li>
+          <li>
+            <button class="topic-chip" type="button" data-topic="cisco" aria-pressed="false">
+              <span class="topic-swatch" aria-hidden="true"></span>
+              <span class="topic-label">Cisco</span>
+              <span class="topic-number">02</span>
+            </button>
+          </li>
+          <li>
+            <button class="topic-chip" type="button" data-topic="tryhackme" aria-pressed="false">
+              <span class="topic-swatch" aria-hidden="true"></span>
+              <span class="topic-label">TryHackMe</span>
+              <span class="topic-number">03</span>
+            </button>
+          </li>
+          <li>
+            <button class="topic-chip" type="button" data-topic="jetbrains" aria-pressed="false">
+              <span class="topic-swatch" aria-hidden="true"></span>
+              <span class="topic-label">JetBrains</span>
+              <span class="topic-number">04</span>
+            </button>
+          </li>
+        </ol>
+      </nav>
+
+      <article
+        class="certificate-viewer"
+        id="certificate-viewer"
+        data-theme="cs50"
+        tabindex="-1"
+        aria-labelledby="certificate-title"
+      >
+        <header class="theme-masthead">
+          <div class="theme-copy">
+            <p class="theme-context" id="certificate-kicker">OpenCourseWare</p>
+            <div class="theme-title-row">
+              <h1 id="certificate-title">CS50</h1>
+              <span class="theme-index" id="theme-index" aria-hidden="true">01 / 04</span>
+            </div>
+            <p class="theme-description" id="certificate-description">
+              Zertifikate und Kursnachweise werden hier gesammelt.
+            </p>
+          </div>
+
+          <div class="theme-art" aria-hidden="true">
+            <span class="theme-art__line theme-art__line--one"></span>
+            <span class="theme-art__line theme-art__line--two"></span>
+            <span class="theme-art__line theme-art__line--three"></span>
+            <strong class="theme-wordmark" id="theme-wordmark">CS50</strong>
+          </div>
+        </header>
+
+        <section class="certificate-wall" aria-labelledby="wall-title">
+          <header class="wall-header">
+            <h2 id="wall-title">Zertifikatswand</h2>
+            <span id="certificate-count">0 Nachweise</span>
+          </header>
+
+          <ol class="certificate-list" id="certificate-list" hidden></ol>
+
+          <div class="wall-empty" id="certificate-empty">
+            <div class="empty-visual" aria-hidden="true">
+              <span></span><span></span><span></span>
+              <strong id="empty-mark">CS50</strong>
+            </div>
+            <strong id="empty-title">Noch keine Nachweise veröffentlicht</strong>
+            <p>Dokumente und Verifikationslinks werden erst nach ihrer Prüfung ergänzt.</p>
+          </div>
+        </section>
+
+        <footer class="viewer-controls" aria-label="Zwischen Zertifikatsthemen wechseln">
+          <button
+            class="navigation-button"
+            id="previous-topic"
+            type="button"
+            aria-label="Zum vorherigen Zertifikatsthema"
+            aria-keyshortcuts="ArrowLeft"
+            disabled
+          >
+            <span aria-hidden="true">←</span>
+            <span>Zurück</span>
+          </button>
+
+          <output id="topic-status" role="status" aria-live="polite">CS50 · 1 von 4 verfügbar</output>
+
+          <button
+            class="navigation-button navigation-button--next"
+            id="next-topic"
+            type="button"
+            aria-label="Zum nächsten Zertifikatsthema"
+            aria-keyshortcuts="ArrowRight"
+          >
+            <span>Weiter</span>
+            <span aria-hidden="true">→</span>
+          </button>
+        </footer>
+
+        <noscript>
+          <p class="noscript-message">Für die Themen-Navigation muss JavaScript aktiviert sein.</p>
+        </noscript>
+      </article>
+    </main>
+  </body>
+</html>

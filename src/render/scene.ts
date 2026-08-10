@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import type { BoardSquare, ChessPieceColor, ChessPieceState, ChessPieceType } from '../chess/state';
-import { ENABLE_TV_SHOWCASE } from '../config/feature-flags';
 import { createChessboard, type ChessboardMesh } from './board';
 import {
   createBoardCameraControls,
@@ -17,9 +16,14 @@ import {
 } from './combat-camera';
 import type { CombatPresentationStateInput } from './combat-presentation';
 import { applyCameraPreset, createBoardCamera, type CameraPreset, resizeCamera } from './camera';
-import { isMobileDevice, isTabletDevice } from './device-tier';
+import { deviceTier, isMobileDevice } from './device-tier';
 import { createBoardInteraction, type BoardInteractionLayer } from './interaction';
 import { createSceneLights, type SceneLights } from './lights';
+import {
+  createRoomQualityController,
+  loadRoomRedesignLightMap,
+  type RoomQualityController
+} from './room-quality';
 import { createBloomEffect, type BloomEffect } from './bloom';
 import {
   DEFAULT_PIECE_ASSET_SET,
@@ -46,11 +50,12 @@ export interface BoardPresentationStateInput extends CombatPresentationStateInpu
   combatRemainingMs: CombatCameraStateInput['combatRemainingMs'];
 }
 
-export type RoomFocusTargetId = 'board' | 'comicEmbed' | 'comicScreen' | 'displayCase' | 'horrorEmbed' | 'legalWall' | 'overview' | 'pictureFrame' | 'pictureFrameDetail' | 'tvSelect' | 'webEmbed' | 'workbench';
+export type RoomFocusTargetId = 'aboutEmbed' | 'board' | 'certificateEmbed' | 'comicEmbed' | 'comicScreen' | 'displayCase' | 'horrorEmbed' | 'legalWall' | 'overview' | 'performanceEmbed' | 'portfolioEmbed' | 'pictureFrame' | 'pictureFrameDetail' | 'tvSelect' | 'workbench';
 
 export type StartFlowMode = 'boardFocus' | 'displayCaseFocus' | 'introTransition' | 'menu' | 'roomExplore';
 
 export interface StartFlowStateInput {
+  certificateTopicId?: string;
   focusFromTarget: RoomFocusTargetId;
   focusProgress: number;
   focusTarget: RoomFocusTargetId;
@@ -127,9 +132,21 @@ export interface BoardPreviewSnapshot {
     hotspots: Array<{
       focusTarget: RoomFocusTargetId;
       id: Exclude<RoomFocusTargetId, 'overview'>;
+      interactionMode: 'marker' | 'surface';
       isFocused: boolean;
       isVisible: boolean;
       label: string;
+      screenHeight: number;
+      screenWidth: number;
+      screenX: number;
+      screenY: number;
+    }>;
+    certificateFrames: Array<{
+      id: string;
+      isVisible: boolean;
+      label: string;
+      screenHeight: number;
+      screenWidth: number;
       screenX: number;
       screenY: number;
     }>;
@@ -155,6 +172,7 @@ export interface BoardPreviewApp {
   applyVisualAssets: (assets: ChessVisualAssets) => void;
   dispose: () => void;
   getSnapshot: () => BoardPreviewSnapshot;
+  prepareInitialRender: (onProgress?: (progress: number) => void) => Promise<void>;
   resetCameraState: () => void;
   requestLookAroundReset: (onComplete: () => void) => void;
   resetPresentationState: () => void;
@@ -180,6 +198,8 @@ export interface BoardPreviewApp {
 
 interface CreateBoardPreviewSceneOptions {
   container: HTMLDivElement;
+  onRoomAssetProgress?: (progress: number) => void;
+  onRoomAssetReady?: () => void;
   onStateChange?: () => void;
   onSquareClick?: (square: BoardSquare) => void;
   pieces: ChessPieceState[];
@@ -197,7 +217,9 @@ interface StageScene {
   pieceLayer: ChessPieceLayer;
   renderer: THREE.WebGLRenderer;
   roomCameraControls: RoomCameraControls;
+  roomGroup: THREE.Group;
   roomPieceNodes: THREE.Object3D[];
+  roomQuality: RoomQualityController;
   scene: THREE.Scene;
 }
 
@@ -225,6 +247,206 @@ const ROOM_OFFSET = new THREE.Vector3(-11.123, -3.833, 15.426);
 // Nach jedem Blender-Export, der das Schachfeld verschiebt, neu messen.
 const BOARD_SURFACE_Y = 0.898; // = 2.4221 * ROOM_SCALE + ROOM_OFFSET.y
 
+interface RoomCalibration {
+  isRedesign: boolean;
+  offset: THREE.Vector3;
+  scale: number;
+}
+
+function resolveRoomCalibration(room: THREE.Object3D): RoomCalibration {
+  const chessAnchors: THREE.Object3D[] = [];
+
+  room.traverse((node) => {
+    if (node.userData.hotspot === true && node.userData.role === 'chess') {
+      chessAnchors.push(node);
+    }
+  });
+
+  const chessAnchor = chessAnchors[0];
+  if (!chessAnchor) {
+    return {
+      isRedesign: false,
+      offset: ROOM_OFFSET.clone(),
+      scale: ROOM_SCALE
+    };
+  }
+
+  const squareStep = Number(chessAnchor.userData.square_step);
+  const boardSurfaceSourceY = Number(chessAnchor.userData.board_surface_z);
+
+  if (!Number.isFinite(squareStep) || squareStep <= 0 || !Number.isFinite(boardSurfaceSourceY)) {
+    return {
+      isRedesign: false,
+      offset: ROOM_OFFSET.clone(),
+      scale: ROOM_SCALE
+    };
+  }
+
+  room.updateMatrixWorld(true);
+  const boardCenter = chessAnchor.getWorldPosition(new THREE.Vector3());
+  const scale = 1 / squareStep;
+
+  return {
+    isRedesign: true,
+    offset: new THREE.Vector3(
+      -boardCenter.x * scale,
+      BOARD_SURFACE_Y - boardSurfaceSourceY * scale,
+      -boardCenter.z * scale
+    ),
+    scale
+  };
+}
+
+function copyCameraPreset(target: CameraPreset, source: CameraPreset): void {
+  Object.assign(target.position, source.position);
+  Object.assign(target.target, source.target);
+}
+
+function zoomCameraPreset(preset: CameraPreset, factor: number): CameraPreset {
+  const dx = preset.position.x - preset.target.x;
+  const dy = preset.position.y - preset.target.y;
+  const dz = preset.position.z - preset.target.z;
+
+  return {
+    position: {
+      x: preset.target.x + dx * factor,
+      y: preset.target.y + dy * factor,
+      z: preset.target.z + dz * factor
+    },
+    target: { ...preset.target }
+  };
+}
+
+function applyRedesignOverviewPreset(roomGroup: THREE.Group): void {
+  roomGroup.updateMatrixWorld(true);
+
+  // Entspricht der freigegebenen Blender-Gesamtansicht des Redesign-Raums.
+  // Die Punkte liegen bereits im von glTF verwendeten Y-up-Koordinatensystem.
+  const position = roomGroup.localToWorld(new THREE.Vector3(1.0, 2.25, 7.8));
+  const target = roomGroup.localToWorld(new THREE.Vector3(0.75, 1.16, -1.08));
+  const preset: CameraPreset = {
+    position: { x: position.x, y: position.y, z: position.z },
+    target: { x: target.x, y: target.y, z: target.z }
+  };
+
+  copyCameraPreset(MENU_CAMERA_PRESET, preset);
+  copyCameraPreset(PORTRAIT_MENU_CAMERA_PRESET, zoomCameraPreset(preset, 0.9));
+  copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.overview, preset);
+}
+
+function applyRedesignLegalCornerPreset(roomGroup: THREE.Group): void {
+  roomGroup.updateMatrixWorld(true);
+
+  // Breite Eckperspektive des rechten Arbeitsplatzes. Die weit links liegende,
+  // niedrige Blender-Pose (-0.30, -5.30, 1.15) blickt auf
+  // (2.45, 0.45, 1.06). So bleiben Oszilloskop und Werkzeugwand vollstaendig
+  // sichtbar, waehrend das Tisch-Endpanel den 3D-Drucker nicht mehr verdeckt.
+  // glTF konvertiert Blender Z-up (x, y, z) nach Y-up (x, z, -y).
+  const position = roomGroup.localToWorld(new THREE.Vector3(-0.30, 1.15, 5.30));
+  const target = roomGroup.localToWorld(new THREE.Vector3(2.45, 1.06, -0.45));
+
+  copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.legalWall, {
+    position: { x: position.x, y: position.y, z: position.z },
+    target: { x: target.x, y: target.y, z: target.z }
+  });
+}
+
+const REDESIGN_MONITOR_FOCUS_DISTANCE = 13;
+const REDESIGN_MONITOR_EMBED_DISTANCE = 1.9;
+const REDESIGN_CERTIFICATE_EMBED_DISTANCE = 1.9;
+let redesignPictureFrameDetailPreset: CameraPreset | null = null;
+const redesignCertificateEmbedPresets = new Map<string, CameraPreset>();
+
+function getMonitorCameraPreset(anchor: THREE.Object3D, distance: number): CameraPreset {
+  const target = anchor.getWorldPosition(new THREE.Vector3());
+  const front = new THREE.Vector3(0, 0, 1)
+    .applyQuaternion(anchor.getWorldQuaternion(new THREE.Quaternion()))
+    .normalize();
+  const position = target.clone().addScaledVector(front, distance);
+
+  return {
+    position: { x: position.x, y: position.y, z: position.z },
+    target: { x: target.x, y: target.y, z: target.z }
+  };
+}
+
+function updateHotspotAnchor(id: Exclude<RoomFocusTargetId, 'overview'>, anchor: THREE.Vector3): void {
+  ROOM_HOTSPOT_DEFINITIONS.find((hotspot) => hotspot.id === id)?.anchor.copy(anchor);
+}
+
+function applyRedesignMonitorNavigation(roomGroup: THREE.Group): void {
+  roomGroup.updateMatrixWorld(true);
+
+  const left = roomGroup.getObjectByName('Anchor_Monitor_01');
+  const center = roomGroup.getObjectByName('Anchor_Monitor_02');
+  const right = roomGroup.getObjectByName('Anchor_Monitor_03');
+
+  if (!left || !center || !right) {
+    return;
+  }
+
+  const leftCenter = left.getWorldPosition(new THREE.Vector3());
+  const centerCenter = center.getWorldPosition(new THREE.Vector3());
+  const rightCenter = right.getWorldPosition(new THREE.Vector3());
+
+  // Die drei unsichtbaren HTML-Hitflächen liegen exakt über den realen
+  // Bildschirmflächen. Die Anker bleiben nur als Legacy-Fallback erhalten.
+  updateHotspotAnchor('performanceEmbed', leftCenter);
+  updateHotspotAnchor('portfolioEmbed', centerCenter);
+  updateHotspotAnchor('aboutEmbed', rightCenter);
+
+  const leftFocus = getMonitorCameraPreset(left, REDESIGN_MONITOR_FOCUS_DISTANCE);
+  const leftEmbed = getMonitorCameraPreset(left, REDESIGN_MONITOR_EMBED_DISTANCE);
+  const centerFocus = getMonitorCameraPreset(center, REDESIGN_MONITOR_FOCUS_DISTANCE);
+  const centerEmbed = getMonitorCameraPreset(center, REDESIGN_MONITOR_EMBED_DISTANCE);
+  const rightFocus = getMonitorCameraPreset(right, REDESIGN_MONITOR_FOCUS_DISTANCE);
+  const rightEmbed = getMonitorCameraPreset(right, REDESIGN_MONITOR_EMBED_DISTANCE);
+
+  copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.pictureFrame, leftFocus);
+  redesignPictureFrameDetailPreset = leftEmbed;
+  copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.performanceEmbed, leftEmbed);
+  copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.workbench, centerFocus);
+  copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.portfolioEmbed, centerEmbed);
+  copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.aboutEmbed, rightEmbed);
+  copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.comicScreen, rightFocus);
+  copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.comicEmbed, rightEmbed);
+  copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.horrorEmbed, rightEmbed);
+  copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.tvSelect, rightEmbed);
+
+  // Die acht bestehenden Leistungsnachweis-Ziele liegen als 4x2-Raster auf
+  // der linken Monitorfläche. Dokumentlogik und IDs bleiben unverändert.
+  const monitorRotation = left.getWorldQuaternion(new THREE.Quaternion());
+  const horizontal = new THREE.Vector3(1, 0, 0).applyQuaternion(monitorRotation).normalize();
+  const vertical = new THREE.Vector3(0, 1, 0).applyQuaternion(monitorRotation).normalize();
+  const columns = [-3.25, -1.08, 1.08, 3.25];
+  const rows = [1.25, -1.25];
+
+  PICTURE_FRAME_ANCHORS.forEach((frame, index) => {
+    const row = Math.floor(index / columns.length);
+    const column = index % columns.length;
+    frame.anchor
+      .copy(leftCenter)
+      .addScaledVector(horizontal, columns[column] ?? 0)
+      .addScaledVector(vertical, rows[row] ?? 0);
+  });
+}
+
+function applyRedesignCertificateNavigation(roomGroup: THREE.Group): void {
+  roomGroup.updateMatrixWorld(true);
+  redesignCertificateEmbedPresets.clear();
+
+  for (const topic of CERTIFICATE_TOPIC_DEFINITIONS) {
+    const anchor = roomGroup.getObjectByName(topic.anchorObjectName);
+    if (!anchor) {
+      continue;
+    }
+
+    redesignCertificateEmbedPresets.set(
+      topic.id,
+      getMonitorCameraPreset(anchor, REDESIGN_CERTIFICATE_EMBED_DISTANCE)
+    );
+  }
+}
 // ── Kamera-Presets ────────────────────────────────────────────────────────
 // Raum-Grenzen in Three.js (nach ROOM_OFFSET.z-Korrektur):
 //   X −29.6..+10.8  Y −5.8..+16.1  Z −13.0..+31.1  (alle Z-Werte sind 0.4 weniger)
@@ -261,6 +483,17 @@ const PORTRAIT_MENU_CAMERA_PRESET: CameraPreset = (() => {
 })();
 
 const ROOM_FOCUS_TARGET_PRESETS: Record<Exclude<RoomFocusTargetId, 'board'>, CameraPreset> = {
+  // Zertifikats-Platzhalter — wird im Redesign dynamisch aus dem gewählten
+  // Anchor_Certificate_* berechnet.
+  certificateEmbed: {
+    position: { x: -21.4, y: 7.0, z: 6.0 },
+    target: { x: -28.4, y: 7.0, z: 6.0 }
+  },
+  // Öffentlicher Über-mich-Embed — fährt direkt in den rechten Monitor.
+  aboutEmbed: {
+    position: { x: 0, y: 9.8, z: -4 },
+    target: { x: 0, y: 9.8, z: -10 }
+  },
   // Comic-Film Display — Nahaufnahme des schwarzen Bildschirms über dem Schachbrett.
   comicScreen: {
     position: { x: 0, y: 9.8, z: 2 },
@@ -311,11 +544,16 @@ const ROOM_FOCUS_TARGET_PRESETS: Record<Exclude<RoomFocusTargetId, 'board'>, Cam
     position: { x: -21.4, y: 7.0, z: 6.0 },
     target: { x: -28.4, y: 7.0, z: 6.0 }
   },
-  // Monitor-Nahaufnahme — Kamera vollständig hinein in den Werkbank-Bildschirm.
-  webEmbed: {
+  // Leistungsnachweise-Embed — fährt direkt in den linken Monitor.
+  performanceEmbed: {
+    position: { x: -21.4, y: 7.0, z: 6.0 },
+    target: { x: -28.4, y: 7.0, z: 6.0 }
+  },
+  // Öffentlicher Portfolio-Platzhalter — fährt direkt in den mittleren Monitor.
+  portfolioEmbed: {
     position: { x: -24.5, y: 3.22, z: 18.01 },
     target: { x: -26.27, y: 3.22, z: 18.01 }
-  }
+  },
 };
 
 const ROOM_HOTSPOT_DEFINITIONS: ReadonlyArray<{
@@ -323,6 +561,7 @@ const ROOM_HOTSPOT_DEFINITIONS: ReadonlyArray<{
   focusTarget: Exclude<RoomFocusTargetId, 'overview'>;
   id: Exclude<RoomFocusTargetId, 'overview'>;
   label: string;
+  surfaceObjectName?: string;
 }> = [
   {
     anchor: new THREE.Vector3(0.15, 4.5, 0.55),
@@ -332,28 +571,37 @@ const ROOM_HOTSPOT_DEFINITIONS: ReadonlyArray<{
   },
   {
     anchor: new THREE.Vector3(0, 9.5, -4),
-    focusTarget: ENABLE_TV_SHOWCASE ? 'tvSelect' : 'comicEmbed',
-    id: ENABLE_TV_SHOWCASE ? 'tvSelect' : 'comicEmbed',
-    label: ENABLE_TV_SHOWCASE ? 'TV' : 'Über mich'
-  },
-  {
-    anchor: new THREE.Vector3(-15.5, 5.22, 2.29),
-    focusTarget: 'displayCase',
-    id: 'displayCase',
-    label: 'Zertifikate'
+    focusTarget: 'aboutEmbed',
+    id: 'aboutEmbed',
+    label: 'Über mich',
+    surfaceObjectName: 'mon_cctv_right'
   },
   {
     anchor: new THREE.Vector3(-25.15, 9.12, 4.51),
-    focusTarget: 'pictureFrame',
-    id: 'pictureFrame',
-    label: 'Leistungsnachweise'
+    focusTarget: 'performanceEmbed',
+    id: 'performanceEmbed',
+    label: 'Leistungsnachweise',
+    surfaceObjectName: 'mon_cctv_left'
   },
   {
     anchor: new THREE.Vector3(-17.47, 6.5, 29.56),
-    focusTarget: 'workbench',
-    id: 'workbench',
-    label: 'Portfolio'
+    focusTarget: 'portfolioEmbed',
+    id: 'portfolioEmbed',
+    label: 'Portfolio',
+    surfaceObjectName: 'Monitor_02_Screen'
   }
+];
+
+const CERTIFICATE_TOPIC_DEFINITIONS: ReadonlyArray<{
+  anchorObjectName: string;
+  id: string;
+  label: string;
+  surfaceObjectName: string;
+}> = [
+  { anchorObjectName: 'Anchor_Certificate_08', id: 'cs50', label: 'CS50', surfaceObjectName: 'Certificate_08_Paper' },
+  { anchorObjectName: 'Anchor_Certificate_07', id: 'cisco', label: 'Cisco', surfaceObjectName: 'Certificate_07_Paper' },
+  { anchorObjectName: 'Anchor_Certificate_06', id: 'tryhackme', label: 'TryHackMe', surfaceObjectName: 'Certificate_06_Paper' },
+  { anchorObjectName: 'Anchor_Certificate_05', id: 'jetbrains', label: 'JetBrains', surfaceObjectName: 'Certificate_05_Paper' }
 ];
 
 // Interaktive Bilderrahmen angezeigt wenn auf das pictureFrame-Ziel fokussiert.
@@ -465,6 +713,8 @@ function attachSemesterOneFrameTexture(roomRoot: THREE.Object3D, texture: THREE.
 
 export function createBoardPreviewScene({
   container,
+  onRoomAssetProgress,
+  onRoomAssetReady,
   onStateChange,
   onSquareClick,
   pieces
@@ -475,7 +725,15 @@ export function createBoardPreviewScene({
   let pieceAssetFallbacks: PieceAssetFallbackMap = {};
   let pieceAssetFiles: PieceAssetFileMap = {};
   let pieceAssetSet: PieceAssetSet = DEFAULT_PIECE_ASSET_SET;
-  const stage = createStageScene(container, onStateChange, onSquareClick, currentPieces, markDirty);
+  const stage = createStageScene(
+    container,
+    onStateChange,
+    onRoomAssetProgress,
+    onRoomAssetReady,
+    onSquareClick,
+    currentPieces,
+    markDirty
+  );
   // onChange-Throttle: Touch-Move feuert bei jedem Pixel — wir coalesce auf
   // den nächsten Animation-Frame damit syncPanels max. 1× pro Frame läuft.
   let lookAroundStateChangePending = false;
@@ -495,6 +753,8 @@ export function createBoardPreviewScene({
   const size = new THREE.Vector2();
   // Wiederverwendbarer Scratch-Vektor — vermeidet Pro-Frame-Vector3-Speicherung in Hotspot-Projektion.
   const _projScratch = new THREE.Vector3();
+  const _surfaceBounds = new THREE.Box3();
+  const _surfaceCorner = new THREE.Vector3();
   const clockState = { elapsedMs: 0 };
   let presentationMode: BoardPresentationStateInput['mode'] = 'board';
   let startFlowMode: StartFlowMode = 'menu';
@@ -503,10 +763,29 @@ export function createBoardPreviewScene({
   let startFlowFocusTarget: RoomFocusTargetId = 'overview';
   let startFlowProgress = 0;
   let activePictureFrameDetailId = 'frame0';
+  let activeCertificateTopicId = 'cs50';
   let roomCameraFree = false;
   let startFlowPendingMenuReturn = false;
   let frameHandle = 0;
   let lastFrameTime = performance.now();
+
+  // Look-around state must exist before the initial camera pose is applied.
+  // The menu is draggable now, so these values are read during the first
+  // synchronous scene setup rather than only after entering the room.
+  const _worldUp = new THREE.Vector3(0, 1, 0);
+  const _lookAroundScratch = {
+    pos: new THREE.Vector3(),
+    forward: new THREE.Vector3(),
+    right: new THREE.Vector3(),
+    rotated: new THREE.Vector3(),
+    lookTarget: new THREE.Vector3()
+  };
+  const LOOK_AROUND_TARGETS: ReadonlyArray<RoomFocusTargetId> = [
+    'overview', 'displayCase', 'pictureFrame', 'workbench'
+  ];
+  let cameraExitSnapshot: CameraPreset | null = null;
+  let lookAroundFadeStartMs = 0;
+  const LOOK_AROUND_FADE_DURATION_MS = 900;
 
   // ── On-Demand Rendering ────────────────────────────────────────────────
   // Dirty-Flag verhindert dass die 5-Pass Bloom-Pipeline jeden Frame läuft
@@ -524,9 +803,13 @@ export function createBoardPreviewScene({
     const width = Math.max(container.clientWidth, 1);
     const height = Math.max(container.clientHeight, 1);
 
-    // Tablets: pixelRatio auf 1.5 cappen — großes Display + hohe DPR = extrem viele Pixel.
-    const maxDpr = isTabletDevice ? 1.5 : 2;
-    const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+    // Ein Pixelbudget verhindert, dass HiDPI- und 4K-Displays die vollständige
+    // fünfstufige Post-Process-Pipeline mit unnötig vielen Renderpixeln belasten.
+    const maxDpr = deviceTier === 'high' ? 1.5 : deviceTier === 'medium' ? 1.25 : 1;
+    const maxPixels = deviceTier === 'high' ? 4_000_000 : deviceTier === 'medium' ? 2_500_000 : 1_500_000;
+    const nativeDpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+    const budgetDpr = Math.sqrt(maxPixels / (width * height));
+    const dpr = Math.min(nativeDpr, Math.max(0.75, budgetDpr));
     stage.renderer.setPixelRatio(dpr);
     stage.renderer.setSize(width, height, false);
     stage.bloom.setSize(
@@ -538,14 +821,15 @@ export function createBoardPreviewScene({
     const isMobileLandscape = isMobileDevice && !isPortrait;
     stage.roomCameraControls.setPortraitMode(isPortrait);
     stage.roomCameraControls.setLandscapeLock(isMobileLandscape);
-    // Mobile Landscape: Look-Around sperren (Yaw-Limits auf 0) — wie Desktop.
-    // Tablet Portrait (≥600px breit): breitere Yaw-Limits als Phone Portrait.
-    const isTabletPortrait = isPortrait && width >= 600;
-    lookAround.setAllowPitch(!isPortrait && !isMobileLandscape);
-    lookAround.setMaxYawLeft(isMobileLandscape ? 0 : isTabletPortrait ? 30 : isPortrait ? 13 : 45);
-    lookAround.setMaxYawRight(isMobileLandscape ? 0 : isTabletPortrait ? 25 : isPortrait ? 12 : 17);
+    // Keep the authored overview composition intact: no leftward look and
+    // only a short rightward glance.  Wider movement exposes the outside of
+    // the room model at the left/right canvas edges.
+    lookAround.setAllowPitch(false);
+    lookAround.setMaxYawLeft(0);
+    lookAround.setMaxYawRight(
+      isPortrait ? 3 : getAspectSafeOverviewRightYaw(stage.camera.aspect)
+    );
     markDirty();
-    render();
     // Hotspot-Positionen nach Resize neu berechnen — immer wenn roomExplore
     // aktiv ist, da alle 3D-projizierten Buttons (Übersicht + Bilderrahmen)
     // auf Canvas-Pixel-Koordinaten basieren und nach einem Resize falsch liegen.
@@ -565,7 +849,8 @@ export function createBoardPreviewScene({
   resize();
 
   const animate = (timestamp: number): void => {
-    const deltaMs = Math.min(timestamp - lastFrameTime, 32);
+    const rawDeltaMs = timestamp - lastFrameTime;
+    const deltaMs = Math.min(rawDeltaMs, 32);
     lastFrameTime = timestamp;
     step(deltaMs);
     frameHandle = window.requestAnimationFrame(animate);
@@ -594,8 +879,15 @@ export function createBoardPreviewScene({
         markDirty();
       }
     } else {
-      stage.lights.key.position.x = -9;
-      stage.lights.key.position.z =  5;
+      const keyLightNeedsReset =
+        Math.abs(stage.lights.key.position.x + 9) > 0.0001 ||
+        Math.abs(stage.lights.key.position.z - 5) > 0.0001;
+      if (keyLightNeedsReset) {
+        stage.lights.key.position.x = -9;
+        stage.lights.key.position.z = 5;
+        stage.renderer.shadowMap.needsUpdate = true;
+        markDirty();
+      }
     }
     stage.pieceLayer.step(deltaMs);
     // Aktive Figuren-Animationen (Zug, Capture, Combat, Hover) erfordern Render.
@@ -611,8 +903,8 @@ export function createBoardPreviewScene({
     applyStartFlowCameraPose();
 
     if (dirty) {
-      render();
       dirty = false;
+      render();
     }
   }
 
@@ -701,6 +993,7 @@ export function createBoardPreviewScene({
         whiteCount: currentPieces.filter((piece) => piece.color === 'white').length
       },
       roomExplore: {
+        certificateFrames: getCertificateFrameSnapshots(),
         hotspots: getRoomHotspotSnapshots(),
         pictureFrames: getPictureFrameSnapshots()
       },
@@ -717,38 +1010,14 @@ export function createBoardPreviewScene({
   }
 
   function syncCameraControlLock(): void {
-    const cameraMode = stage.cameraController.getSnapshot().mode;
+    stage.interaction.setHighlightsVisible(presentationMode !== 'combat');
+    const cameraMode = stage.cameraController.getMode();
     stage.boardCameraControls.setLocked(startFlowMode !== 'boardFocus' || presentationMode === 'combat' || cameraMode !== 'board');
   }
 
   function syncStartFlowInteractionLock(): void {
     stage.interaction.setEnabled(startFlowMode === 'boardFocus');
   }
-
-  // Vector3-Pool für Look-Around: Reuse statt ständig neue zu allocaten
-  const _worldUp = new THREE.Vector3(0, 1, 0);
-  const _lookAroundScratch = {
-    pos: new THREE.Vector3(),
-    forward: new THREE.Vector3(),
-    right: new THREE.Vector3(),
-    rotated: new THREE.Vector3(),
-    lookTarget: new THREE.Vector3()
-  };
-
-  const LOOK_AROUND_TARGETS: ReadonlyArray<RoomFocusTargetId> = [
-    'overview', 'displayCase', 'pictureFrame', 'workbench'
-  ];
-
-  // Snapshot der Kamera beim Verlassen eines Zustands.
-  // Wird als Transitions-Startpunkt benutzt, damit die Kamera von ihrer
-  // tatsächlichen Position losfährt — egal ob Look-Around, Freikamera oder Orbit.
-  let cameraExitSnapshot: CameraPreset | null = null;
-
-  // Fade-Out für Look-Around beim Zurück-zum-Menü: 0 = kein Fade, >0 = läuft.
-  let lookAroundFadeStartMs = 0;
-  const LOOK_AROUND_FADE_DURATION_MS = 900;
-
-
 
   function applyStartFlowCameraPose(): void {
     const preset = getStartFlowCameraPreset();
@@ -760,26 +1029,33 @@ export function createBoardPreviewScene({
 
     applyCameraPreset(stage.camera, preset);
 
-    // Look-Around (nur Touch): Blickrichtung ±45° drehen während Kamera-Position
-    // fix bleibt. Aktiv in vier Benutzer-Bereichen:
+    // Look-around: horizontal per left-mouse drag or one-finger touch while
+    // the camera position stays fixed. The main menu remains completely
+    // static; interaction starts only in the existing stable room views:
     //   Übersicht (Raum erkunden), Vitrine (Zertifikate),
-    //   Bilderrahmen (Leistungsnachweise), Werkbank (Portfolio)
-    // Deaktiviert in: webEmbed (iframe bedeckt die Ansicht), pictureFrameDetail
-    // (Nahaufnahme), boardFocus (Board-Kamera übernimmt), menu/introTransition.
+    //   Bilderrahmen (Leistungsnachweise), Werkbank
+    // Deaktiviert in: menu, portfolioEmbed (iframe), pictureFrameDetail
+    // (Nahaufnahme), boardFocus (Board-Kamera übernimmt) und introTransition.
     // Muss vollständig am Ziel angekommen sein (nicht unter Transition).
-    // Look-Around bleibt auch während der Freikamera-Exit-Animation aktiv,
-    // damit der Schwenk nicht abrupt zurückspringt wenn man "Zurück" drückt.
-    const isFixedView =
-      (startFlowMode === 'roomExplore' || roomCameraFree) &&
+    // During the exit fade the offset is still rendered, but interaction is
+    // locked so no new gesture can start while the camera is moving.
+    const isStableRoomView =
+      startFlowMode === 'roomExplore' &&
       LOOK_AROUND_TARGETS.includes(startFlowFocusTarget) &&
       startFlowFocusProgress >= 1;
+    const isLookAroundView = isStableRoomView;
+    const isLookAroundFading = lookAroundFadeStartMs > 0;
+    const canInteractWithLookAround =
+      isLookAroundView &&
+      !startFlowPendingMenuReturn &&
+      !isLookAroundFading;
 
-    lookAround.setEnabled(isFixedView);
+    lookAround.setEnabled(canInteractWithLookAround);
 
-    if (isFixedView) {
+    if (isLookAroundView || isLookAroundFading) {
       let { yaw, pitch } = lookAround.getOffset();
       // Sanftes Ausblenden des Look-Around während der Exit-Animation
-      if (lookAroundFadeStartMs > 0) {
+      if (isLookAroundFading) {
         const fadeElapsed = performance.now() - lookAroundFadeStartMs;
         const fadeT = Math.min(fadeElapsed / LOOK_AROUND_FADE_DURATION_MS, 1);
         const fadeFactor = 1 - fadeT; // 1 → 0
@@ -830,7 +1106,7 @@ export function createBoardPreviewScene({
 
     if (startFlowMode === 'introTransition') {
       const menuPreset = isPortrait ? PORTRAIT_MENU_CAMERA_PRESET : MENU_CAMERA_PRESET;
-      return lerpCameraPreset(menuPreset, getRoomFocusTargetPreset('overview'), easeInOutCubic(startFlowProgress));
+      return lerpCameraPreset(menuPreset, getRoomFocusTargetPreset('overview'), easeInOutSmootherstep(startFlowProgress));
     }
 
     // Startpunkt der Transition: Kamera-Snapshot (wo die Kamera tatsächlich war)
@@ -855,16 +1131,12 @@ export function createBoardPreviewScene({
       return toPreset;
     }
 
-    const t = easeInOutCubic(startFlowFocusProgress);
+    const t = easeInOutSmootherstep(startFlowFocusProgress);
     const isDisplayCaseTransition =
       startFlowFocusTarget === 'displayCase' || startFlowFocusFromTarget === 'displayCase';
-    const isLegalWallTransition =
-      startFlowFocusTarget === 'legalWall' || startFlowFocusFromTarget === 'legalWall';
-    return isLegalWallTransition
-      ? swingLerpCameraPreset(fromPreset, toPreset, t)
-      : isDisplayCaseTransition
-        ? arcLerpCameraPreset(fromPreset, toPreset, t, 4.0)
-        : lerpCameraPreset(fromPreset, toPreset, t);
+    return isDisplayCaseTransition
+      ? arcLerpCameraPreset(fromPreset, toPreset, t, 4.0)
+      : lerpCameraPreset(fromPreset, toPreset, t);
   }
 
   function getRoomHotspotSnapshots(): BoardPreviewSnapshot['roomExplore']['hotspots'] {
@@ -873,13 +1145,45 @@ export function createBoardPreviewScene({
     }
 
     return ROOM_HOTSPOT_DEFINITIONS.map((hotspot) => {
-      const projected = projectRoomHotspotAnchor(hotspot.anchor);
+      const projected = hotspot.surfaceObjectName
+        ? projectRoomSurface(hotspot.surfaceObjectName, hotspot.anchor)
+        : {
+            ...projectRoomHotspotAnchor(hotspot.anchor),
+            screenHeight: 0,
+            screenWidth: 0
+          };
       return {
         focusTarget: hotspot.focusTarget,
         id: hotspot.id,
+        interactionMode: hotspot.surfaceObjectName ? 'surface' : 'marker',
         isFocused: startFlowFocusTarget === hotspot.focusTarget,
         isVisible: projected.isVisible,
         label: hotspot.label,
+        screenHeight: projected.screenHeight,
+        screenWidth: projected.screenWidth,
+        screenX: projected.screenX,
+        screenY: projected.screenY
+      };
+    });
+  }
+
+  function getCertificateFrameSnapshots(): BoardPreviewSnapshot['roomExplore']['certificateFrames'] {
+    if (
+      startFlowMode !== 'roomExplore' ||
+      startFlowFocusTarget !== 'overview' ||
+      startFlowFocusProgress < 1
+    ) {
+      return [];
+    }
+
+    return CERTIFICATE_TOPIC_DEFINITIONS.map((topic) => {
+      const projected = projectRoomSurface(topic.surfaceObjectName);
+      return {
+        id: topic.id,
+        isVisible: projected.isVisible,
+        label: topic.label,
+        screenHeight: projected.screenHeight,
+        screenWidth: projected.screenWidth,
         screenX: projected.screenX,
         screenY: projected.screenY
       };
@@ -901,6 +1205,65 @@ export function createBoardPreviewScene({
         screenY: projected.screenY
       };
     });
+  }
+
+  function projectRoomSurface(
+    objectName: string,
+    fallbackAnchor = new THREE.Vector3()
+  ): {
+    isVisible: boolean;
+    screenHeight: number;
+    screenWidth: number;
+    screenX: number;
+    screenY: number;
+  } {
+    const object = stage.roomGroup.getObjectByName(objectName);
+    if (!object) {
+      const fallback = projectRoomHotspotAnchor(fallbackAnchor);
+      return { ...fallback, screenHeight: 0, screenWidth: 0 };
+    }
+
+    _surfaceBounds.setFromObject(object);
+    if (_surfaceBounds.isEmpty()) {
+      const fallback = projectRoomHotspotAnchor(fallbackAnchor);
+      return { ...fallback, screenHeight: 0, screenWidth: 0 };
+    }
+
+    let minX = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+
+    for (let index = 0; index < 8; index += 1) {
+      _surfaceCorner
+        .set(
+          index & 1 ? _surfaceBounds.max.x : _surfaceBounds.min.x,
+          index & 2 ? _surfaceBounds.max.y : _surfaceBounds.min.y,
+          index & 4 ? _surfaceBounds.max.z : _surfaceBounds.min.z
+        )
+        .project(stage.camera);
+      const x = (_surfaceCorner.x * 0.5 + 0.5) * size.x;
+      const y = (-_surfaceCorner.y * 0.5 + 0.5) * size.y;
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+    }
+
+    const center = _surfaceBounds.getCenter(_projScratch).project(stage.camera);
+    return {
+      isVisible:
+        center.z >= -1 &&
+        center.z <= 1 &&
+        maxX >= 0 &&
+        minX <= size.x &&
+        maxY >= 0 &&
+        minY <= size.y,
+      screenHeight: Math.max(0, maxY - minY),
+      screenWidth: Math.max(0, maxX - minX),
+      screenX: (minX + maxX) / 2,
+      screenY: (minY + maxY) / 2
+    };
   }
 
   function projectRoomHotspotAnchor(anchor: THREE.Vector3): { isVisible: boolean; screenX: number; screenY: number } {
@@ -928,7 +1291,6 @@ export function createBoardPreviewScene({
       loadedBoardFile = assets.loadedBoardFile;
       stage.board.setVisualBoardAsset(assets.board);
       markDirty();
-      render();
       onStateChange?.();
     },
     applyPieceAssets: (assets) => {
@@ -938,7 +1300,6 @@ export function createBoardPreviewScene({
       pieceAssetSet = assets.pieceAssetSet;
       stage.pieceLayer.setPieceAssets(assets.pieceTemplates, currentPieces);
       markDirty();
-      render();
       onStateChange?.();
     },
     applyVisualAssets: (assets) => {
@@ -950,7 +1311,6 @@ export function createBoardPreviewScene({
       stage.board.setVisualBoardAsset(assets.board);
       stage.pieceLayer.setPieceAssets(assets.pieceTemplates, currentPieces);
       markDirty();
-      render();
       onStateChange?.();
     },
     dispose: () => {
@@ -962,18 +1322,38 @@ export function createBoardPreviewScene({
       stage.board.dispose();
       stage.pieceLayer.dispose();
       stage.bloom.dispose();
+      stage.roomQuality.dispose();
       lookAround.dispose();
       stage.cctvScreen.dispose();
       stage.renderer.dispose();
       container.innerHTML = '';
     },
     getSnapshot,
+    prepareInitialRender: async (onProgress) => {
+      onProgress?.(0.08);
+
+      try {
+        await stage.renderer.compileAsync(stage.scene, stage.camera);
+      } catch {
+        stage.renderer.compile(stage.scene, stage.camera);
+      }
+
+      onProgress?.(0.78);
+      dirty = false;
+      render();
+
+      await new Promise<void>((resolve) => {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => resolve());
+        });
+      });
+      onProgress?.(1);
+    },
     resetCameraState: () => {
       stage.boardCameraControls.reset();
       stage.cameraController.reset();
       syncCameraControlLock();
       markDirty();
-      render();
       onStateChange?.();
     },
     requestLookAroundReset: (onComplete: () => void) => {
@@ -983,7 +1363,6 @@ export function createBoardPreviewScene({
       }
       lookAround.animateReset(() => {
         markDirty();
-        render();
         onComplete();
       });
     },
@@ -995,11 +1374,14 @@ export function createBoardPreviewScene({
       stage.cameraController.reset();
       syncCameraControlLock();
       markDirty();
-      render();
       onStateChange?.();
     },
     renderGameToText,
     syncStartFlowState: (nextState) => {
+      const previousFocusProgress = startFlowFocusProgress;
+      const previousPendingMenuReturn = startFlowPendingMenuReturn;
+      const previousPictureFrameDetailId = activePictureFrameDetailId;
+      const previousCertificateTopicId = activeCertificateTopicId;
       startFlowFocusFromTarget = nextState.focusFromTarget;
       startFlowFocusProgress = THREE.MathUtils.clamp(nextState.focusProgress, 0, 1);
       // Beim Verlassen eines Fokus-Ziels oder Mode-Wechsel: aktuelle Kamera-Position
@@ -1010,7 +1392,19 @@ export function createBoardPreviewScene({
       const focusTargetChanged = startFlowFocusTarget !== nextState.focusTarget;
       const modeChanged = startFlowMode !== nextState.mode;
       const isMenuReturnFromFreeCamera = roomCameraFree && nextState.mode === 'menu';
-      if ((focusTargetChanged || modeChanged) && !isMenuReturnFromFreeCamera) {
+      // Menu and overview share the same base preset. Preserve the user's
+      // horizontal look offset when entering the room so this mode-only
+      // switch cannot visibly snap the camera back to centre.
+      const isMenuToOverviewEntry =
+        startFlowMode === 'menu' &&
+        nextState.mode === 'roomExplore' &&
+        startFlowFocusTarget === 'overview' &&
+        nextState.focusTarget === 'overview';
+      if (
+        (focusTargetChanged || modeChanged) &&
+        !isMenuReturnFromFreeCamera &&
+        !isMenuToOverviewEntry
+      ) {
         // Snapshot der aktuellen Kamera-Position + Blickrichtung.
         // Target-Distanz vom Basis-Preset übernehmen damit die Lerp-Interpolation
         // keine verzerrten Winkel erzeugt (sonst wäre der Snapshot-Target nur 1 Unit
@@ -1038,6 +1432,45 @@ export function createBoardPreviewScene({
       if (nextState.pictureFrameDetailId !== undefined) {
         activePictureFrameDetailId = nextState.pictureFrameDetailId;
       }
+      if (nextState.certificateTopicId !== undefined) {
+        activeCertificateTopicId = nextState.certificateTopicId;
+      }
+      const focusTransitionReachedEndpoint =
+        previousFocusProgress < 1 && startFlowFocusProgress >= 1;
+      const shellStateChanged =
+        focusTargetChanged ||
+        modeChanged ||
+        focusTransitionReachedEndpoint ||
+        previousPendingMenuReturn !== startFlowPendingMenuReturn ||
+        previousPictureFrameDetailId !== activePictureFrameDetailId ||
+        previousCertificateTopicId !== activeCertificateTopicId;
+
+      // Nur der linke Hauptmonitor übernimmt während der Leistungsnachweis-Fahrt
+      // die warme Seitenfarbe. Beim Zurückfahren blendet er wieder zu Schwarz,
+      // während alle übrigen Anzeigen unverändert dunkel bleiben.
+      let performancePreviewMix = 0;
+      if (startFlowFocusTarget === 'performanceEmbed') {
+        performancePreviewMix = THREE.MathUtils.clamp(startFlowFocusProgress / 0.18, 0, 1);
+      } else if (startFlowFocusFromTarget === 'performanceEmbed' && startFlowFocusProgress < 1) {
+        performancePreviewMix = THREE.MathUtils.clamp(1 - startFlowFocusProgress / 0.35, 0, 1);
+      }
+      stage.cctvScreen.setPerformancePreviewMix(performancePreviewMix);
+
+      let aboutPreviewMix = 0;
+      if (startFlowFocusTarget === 'aboutEmbed') {
+        aboutPreviewMix = THREE.MathUtils.clamp(startFlowFocusProgress / 0.18, 0, 1);
+      } else if (startFlowFocusFromTarget === 'aboutEmbed' && startFlowFocusProgress < 1) {
+        aboutPreviewMix = THREE.MathUtils.clamp(1 - startFlowFocusProgress / 0.35, 0, 1);
+      }
+      stage.cctvScreen.setAboutPreviewMix(aboutPreviewMix);
+
+      let portfolioPreviewMix = 0;
+      if (startFlowFocusTarget === 'portfolioEmbed') {
+        portfolioPreviewMix = THREE.MathUtils.clamp(startFlowFocusProgress / 0.18, 0, 1);
+      } else if (startFlowFocusFromTarget === 'portfolioEmbed' && startFlowFocusProgress < 1) {
+        portfolioPreviewMix = THREE.MathUtils.clamp(1 - startFlowFocusProgress / 0.35, 0, 1);
+      }
+      stage.cctvScreen.setPortfolioPreviewMix(portfolioPreviewMix);
 
       // Engine-Figuren immer sichtbar — sie ersetzen die statischen Raum-Figuren
       // und sind nur in boardFocus interaktiv (via boardInteraction.setEnabled).
@@ -1093,18 +1526,20 @@ export function createBoardPreviewScene({
         }
       }
 
-      syncCameraControlLock();
-      syncStartFlowInteractionLock();
-      // Shadow-Map bei Modus-Wechsel aktualisieren (Szenengeometrie hat sich verändert).
-      stage.renderer.shadowMap.needsUpdate = true;
-      if (startFlowMode === 'boardFocus') {
-        applyCameraPreset(stage.camera, stage.boardCameraControls.getPose());
-      } else {
-        applyStartFlowCameraPose();
-      }
       markDirty();
-      render();
-      onStateChange?.();
+      // Controls and hotspots are hidden throughout a focus transition. Rebuilding
+      // their complete DOM on every camera frame caused avoidable layout/GC work;
+      // the shell only needs synchronization at state changes and arrival.
+      if (shellStateChanged) {
+        syncCameraControlLock();
+        syncStartFlowInteractionLock();
+        if (startFlowMode === 'boardFocus') {
+          applyCameraPreset(stage.camera, stage.boardCameraControls.getPose());
+        } else {
+          applyStartFlowCameraPose();
+        }
+        onStateChange?.();
+      }
     },
     syncPresentationState: (nextState) => {
       presentationMode = nextState.mode;
@@ -1123,13 +1558,11 @@ export function createBoardPreviewScene({
       syncCameraControlLock();
       stage.pieceLayer.syncCombatPresentation(nextState);
       markDirty();
-      render();
       onStateChange?.();
     },
     syncInteractionState: (nextState) => {
       stage.interaction.setHighlightState(nextState);
       markDirty();
-      render();
       onStateChange?.();
     },
     syncPieces: (piecesToRender, options) => {
@@ -1137,7 +1570,6 @@ export function createBoardPreviewScene({
       stage.pieceLayer.syncPieces(currentPieces, options);
       stage.renderer.shadowMap.needsUpdate = true;
       markDirty();
-      render();
       onStateChange?.();
     }
   };
@@ -1145,6 +1577,17 @@ export function createBoardPreviewScene({
   function getRoomFocusTargetPreset(target: RoomFocusTargetId): CameraPreset {
     if (target === 'board') {
       return stage.boardCameraControls.getPose();
+    }
+
+    if (target === 'certificateEmbed') {
+      return (
+        redesignCertificateEmbedPresets.get(activeCertificateTopicId) ??
+        ROOM_FOCUS_TARGET_PRESETS.certificateEmbed
+      );
+    }
+
+    if (target === 'pictureFrameDetail' && redesignPictureFrameDetailPreset) {
+      return redesignPictureFrameDetailPreset;
     }
 
     if (target === 'pictureFrameDetail') {
@@ -1164,6 +1607,8 @@ export function createBoardPreviewScene({
 function createStageScene(
   container: HTMLDivElement,
   onStateChange: (() => void) | undefined,
+  onRoomAssetProgress: ((progress: number) => void) | undefined,
+  onRoomAssetReady: (() => void) | undefined,
   onSquareClick: ((square: BoardSquare) => void) | undefined,
   pieces: ChessPieceState[],
   onDirty?: () => void
@@ -1175,12 +1620,14 @@ function createStageScene(
   // Board-Fokus nutzt viel kürzere Kamera-Abstände deshalb Fog ist unsichtbar dort.
   scene.fog = new THREE.Fog('#0d0d18', 80, 150);
 
-  // antialias: true gibt MSAA auf den Zwischendurchläufen in BloomEffect;
-  // die finale zusammengefügte Ausgabe zum Bildschirm profitiert auch davon.
-  // Tablets: MSAA deaktivieren — die 5-Pass Bloom-Pipeline multipliziert den
-  // Fill-Rate-Overhead pro Sample. Auf Tablet-Displays (DPR 1.5+) ist die
-  // Pixeldichte hoch genug dass fehlende MSAA kaum auffällt.
-  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: !isTabletDevice, powerPreference: 'high-performance' });
+  // Die Hauptszene wird in ein eigenes, nicht-multisampletes Bloom-Target
+  // gerendert. Context-MSAA würde daher nur das abschließende Vollbild-Quad
+  // abtasten und bringt dort keinen sichtbaren Kantenglättungsgewinn.
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false, powerPreference: 'high-performance' });
+  // Transmissive Lampen-/Fenstergläser benötigen intern einen zusätzlichen
+  // Szenenpass. Eine kleinere Auflösung spart dort viele Samples, ohne die
+  // eigentliche Raumdarstellung oder Materialparameter zu verändern.
+  renderer.transmissionResolutionScale = deviceTier === 'high' ? 0.5 : 0.35;
   // outputColorSpace + toneMapping werden in BloomEffect's Composite
   // Shader behandelt (ACESFilmic + sRGB Gamma). Wir setzen NoToneMapping auf dem Renderer
   // deshalb wendet er keine doppelte Tone-Mapping an beim Rendern zum Scene RT.
@@ -1209,11 +1656,12 @@ function createStageScene(
   const camera = createBoardCamera(1);
   const cameraController = createCombatCameraController({ camera });
   const lights = createSceneLights();
+  const roomQuality = createRoomQualityController(renderer);
   const bloom = createBloomEffect(renderer, {
     threshold: 0.90,  // höherer Threshold → weniger Pixel qualifizieren sich
     strength:  0.25,  // schwächerer additiver Bloom-Anteil
     blurScale: 1.5,   // engerer Glow-Radius
-    exposure:  1.25
+    exposure:  1.50
   });
   // Pose-/Interaction-Änderungen markieren die Szene als dirty statt direkt zu rendern.
   // Der nächste rAF-Frame in step() erledigt den Render.
@@ -1288,12 +1736,58 @@ function createStageScene(
   const roomPieceNodes: THREE.Object3D[] = [];
   const ROOM_PIECE_PATTERN = /^[wb]_(bishop|rook|knight|queen|king|pawn)/i;
   const cctvScreen = createCCTVScreen();
+  let roomModelProgress = 0;
+  let roomLightMapProgress = 0;
+  const reportRoomAssetProgress = (): void => {
+    // The lightmap is roughly seven times larger than the room GLB, so the
+    // combined value follows the bytes users are actually waiting for.
+    onRoomAssetProgress?.(roomModelProgress * 0.12 + roomLightMapProgress * 0.88);
+  };
 
-  loadRoomAsset().then((room) => {
+  onRoomAssetProgress?.(0);
+
+  Promise.all([
+    loadRoomAsset(progress => {
+      roomModelProgress = Math.max(roomModelProgress, progress);
+      reportRoomAssetProgress();
+    }),
+    loadRoomRedesignLightMap(progress => {
+      roomLightMapProgress = Math.max(roomLightMapProgress, progress);
+      reportRoomAssetProgress();
+    })
+  ]).then(([room, lightMap]) => {
     if (room) {
+      const calibration = resolveRoomCalibration(room);
+      roomGroup.scale.setScalar(calibration.scale);
+      roomGroup.position.copy(calibration.offset);
+
       for (const child of room.children.slice()) {
         roomGroup.add(child);
       }
+
+      roomGroup.updateMatrixWorld(true);
+      if (calibration.isRedesign) {
+        applyRedesignOverviewPreset(roomGroup);
+        applyRedesignLegalCornerPreset(roomGroup);
+        applyRedesignMonitorNavigation(roomGroup);
+        applyRedesignCertificateNavigation(roomGroup);
+        lights.applyRoomRedesignProfile(roomGroup);
+        scene.background = new THREE.Color('#01040b');
+        scene.fog = new THREE.Fog('#01040b', 80, 150);
+        scene.environmentIntensity = 0.05;
+
+        if (lightMap) {
+          const lightmappedMeshes = roomQuality.apply(roomGroup, lightMap);
+          if (lightmappedMeshes > 0) {
+            lights.applyBakedRoomProfile();
+          } else {
+            lightMap.dispose();
+          }
+        }
+      } else {
+        lightMap?.dispose();
+      }
+
       roomGroup.traverse((node) => {
         if (ROOM_PIECE_PATTERN.test(node.name)) {
           roomPieceNodes.push(node);
@@ -1305,7 +1799,12 @@ function createStageScene(
       renderer.shadowMap.needsUpdate = true;
       onDirty?.();
       onStateChange?.();
+    } else {
+      lightMap?.dispose();
     }
+  }).finally(() => {
+    onRoomAssetProgress?.(1);
+    onRoomAssetReady?.();
   });
 
   return {
@@ -1320,7 +1819,9 @@ function createStageScene(
     pieceLayer,
     renderer,
     roomCameraControls,
+    roomGroup,
     roomPieceNodes,
+    roomQuality,
     scene
   };
 }
@@ -1342,8 +1843,28 @@ function lerpCameraPreset(from: CameraPreset, to: CameraPreset, t: number): Came
   };
 }
 
-function easeInOutCubic(value: number): number {
-  return value < 0.5 ? 4 * value * value * value : 1 - Math.pow(-2 * value + 2, 3) / 2;
+function easeInOutSmootherstep(value: number): number {
+  const t = THREE.MathUtils.clamp(value, 0, 1);
+  return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
+const OVERVIEW_FULL_RIGHT_YAW_ASPECT = 1.5;
+const OVERVIEW_ZERO_RIGHT_YAW_ASPECT = 1.875;
+const OVERVIEW_MAX_RIGHT_YAW_DEGREES = 4.5;
+
+function getAspectSafeOverviewRightYaw(aspect: number): number {
+  if (aspect <= OVERVIEW_FULL_RIGHT_YAW_ASPECT) {
+    return OVERVIEW_MAX_RIGHT_YAW_DEGREES;
+  }
+
+  const normalizedAspect = THREE.MathUtils.clamp(
+    (aspect - OVERVIEW_FULL_RIGHT_YAW_ASPECT) /
+      (OVERVIEW_ZERO_RIGHT_YAW_ASPECT - OVERVIEW_FULL_RIGHT_YAW_ASPECT),
+    0,
+    1
+  );
+  const easedAspect = normalizedAspect * normalizedAspect * (3 - 2 * normalizedAspect);
+  return OVERVIEW_MAX_RIGHT_YAW_DEGREES * (1 - easedAspect);
 }
 
 // Interpoliert zwischen zwei Presets mit einem parabolischen Y-Bogen auf der Kamera-Position.
@@ -1354,29 +1875,5 @@ function arcLerpCameraPreset(from: CameraPreset, to: CameraPreset, t: number, ar
   return {
     position: { x: base.position.x, y: base.position.y + lift, z: base.position.z },
     target: base.target
-  };
-}
-
-// Quadratische Bézier-Kameraschwenk für einen kinematischen Bogenschwenk.
-// Der Kontrollpunkt liegt seitlich und leicht erhöht zwischen Start und Ziel.
-function swingLerpCameraPreset(from: CameraPreset, to: CameraPreset, t: number): CameraPreset {
-  const progress = THREE.MathUtils.clamp(t, 0, 1);
-  const midX = (from.position.x + to.position.x) / 2 + 7;
-  const midY = (from.position.y + to.position.y) / 2 + 2.5;
-  const midZ = (from.position.z + to.position.z) / 2 - 5;
-  const b0 = (1 - progress) * (1 - progress);
-  const b1 = 2 * (1 - progress) * progress;
-  const b2 = progress * progress;
-  return {
-    position: {
-      x: b0 * from.position.x + b1 * midX + b2 * to.position.x,
-      y: b0 * from.position.y + b1 * midY + b2 * to.position.y,
-      z: b0 * from.position.z + b1 * midZ + b2 * to.position.z
-    },
-    target: {
-      x: THREE.MathUtils.lerp(from.target.x, to.target.x, progress),
-      y: THREE.MathUtils.lerp(from.target.y, to.target.y, progress),
-      z: THREE.MathUtils.lerp(from.target.z, to.target.z, progress)
-    }
   };
 }
