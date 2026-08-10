@@ -256,12 +256,19 @@ function clamp(value: number, min: number, max: number): number {
  *
  * @param portrait  If true, returns the max-zoom position (3 steps in)
  *                  matching portrait mode's setPose behaviour.
+ * @param landscapeLocked If true, returns the landscape-mobile position
+ *                  (2 steps in) matching setPose behaviour.
  */
-export function computeFreeCameraEntryPreset(preset: CameraPreset, portrait = false): CameraPreset {
+export function computeFreeCameraEntryPreset(
+  preset: CameraPreset,
+  portrait = false,
+  landscapeLocked = false
+): CameraPreset {
   const tgt = new THREE.Vector3(preset.target.x, preset.target.y, preset.target.z);
   const offset = new THREE.Vector3(preset.position.x, preset.position.y, preset.position.z).sub(tgt);
   const sph = new THREE.Spherical().setFromVector3(offset);
-  sph.radius *= portrait ? Math.pow(ZOOM_FACTOR_PER_STEP, MAX_ZOOM_STEPS) : ZOOM_FACTOR_PER_STEP;
+  const zoomSteps = portrait ? MAX_ZOOM_STEPS : landscapeLocked ? 2 : 1;
+  sph.radius *= Math.pow(ZOOM_FACTOR_PER_STEP, zoomSteps);
   const pos = new THREE.Vector3().setFromSpherical(sph).add(tgt);
   return {
     position: { x: pos.x, y: pos.y, z: pos.z },

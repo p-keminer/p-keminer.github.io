@@ -457,8 +457,9 @@ function applyRedesignCertificateNavigation(roomGroup: THREE.Group): void {
 //   Zertifikats-  → Mitte (−28.4, 4.7, 1.2)
 //   rahmen
 //
-// MENU_CAMERA_PRESET und overview müssen identisch bleiben — "Raum erkunden" überspringt
-// die introTransition und die Kamera ist bereits in der Übersicht-Position.
+// Basispose für Desktop-Menü und Raumübersicht. Auf Mobilgeräten im Querformat
+// verwendet getMenuCameraPreset() stattdessen die sichere, näher liegende
+// Freikamera-Pose der Übersicht.
 const MENU_CAMERA_PRESET: CameraPreset = {
   position: { x: 1.8, y: 8.41, z: 66.99 },
   target: { x: -14.76, y: 6.0, z: 8.95 }
@@ -1085,6 +1086,19 @@ export function createBoardPreviewScene({
     }
   }
 
+  function getMenuCameraPreset(): CameraPreset {
+    if (isPortrait) {
+      return PORTRAIT_MENU_CAMERA_PRESET;
+    }
+
+    // Das Hauptmenü teilt auf Mobile/Tablet im Querformat exakt die sichere
+    // Endpose von "Raum erkunden". So gibt es beim Start keinen Zoom und die
+    // Modellhülle bleibt außerhalb des Sichtfelds.
+    return isMobileDevice
+      ? computeFreeCameraEntryPreset(ROOM_FOCUS_TARGET_PRESETS.overview, false, true)
+      : MENU_CAMERA_PRESET;
+  }
+
   function getStartFlowCameraPreset(): CameraPreset | null {
     if (startFlowMode === 'boardFocus') {
       return null;
@@ -1101,12 +1115,15 @@ export function createBoardPreviewScene({
     }
 
     if (startFlowMode === 'menu') {
-      return isPortrait ? PORTRAIT_MENU_CAMERA_PRESET : MENU_CAMERA_PRESET;
+      return getMenuCameraPreset();
     }
 
     if (startFlowMode === 'introTransition') {
-      const menuPreset = isPortrait ? PORTRAIT_MENU_CAMERA_PRESET : MENU_CAMERA_PRESET;
-      return lerpCameraPreset(menuPreset, getRoomFocusTargetPreset('overview'), easeInOutSmootherstep(startFlowProgress));
+      const menuPreset = getMenuCameraPreset();
+      const overviewPreset = isMobileDevice && !isPortrait
+        ? computeFreeCameraEntryPreset(getRoomFocusTargetPreset('overview'), false, true)
+        : getRoomFocusTargetPreset('overview');
+      return lerpCameraPreset(menuPreset, overviewPreset, easeInOutSmootherstep(startFlowProgress));
     }
 
     // Startpunkt der Transition: Kamera-Snapshot (wo die Kamera tatsächlich war)
@@ -1117,12 +1134,17 @@ export function createBoardPreviewScene({
     // Wenn zum overview übergegangen wird aktiviert sich die Freikamera in der
     // gezoomten Ruheposition. Das dient als toPreset damit die Interpolation
     // genau dort endet und kein Sprung auftritt wenn die Freikamera übernimmt.
-    // Ausnahme: wenn zum Menü zurückgekehrt wird soll man genau in der Menü-
-    // Kamera-Position landen (baseRadius), nicht in der gezoomten Variante.
+    // Ausnahme: Bei der Rückkehr zum Menü landet die Kamera in dessen eigener
+    // Pose: Desktop auf dem Basisradius, Mobile/Tablet im Querformat in der
+    // identischen sicheren Übersichtspose.
     const toPreset = startFlowFocusTarget === 'overview'
       ? (startFlowPendingMenuReturn
-          ? getRoomFocusTargetPreset('overview')
-          : computeFreeCameraEntryPreset(getRoomFocusTargetPreset('overview'), isPortrait))
+          ? getMenuCameraPreset()
+          : computeFreeCameraEntryPreset(
+              getRoomFocusTargetPreset('overview'),
+              isPortrait,
+              isMobileDevice && !isPortrait
+            ))
       : getRoomFocusTargetPreset(startFlowFocusTarget);
 
     if (startFlowFocusFromTarget === startFlowFocusTarget || startFlowFocusProgress >= 1) {
@@ -1392,9 +1414,9 @@ export function createBoardPreviewScene({
       const focusTargetChanged = startFlowFocusTarget !== nextState.focusTarget;
       const modeChanged = startFlowMode !== nextState.mode;
       const isMenuReturnFromFreeCamera = roomCameraFree && nextState.mode === 'menu';
-      // Menu and overview share the same base preset. Preserve the user's
-      // horizontal look offset when entering the room so this mode-only
-      // switch cannot visibly snap the camera back to centre.
+      // Desktop menu and overview share the base preset; Mobile/Tablet in
+      // landscape shares the final free-camera pose. Preserve the user's
+      // horizontal look offset when this mode-only switch has no camera move.
       const isMenuToOverviewEntry =
         startFlowMode === 'menu' &&
         nextState.mode === 'roomExplore' &&
@@ -1499,17 +1521,28 @@ export function createBoardPreviewScene({
         // in der richtigen Position startet. Der Benutzer kann dann frei dahinter orbiten/scannen.
         stage.roomCameraControls.setPose(ROOM_FOCUS_TARGET_PRESETS.overview);
         cameraExitSnapshot = null;
-        // Nur den Eingangs-Zoom spielen wenn zum ersten Mal vom Menü eintritt.
+        // Nur auf Desktop den Eingangs-Zoom spielen. Auf mobilen Geräten im
+        // Querformat muss die Übersicht direkt in ihrer sicheren Endpose
+        // erscheinen: Der weit entfernte Start-Radius würde dort die
+        // Raumbegrenzung am rechten Rand sichtbar machen. Hochformat bleibt
+        // durch das bestehende Drehen-Overlay ohnehin gesperrt.
         // Wenn von einem Fokus-Ziel zurück kommt hat die Transition die Kamera
         // bereits bewegt; wir landen in der gezoomten Position ohne zweite Animation.
-        if (startFlowFocusFromTarget === 'overview') {
+        if (startFlowFocusFromTarget === 'overview' && !(isMobileDevice && !isPortrait)) {
           stage.roomCameraControls.startEntranceAnimation();
         }
         stage.roomCameraControls.setEnabled(true);
         roomCameraFree = true;
       } else if (!shouldBeFree && roomCameraFree) {
         stage.roomCameraControls.setEnabled(false);
-        if (startFlowMode === 'menu') {
+        if (startFlowMode === 'menu' && isMobileDevice && !isPortrait) {
+          // Das Mobile-Landscape-Menü nutzt dieselbe Endpose wie die
+          // Raumübersicht. Daher beim Zurückkehren weder herauszoomen noch
+          // danach wieder hineinspringen.
+          roomCameraFree = false;
+          lookAroundFadeStartMs = 0;
+          lookAround.reset();
+        } else if (startFlowMode === 'menu') {
           // Zurück zum Menü: animiert das Zoom-Out damit die Kamera nicht springt.
           // syncStartFlowState wird hier nicht wieder in enger Schleife aufgerufen,
           // deshalb feuert der animateExit-Callback zuverlässig.
