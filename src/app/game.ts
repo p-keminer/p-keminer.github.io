@@ -1692,7 +1692,7 @@ function renderRoomHotspots(
                Zertifikatsbereich wird ge&ouml;ffnet&nbsp;&hellip;
              </div>
              <iframe
-                src="/zertifikate/index.html?thema=${encodeURIComponent(snapshot.startFlow.activeCertificateTopicId)}"
+                src="/zertifikate/index.html?thema=${encodeURIComponent(snapshot.startFlow.activeCertificateTopicId)}&v=2026-08-22-networking-basics"
                 title="Zertifikate"
                 loading="eager"
                 referrerpolicy="no-referrer"

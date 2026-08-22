@@ -56,6 +56,17 @@ const topics = [
         previewWidth: 1188,
         previewHeight: 918,
       },
+      {
+        title: "Networking Basics",
+        issuer: "Cisco Networking Academy",
+        issued: "22. August 2026",
+        credential: "Cert ID: 40981be6-59fd-4318-8ca2-b7c189a13a36",
+        source: "./nachweise/cisco/networking-basics-2026.pdf",
+        preview: "./nachweise/cisco/networking-basics-2026.png",
+        previewWidth: 1188,
+        previewHeight: 805,
+        verification: "https://www.netacad.com/recognitions/verify/40981be6-59fd-4318-8ca2-b7c189a13a36",
+      },
     ],
   },
   {

@@ -25,6 +25,12 @@ const mobileMenuPanel = document.querySelector<HTMLElement>('#mobile-menu-panel'
 const mobileMenuRoot = document.querySelector<HTMLElement>('#mobile-menu-root');
 const orientationGate = document.querySelector<HTMLElement>('#orientation-gate');
 const portraitOrientation = window.matchMedia('(orientation: portrait)');
+const portraitCompatibleContentClasses = [
+  'portfolio-embed-active',
+  'about-embed-active',
+  'performance-embed-active',
+  'certificate-embed-active'
+] as const;
 
 if (!privacyGateElement || !introOverlayElement) {
   throw new Error('Privacy gate or loading overlay is missing.');
@@ -52,18 +58,40 @@ let orientationGateWasVisible = false;
 function syncOrientationGate(): void {
   if (!orientationGate) return;
 
-  const shouldBlock = isMobileDevice && portraitOrientation.matches;
+  const portraitCompatibleContentIsActive = portraitCompatibleContentClasses.some(className =>
+    document.body.classList.contains(className)
+  );
+  const shouldBlock =
+    isMobileDevice && portraitOrientation.matches && !portraitCompatibleContentIsActive;
   orientationGate.hidden = !shouldBlock;
   document.body.classList.toggle('orientation-gated', shouldBlock);
 
   if (shouldBlock && !orientationGateWasVisible) {
-    window.requestAnimationFrame(() => orientationGate.focus({ preventScroll: true }));
+    window.requestAnimationFrame(() => {
+      if (!orientationGate.hidden) {
+        orientationGate.focus({ preventScroll: true });
+      }
+    });
+  } else if (!shouldBlock && orientationGateWasVisible) {
+    window.requestAnimationFrame(() => {
+      if (!orientationGate.hidden) return;
+
+      const nextFocusTarget =
+        document.querySelector<HTMLElement>('.monitor-page-overlay .web-embed-nav__btn') ??
+        document.querySelector<HTMLElement>('#app button:not([disabled])');
+      nextFocusTarget?.focus({ preventScroll: true });
+    });
   }
 
   orientationGateWasVisible = shouldBlock;
 }
 
 function setupOrientationGate(): void {
+  const contentStateObserver = new MutationObserver(syncOrientationGate);
+  contentStateObserver.observe(document.body, {
+    attributes: true,
+    attributeFilter: ['class']
+  });
   portraitOrientation.addEventListener?.('change', syncOrientationGate);
   window.addEventListener('orientationchange', syncOrientationGate);
   window.addEventListener('resize', syncOrientationGate, { passive: true });
