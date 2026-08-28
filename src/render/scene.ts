@@ -26,15 +26,10 @@ import {
 } from './room-quality';
 import { createBloomEffect, type BloomEffect } from './bloom';
 import {
-  DEFAULT_PIECE_ASSET_SET,
   loadRoomAsset,
   type BoardAssetMode,
   type BoardVisualAssets,
-  type ChessVisualAssets,
-  type PieceAssetFallbackMap,
-  type PieceAssetFileMap,
   type PieceAssetMode,
-  type PieceAssetSet,
   type PieceVisualAssets
 } from './loaders';
 import {
@@ -50,9 +45,9 @@ export interface BoardPresentationStateInput extends CombatPresentationStateInpu
   combatRemainingMs: CombatCameraStateInput['combatRemainingMs'];
 }
 
-export type RoomFocusTargetId = 'aboutEmbed' | 'board' | 'certificateEmbed' | 'comicEmbed' | 'comicScreen' | 'displayCase' | 'horrorEmbed' | 'legalWall' | 'overview' | 'performanceEmbed' | 'portfolioEmbed' | 'pictureFrame' | 'pictureFrameDetail' | 'tvSelect' | 'workbench';
+export type RoomFocusTargetId = 'aboutEmbed' | 'board' | 'certificateEmbed' | 'legalWall' | 'overview' | 'performanceEmbed' | 'portfolioEmbed';
 
-export type StartFlowMode = 'boardFocus' | 'displayCaseFocus' | 'introTransition' | 'menu' | 'roomExplore';
+export type StartFlowMode = 'boardFocus' | 'menu' | 'roomExplore';
 
 export interface StartFlowStateInput {
   certificateTopicId?: string;
@@ -61,8 +56,6 @@ export interface StartFlowStateInput {
   focusTarget: RoomFocusTargetId;
   mode: StartFlowMode;
   pendingMenuReturn?: boolean;
-  pictureFrameDetailId?: string;
-  progress: number;
 }
 
 export interface BoardPreviewSnapshot {
@@ -71,9 +64,6 @@ export interface BoardPreviewSnapshot {
     board: BoardAssetMode;
     loadedModelFiles: string[];
     loadedPieceModelFiles: string[];
-    pieceAssetFallbacks: PieceAssetFallbackMap;
-    pieceAssetFiles: PieceAssetFileMap;
-    pieceAssetSet: PieceAssetSet;
     pieces: PieceAssetMode;
   };
   board: {
@@ -150,13 +140,6 @@ export interface BoardPreviewSnapshot {
       screenX: number;
       screenY: number;
     }>;
-    pictureFrames: Array<{
-      id: string;
-      isVisible: boolean;
-      label: string;
-      screenX: number;
-      screenY: number;
-    }>;
   };
   renderer: {
     height: number;
@@ -169,7 +152,6 @@ export interface BoardPreviewApp {
   advanceTime: (ms: number) => void;
   applyBoardAsset: (assets: BoardVisualAssets) => void;
   applyPieceAssets: (assets: PieceVisualAssets) => void;
-  applyVisualAssets: (assets: ChessVisualAssets) => void;
   dispose: () => void;
   getSnapshot: () => BoardPreviewSnapshot;
   prepareInitialRender: (onProgress?: (progress: number) => void) => Promise<void>;
@@ -351,10 +333,8 @@ function applyRedesignLegalCornerPreset(roomGroup: THREE.Group): void {
   });
 }
 
-const REDESIGN_MONITOR_FOCUS_DISTANCE = 13;
 const REDESIGN_MONITOR_EMBED_DISTANCE = 1.9;
 const REDESIGN_CERTIFICATE_EMBED_DISTANCE = 1.9;
-let redesignPictureFrameDetailPreset: CameraPreset | null = null;
 const redesignCertificateEmbedPresets = new Map<string, CameraPreset>();
 
 function getMonitorCameraPreset(anchor: THREE.Object3D, distance: number): CameraPreset {
@@ -395,40 +375,13 @@ function applyRedesignMonitorNavigation(roomGroup: THREE.Group): void {
   updateHotspotAnchor('portfolioEmbed', centerCenter);
   updateHotspotAnchor('aboutEmbed', rightCenter);
 
-  const leftFocus = getMonitorCameraPreset(left, REDESIGN_MONITOR_FOCUS_DISTANCE);
   const leftEmbed = getMonitorCameraPreset(left, REDESIGN_MONITOR_EMBED_DISTANCE);
-  const centerFocus = getMonitorCameraPreset(center, REDESIGN_MONITOR_FOCUS_DISTANCE);
   const centerEmbed = getMonitorCameraPreset(center, REDESIGN_MONITOR_EMBED_DISTANCE);
-  const rightFocus = getMonitorCameraPreset(right, REDESIGN_MONITOR_FOCUS_DISTANCE);
   const rightEmbed = getMonitorCameraPreset(right, REDESIGN_MONITOR_EMBED_DISTANCE);
 
-  copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.pictureFrame, leftFocus);
-  redesignPictureFrameDetailPreset = leftEmbed;
   copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.performanceEmbed, leftEmbed);
-  copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.workbench, centerFocus);
   copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.portfolioEmbed, centerEmbed);
   copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.aboutEmbed, rightEmbed);
-  copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.comicScreen, rightFocus);
-  copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.comicEmbed, rightEmbed);
-  copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.horrorEmbed, rightEmbed);
-  copyCameraPreset(ROOM_FOCUS_TARGET_PRESETS.tvSelect, rightEmbed);
-
-  // Die acht bestehenden Leistungsnachweis-Ziele liegen als 4x2-Raster auf
-  // der linken Monitorfläche. Dokumentlogik und IDs bleiben unverändert.
-  const monitorRotation = left.getWorldQuaternion(new THREE.Quaternion());
-  const horizontal = new THREE.Vector3(1, 0, 0).applyQuaternion(monitorRotation).normalize();
-  const vertical = new THREE.Vector3(0, 1, 0).applyQuaternion(monitorRotation).normalize();
-  const columns = [-3.25, -1.08, 1.08, 3.25];
-  const rows = [1.25, -1.25];
-
-  PICTURE_FRAME_ANCHORS.forEach((frame, index) => {
-    const row = Math.floor(index / columns.length);
-    const column = index % columns.length;
-    frame.anchor
-      .copy(leftCenter)
-      .addScaledVector(horizontal, columns[column] ?? 0)
-      .addScaledVector(vertical, rows[row] ?? 0);
-  });
 }
 
 function applyRedesignCertificateNavigation(roomGroup: THREE.Group): void {
@@ -495,31 +448,6 @@ const ROOM_FOCUS_TARGET_PRESETS: Record<Exclude<RoomFocusTargetId, 'board'>, Cam
     position: { x: 0, y: 9.8, z: -4 },
     target: { x: 0, y: 9.8, z: -10 }
   },
-  // Comic-Film Display — Nahaufnahme des schwarzen Bildschirms über dem Schachbrett.
-  comicScreen: {
-    position: { x: 0, y: 9.8, z: 2 },
-    target: { x: 0, y: 9.8, z: -10 }
-  },
-  // Comic-Film Embed — Kamera vollständig hinein in den Comic-Bildschirm.
-  comicEmbed: {
-    position: { x: 0, y: 9.8, z: -4 },
-    target: { x: 0, y: 9.8, z: -10 }
-  },
-  // Horror-Film Embed — gleiche Kameraposition wie comicEmbed.
-  horrorEmbed: {
-    position: { x: 0, y: 9.8, z: -4 },
-    target: { x: 0, y: 9.8, z: -10 }
-  },
-  // TV-Auswahl — gleiche Position wie comicEmbed (rein in den Bildschirm).
-  tvSelect: {
-    position: { x: 0, y: 9.8, z: -4 },
-    target: { x: 0, y: 9.8, z: -10 }
-  },
-  // Vitrine — hinten-links im Raum.
-  displayCase: {
-    position: { x: -20.5, y: 4.5, z: 9.0 },
-    target: { x: -24.9, y: 2.7, z: -8.0 }
-  },
   // Rechtliche Wand — rechte Seite des Raums, frontal (wie Workbench-Muster).
   legalWall: {
     position: { x: -8.0, y: 3.5, z: 25.0 },
@@ -530,27 +458,12 @@ const ROOM_FOCUS_TARGET_PRESETS: Record<Exclude<RoomFocusTargetId, 'board'>, Cam
     position: { x: 1.8, y: 8.41, z: 66.99 },
     target: { x: -14.76, y: 6.0, z: 8.95 }
   },
-  // Werkbank-Monitor-Wand.
-  workbench: {
-    position: { x: -9.5, y: 3.5, z: 18.0 },
-    target: { x: -26.27, y: 3.22, z: 18.01 }
-  },
-  // Zertifikate / Bilderrahmen — linke Wand.
-  pictureFrame: {
-    position: { x: -7.0, y: 3.5, z: 1.2 },
-    target: { x: -28.4, y: 4.5, z: 1.2 }
-  },
-  // Nahaufnahme des ersten Zertifikats (oben-links) — navigiert durch Klick.
-  pictureFrameDetail: {
-    position: { x: -21.4, y: 7.0, z: 6.0 },
-    target: { x: -28.4, y: 7.0, z: 6.0 }
-  },
   // Leistungsnachweise-Embed — fährt direkt in den linken Monitor.
   performanceEmbed: {
     position: { x: -21.4, y: 7.0, z: 6.0 },
     target: { x: -28.4, y: 7.0, z: 6.0 }
   },
-  // Öffentlicher Portfolio-Platzhalter — fährt direkt in den mittleren Monitor.
+  // Öffentliches Portfolio — fährt direkt in den mittleren Monitor.
   portfolioEmbed: {
     position: { x: -24.5, y: 3.22, z: 18.01 },
     target: { x: -26.27, y: 3.22, z: 18.01 }
@@ -603,22 +516,6 @@ const CERTIFICATE_TOPIC_DEFINITIONS: ReadonlyArray<{
   { anchorObjectName: 'Anchor_Certificate_07', id: 'cisco', label: 'Cisco', surfaceObjectName: 'Certificate_07_Paper' },
   { anchorObjectName: 'Anchor_Certificate_06', id: 'tryhackme', label: 'TryHackMe', surfaceObjectName: 'Certificate_06_Paper' },
   { anchorObjectName: 'Anchor_Certificate_05', id: 'jetbrains', label: 'JetBrains', surfaceObjectName: 'Certificate_05_Paper' }
-];
-
-// Interaktive Bilderrahmen angezeigt wenn auf das pictureFrame-Ziel fokussiert.
-// Jeder Eintrag definiert die Welt-Koordinaten der Rahmenmitte für die Bildschirm-Projektion.
-// Horizontaler Schritt: -3.29 Z-Units pro Rahmen. Oben Y=7.0, unten Y=3.2.
-const PICTURE_FRAME_ANCHORS: ReadonlyArray<{ id: string; anchor: THREE.Vector3; label: string }> = [
-  // Obere Reihe (links → rechts)
-  { id: 'frame0', anchor: new THREE.Vector3(-28.4, 7.0,  6.0),  label: 'Zertifikat' },
-  { id: 'frame2', anchor: new THREE.Vector3(-28.4, 7.0,  2.71), label: 'Zertifikat' },
-  { id: 'frame3', anchor: new THREE.Vector3(-28.4, 7.0, -0.76), label: 'Zertifikat' },
-  { id: 'frame4', anchor: new THREE.Vector3(-28.4, 7.0, -4.05), label: 'Zertifikat' },
-  // Untere Reihe (links → rechts)
-  { id: 'frame1', anchor: new THREE.Vector3(-28.4, 3.2,  6.0),  label: 'Zertifikat' },
-  { id: 'frame5', anchor: new THREE.Vector3(-28.4, 3.2,  2.71), label: 'Zertifikat' },
-  { id: 'frame6', anchor: new THREE.Vector3(-28.4, 3.2, -0.76), label: 'Zertifikat' },
-  { id: 'frame7', anchor: new THREE.Vector3(-28.4, 3.2, -4.05), label: 'Zertifikat' }
 ];
 
 function createSemesterOneFrameTexture(renderer: THREE.WebGLRenderer): THREE.CanvasTexture {
@@ -723,9 +620,6 @@ export function createBoardPreviewScene({
   let currentPieces = pieces.map((piece) => ({ ...piece }));
   let loadedBoardFile: string | null = null;
   let loadedPieceModelFiles: string[] = [];
-  let pieceAssetFallbacks: PieceAssetFallbackMap = {};
-  let pieceAssetFiles: PieceAssetFileMap = {};
-  let pieceAssetSet: PieceAssetSet = DEFAULT_PIECE_ASSET_SET;
   const stage = createStageScene(
     container,
     onStateChange,
@@ -762,8 +656,6 @@ export function createBoardPreviewScene({
   let startFlowFocusFromTarget: RoomFocusTargetId = 'overview';
   let startFlowFocusProgress = 1;
   let startFlowFocusTarget: RoomFocusTargetId = 'overview';
-  let startFlowProgress = 0;
-  let activePictureFrameDetailId = 'frame0';
   let activeCertificateTopicId = 'cs50';
   let roomCameraFree = false;
   let startFlowPendingMenuReturn = false;
@@ -781,9 +673,7 @@ export function createBoardPreviewScene({
     rotated: new THREE.Vector3(),
     lookTarget: new THREE.Vector3()
   };
-  const LOOK_AROUND_TARGETS: ReadonlyArray<RoomFocusTargetId> = [
-    'overview', 'displayCase', 'pictureFrame', 'workbench'
-  ];
+  const LOOK_AROUND_TARGETS: ReadonlyArray<RoomFocusTargetId> = ['overview'];
   let cameraExitSnapshot: CameraPreset | null = null;
   let lookAroundFadeStartMs = 0;
   const LOOK_AROUND_FADE_DURATION_MS = 900;
@@ -899,7 +789,6 @@ export function createBoardPreviewScene({
     if (stage.cameraController.step(deltaMs)) {
       markDirty();
     }
-    stage.cctvScreen.tick(clockState.elapsedMs);
     syncCameraControlLock();
     applyStartFlowCameraPose();
 
@@ -910,9 +799,6 @@ export function createBoardPreviewScene({
   }
 
   function render(): void {
-    // CCTV-Feed in sein Off-Screen-Ziel rendern VOR dem Hauptpass
-    // damit die Bildschirm-Textur aktuell ist wenn Bloom die Szene zusammenstellt.
-    stage.cctvScreen.renderToTarget(stage.scene, stage.renderer);
     stage.bloom.render(stage.scene, stage.camera);
   }
 
@@ -932,9 +818,6 @@ export function createBoardPreviewScene({
         board: stage.board.getVisualMode(),
         loadedModelFiles: [...(loadedBoardFile ? [loadedBoardFile] : []), ...loadedPieceModelFiles],
         loadedPieceModelFiles: [...loadedPieceModelFiles],
-        pieceAssetFallbacks: { ...pieceAssetFallbacks },
-        pieceAssetFiles: { ...pieceAssetFiles },
-        pieceAssetSet,
         pieces: stage.pieceLayer.getVisualMode()
       },
       board: {
@@ -995,8 +878,7 @@ export function createBoardPreviewScene({
       },
       roomExplore: {
         certificateFrames: getCertificateFrameSnapshots(),
-        hotspots: getRoomHotspotSnapshots(),
-        pictureFrames: getPictureFrameSnapshots()
+        hotspots: getRoomHotspotSnapshots()
       },
       renderer: {
         height: size.y,
@@ -1032,11 +914,8 @@ export function createBoardPreviewScene({
 
     // Look-around: horizontal per left-mouse drag or one-finger touch while
     // the camera position stays fixed. The main menu remains completely
-    // static; interaction starts only in the existing stable room views:
-    //   Übersicht (Raum erkunden), Vitrine (Zertifikate),
-    //   Bilderrahmen (Leistungsnachweise), Werkbank
-    // Deaktiviert in: menu, portfolioEmbed (iframe), pictureFrameDetail
-    // (Nahaufnahme), boardFocus (Board-Kamera übernimmt) und introTransition.
+    // static; interaction starts only in the stable room overview.
+    // Monitor embeds and boardFocus keep their dedicated camera controls.
     // Muss vollständig am Ziel angekommen sein (nicht unter Transition).
     // During the exit fade the offset is still rendered, but interaction is
     // locked so no new gesture can start while the camera is moving.
@@ -1110,20 +989,8 @@ export function createBoardPreviewScene({
       return stage.roomCameraControls.getPose();
     }
 
-    if (startFlowMode === 'displayCaseFocus') {
-      return ROOM_FOCUS_TARGET_PRESETS.displayCase;
-    }
-
     if (startFlowMode === 'menu') {
       return getMenuCameraPreset();
-    }
-
-    if (startFlowMode === 'introTransition') {
-      const menuPreset = getMenuCameraPreset();
-      const overviewPreset = isMobileDevice && !isPortrait
-        ? computeFreeCameraEntryPreset(getRoomFocusTargetPreset('overview'), false, true)
-        : getRoomFocusTargetPreset('overview');
-      return lerpCameraPreset(menuPreset, overviewPreset, easeInOutSmootherstep(startFlowProgress));
     }
 
     // Startpunkt der Transition: Kamera-Snapshot (wo die Kamera tatsächlich war)
@@ -1154,11 +1021,7 @@ export function createBoardPreviewScene({
     }
 
     const t = easeInOutSmootherstep(startFlowFocusProgress);
-    const isDisplayCaseTransition =
-      startFlowFocusTarget === 'displayCase' || startFlowFocusFromTarget === 'displayCase';
-    return isDisplayCaseTransition
-      ? arcLerpCameraPreset(fromPreset, toPreset, t, 4.0)
-      : lerpCameraPreset(fromPreset, toPreset, t);
+    return lerpCameraPreset(fromPreset, toPreset, t);
   }
 
   function getRoomHotspotSnapshots(): BoardPreviewSnapshot['roomExplore']['hotspots'] {
@@ -1206,23 +1069,6 @@ export function createBoardPreviewScene({
         label: topic.label,
         screenHeight: projected.screenHeight,
         screenWidth: projected.screenWidth,
-        screenX: projected.screenX,
-        screenY: projected.screenY
-      };
-    });
-  }
-
-  function getPictureFrameSnapshots(): BoardPreviewSnapshot['roomExplore']['pictureFrames'] {
-    if (startFlowMode !== 'roomExplore' || startFlowFocusTarget !== 'pictureFrame' || startFlowFocusProgress < 1) {
-      return [];
-    }
-
-    return PICTURE_FRAME_ANCHORS.map((frame) => {
-      const projected = projectRoomHotspotAnchor(frame.anchor);
-      return {
-        id: frame.id,
-        isVisible: projected.isVisible,
-        label: frame.label,
         screenX: projected.screenX,
         screenY: projected.screenY
       };
@@ -1317,20 +1163,6 @@ export function createBoardPreviewScene({
     },
     applyPieceAssets: (assets) => {
       loadedPieceModelFiles = [...assets.loadedPieceFiles];
-      pieceAssetFallbacks = { ...assets.pieceAssetFallbacks };
-      pieceAssetFiles = { ...assets.pieceAssetFiles };
-      pieceAssetSet = assets.pieceAssetSet;
-      stage.pieceLayer.setPieceAssets(assets.pieceTemplates, currentPieces);
-      markDirty();
-      onStateChange?.();
-    },
-    applyVisualAssets: (assets) => {
-      loadedBoardFile = assets.loadedBoardFile;
-      loadedPieceModelFiles = [...assets.loadedPieceFiles];
-      pieceAssetFallbacks = { ...assets.pieceAssetFallbacks };
-      pieceAssetFiles = { ...assets.pieceAssetFiles };
-      pieceAssetSet = assets.pieceAssetSet;
-      stage.board.setVisualBoardAsset(assets.board);
       stage.pieceLayer.setPieceAssets(assets.pieceTemplates, currentPieces);
       markDirty();
       onStateChange?.();
@@ -1402,7 +1234,6 @@ export function createBoardPreviewScene({
     syncStartFlowState: (nextState) => {
       const previousFocusProgress = startFlowFocusProgress;
       const previousPendingMenuReturn = startFlowPendingMenuReturn;
-      const previousPictureFrameDetailId = activePictureFrameDetailId;
       const previousCertificateTopicId = activeCertificateTopicId;
       startFlowFocusFromTarget = nextState.focusFromTarget;
       startFlowFocusProgress = THREE.MathUtils.clamp(nextState.focusProgress, 0, 1);
@@ -1449,11 +1280,7 @@ export function createBoardPreviewScene({
       }
       startFlowFocusTarget = nextState.focusTarget;
       startFlowMode = nextState.mode;
-      startFlowProgress = THREE.MathUtils.clamp(nextState.progress, 0, 1);
       startFlowPendingMenuReturn = nextState.pendingMenuReturn ?? false;
-      if (nextState.pictureFrameDetailId !== undefined) {
-        activePictureFrameDetailId = nextState.pictureFrameDetailId;
-      }
       if (nextState.certificateTopicId !== undefined) {
         activeCertificateTopicId = nextState.certificateTopicId;
       }
@@ -1464,7 +1291,6 @@ export function createBoardPreviewScene({
         modeChanged ||
         focusTransitionReachedEndpoint ||
         previousPendingMenuReturn !== startFlowPendingMenuReturn ||
-        previousPictureFrameDetailId !== activePictureFrameDetailId ||
         previousCertificateTopicId !== activeCertificateTopicId;
 
       // Nur der linke Hauptmonitor übernimmt während der Leistungsnachweis-Fahrt
@@ -1496,7 +1322,6 @@ export function createBoardPreviewScene({
 
       // Engine-Figuren immer sichtbar — sie ersetzen die statischen Raum-Figuren
       // und sind nur in boardFocus interaktiv (via boardInteraction.setEnabled).
-      const isBoardFocus = startFlowMode === 'boardFocus';
       stage.pieceLayer.group.visible = true;
 
       // Statische GLB-Raum-Figuren permanent versteckt — Engine-Figuren übernehmen.
@@ -1617,20 +1442,6 @@ export function createBoardPreviewScene({
         redesignCertificateEmbedPresets.get(activeCertificateTopicId) ??
         ROOM_FOCUS_TARGET_PRESETS.certificateEmbed
       );
-    }
-
-    if (target === 'pictureFrameDetail' && redesignPictureFrameDetailPreset) {
-      return redesignPictureFrameDetailPreset;
-    }
-
-    if (target === 'pictureFrameDetail') {
-      const frame = PICTURE_FRAME_ANCHORS.find((f) => f.id === activePictureFrameDetailId);
-      if (frame) {
-        return {
-          position: { x: -21.4, y: frame.anchor.y, z: frame.anchor.z },
-          target:   { x: -28.4, y: frame.anchor.y, z: frame.anchor.z }
-        };
-      }
     }
 
     return ROOM_FOCUS_TARGET_PRESETS[target];
@@ -1898,15 +1709,4 @@ function getAspectSafeOverviewRightYaw(aspect: number): number {
   );
   const easedAspect = normalizedAspect * normalizedAspect * (3 - 2 * normalizedAspect);
   return OVERVIEW_MAX_RIGHT_YAW_DEGREES * (1 - easedAspect);
-}
-
-// Interpoliert zwischen zwei Presets mit einem parabolischen Y-Bogen auf der Kamera-Position.
-// arcLift definiert die maximale Höhe die bei t=0.5 hinzugefügt wird (Sinus-Glockenkurve).
-function arcLerpCameraPreset(from: CameraPreset, to: CameraPreset, t: number, arcLift: number): CameraPreset {
-  const base = lerpCameraPreset(from, to, t);
-  const lift = arcLift * Math.sin(Math.PI * t);
-  return {
-    position: { x: base.position.x, y: base.position.y + lift, z: base.position.z },
-    target: base.target
-  };
 }

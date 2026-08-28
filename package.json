@@ -1,9 +1,9 @@
 {
-  "name": "3d-web-chess",
+  "name": "p-keminer-3d-portfolio",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Scaffold and documentation base for a browser-based 3D chess game.",
+  "description": "Interactive Three.js portfolio with a 3D workspace, playable chess, and embedded project pages.",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && node scripts/verify_static_security.mjs",
@@ -12,7 +12,6 @@
   },
   "devDependencies": {
     "@types/three": "^0.183.1",
-    "playwright": "^1.58.2",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-compression2": "^2.5.3"
@@ -21,7 +20,6 @@
     "@fontsource/inter": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "chess.js": "^1.4.0",
-    "draco3d": "^1.5.7",
     "three": "^0.183.2",
     "three-stdlib": "^2.36.1"
   }

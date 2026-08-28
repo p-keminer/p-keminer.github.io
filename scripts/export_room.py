@@ -6,7 +6,7 @@ Option A — Run from Blender's Text Editor while raum.blend is open:
     1. Open raum.blend in Blender.
     2. Open this file in Blender's Text Editor (Scripting workspace).
     3. Click "Run Script" (or press Alt+R).
-    The file is written to  3d-web-chess/public/models/room.glb
+    The file is written to p-keminer.github.io/public/models/room.glb
     relative to this script.
 
 Option B — Command-line (headless):

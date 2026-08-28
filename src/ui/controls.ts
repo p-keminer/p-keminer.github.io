@@ -1,12 +1,10 @@
 export function renderControls({
   cameraLocked,
-  gameOver,
   restartAvailable,
   showReturnToRoom,
   undoAvailable
 }: {
   cameraLocked: boolean;
-  gameOver: boolean;
   restartAvailable: boolean;
   showReturnToRoom?: boolean;
   undoAvailable: boolean;

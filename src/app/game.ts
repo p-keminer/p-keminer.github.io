@@ -3,14 +3,8 @@ import { createCombatSfxController } from '../audio/combat-sfx';
 import { createSoundController } from '../audio/sound';
 import { createChessEngine } from '../chess/engine';
 import type { BoardSquare, ChessGameSnapshot, ChessPieceType } from '../chess/state';
-import { ENABLE_TV_SHOWCASE } from '../config/feature-flags';
 import type { CombatPresentationEventInput } from '../render/combat-presentation';
-import {
-  DEFAULT_PIECE_ASSET_SET,
-  loadBoardVisualAsset,
-  loadPieceVisualAssets,
-  type PieceAssetSet
-} from '../render/loaders';
+import { loadBoardVisualAsset, loadPieceVisualAssets } from '../render/loaders';
 import {
   createBoardPreviewScene,
   type BoardPreviewSnapshot,
@@ -49,13 +43,7 @@ interface GameInteractionControllerState {
   selectedSquare: BoardSquare | null;
 }
 
-type TvSelectionId = 'comic' | 'horror';
-
 interface GameSnapshot extends BoardPreviewSnapshot {
-  assetLoading: {
-    pendingPieceAssetSet: PieceAssetSet | null;
-    pieces: boolean;
-  };
   capturedPieces: ChessGameSnapshot['capturedPieces'];
   checkedKingSquare: ChessGameSnapshot['checkedKingSquare'];
   fen: string;
@@ -73,14 +61,11 @@ interface GameSnapshot extends BoardPreviewSnapshot {
   };
   startFlow: {
     activeCertificateTopicId: string;
-    activePictureFrameDetailId: string;
-    activeTvSelection: TvSelectionId;
     certificateEmbedReady: boolean;
     currentRoomFocusTarget: RoomFocusTargetId | null;
     gameplayInteractionEnabled: boolean;
     hoveredRoomHotspot: RoomFocusTargetId | null;
     aboutEmbedReady: boolean;
-    introTransitionActive: boolean;
     performanceEmbedReady: boolean;
     portfolioEmbedReady: boolean;
     roomFocusTransitionActive: boolean;
@@ -93,18 +78,10 @@ interface GameSnapshot extends BoardPreviewSnapshot {
 
 type MonitorPageTarget = 'aboutEmbed' | 'certificateEmbed' | 'performanceEmbed' | 'portfolioEmbed';
 
-const START_FLOW_INTRO_DURATION_MS = 1400;
 const ROOM_FOCUS_TRANSITION_DURATION_MS = 2000;
 const MONITOR_PAGE_SETTLE_DURATION_MS = 0;
 const MONITOR_ENTRY_BLACKOUT_DURATION_MS = 180;
 const MONITOR_PAGE_MIN_BLACKOUT_MS = 300;
-const ROOM_TV_SHOWCASE_TARGETS = new Set<RoomFocusTargetId>([
-  'comicEmbed',
-  'comicScreen',
-  'horrorEmbed',
-  'tvSelect'
-]);
-
 function isMonitorPageTarget(target: RoomFocusTargetId): target is MonitorPageTarget {
   return (
     target === 'aboutEmbed' ||
@@ -113,35 +90,6 @@ function isMonitorPageTarget(target: RoomFocusTargetId): target is MonitorPageTa
     target === 'portfolioEmbed'
   );
 }
-const ROOM_FOCUS_TARGET_OPTIONS: ReadonlyArray<{ id: RoomFocusTargetId; label: string }> = [
-  { id: 'overview', label: 'Room Overview' },
-  { id: 'displayCase', label: 'Zertifikate' },
-  { id: 'board', label: 'Schachbrett' },
-  { id: 'workbench', label: 'Workbench' },
-  { id: 'performanceEmbed', label: 'Leistungsnachweise Bildschirm' },
-  { id: 'portfolioEmbed', label: 'Portfolio Bildschirm' },
-  { id: 'aboutEmbed', label: 'Über mich Bildschirm' },
-  { id: 'certificateEmbed', label: 'Zertifikate' },
-  { id: 'pictureFrame', label: 'Leistungsnachweise' },
-  ...(ENABLE_TV_SHOWCASE
-    ? [
-        { id: 'comicEmbed', label: 'Über mich (Legacy-Video)' },
-        { id: 'comicScreen', label: 'TV' },
-        { id: 'tvSelect', label: 'TV' },
-        { id: 'horrorEmbed', label: 'KI-Trailer' }
-      ] satisfies ReadonlyArray<{ id: RoomFocusTargetId; label: string }>
-    : []),
-  { id: 'pictureFrameDetail', label: 'Certificate Detail' }
-];
-
-function normalizePublicRoomFocusTarget(target: RoomFocusTargetId): RoomFocusTargetId {
-  if (!ENABLE_TV_SHOWCASE && ROOM_TV_SHOWCASE_TARGETS.has(target)) {
-    return 'aboutEmbed';
-  }
-
-  return target;
-}
-
 export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}): MountedGame {
   const engine = createChessEngine();
   const presentationStateMachine = createPresentationStateMachine();
@@ -149,14 +97,10 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
   const combatSfxController = createCombatSfxController({ soundController });
   let boardAssetRequestId = 0;
   let isDisposed = false;
-  let pendingPieceAssetSet: PieceAssetSet | null = null;
   let presentationFrameHandle = 0;
   let presentationLastFrameTime = 0;
-  let pieceAssetRequestId = 0;
-  let pieceAssetSetLoading = false;
   let startFlowFrameHandle = 0;
   let startFlowLastFrameTime = 0;
-  let startFlowElapsedMs = 0;
   let roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
   let monitorPageReadyTarget: MonitorPageTarget | null = null;
   let monitorPageSettleElapsedMs = 0;
@@ -164,11 +108,8 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
   let startFlowState: StartFlowMode = 'menu';
   let roomFocusTarget: RoomFocusTargetId = 'overview';
   let hoveredRoomHotspot: RoomFocusTargetId | null = null;
-  let hoveredPictureFrameId: string | null = null;
   let hoveredCertificateTopicId: string | null = null;
   let activeCertificateTopicId = 'cs50';
-  let activePictureFrameDetailId = 'frame0';
-  let activeTvSelection: TvSelectionId = 'comic';
   let pendingMenuReturn = false;
   let legalWallTab: 'impressum' | 'datenschutz' = 'impressum';
   const controllerState: GameInteractionControllerState = {
@@ -228,9 +169,6 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
     throw new Error('Missing game shell mount points.');
   }
 
-  const isPieceAssetToggleLocked = (): boolean =>
-    pieceAssetSetLoading || presentationStateMachine.getSnapshot().mode === 'combat';
-
   const handleControlsClick = (event: Event): void => {
     const target = event.target;
 
@@ -272,14 +210,6 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
       return;
     }
 
-    if (action === 'enter-display-case-focus') {
-      if (startFlowState === 'roomExplore' && roomFocusTarget === 'displayCase' && !isRoomFocusTransitionActive()) {
-        enterDisplayCaseFocus();
-      }
-
-      return;
-    }
-
     if (action === 'direct-to-leistungen') {
       if (startFlowState === 'menu') {
         beginStartFlowTransitionToTarget('performanceEmbed');
@@ -313,119 +243,6 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
       return;
     }
 
-    // Legacy-Einstieg für den optionalen TV-/Comic-Showcase. Der öffentliche
-    // Über-mich-Button verwendet ausschließlich den neuen aboutEmbed-Pfad.
-    if (action === 'direct-to-comic') {
-      if (ENABLE_TV_SHOWCASE && startFlowState === 'menu') {
-        beginStartFlowTransitionToTarget('comicEmbed');
-      }
-
-      return;
-    }
-
-    if (action === 'back-from-comic-embed') {
-      if (startFlowState === 'roomExplore' && roomFocusTarget === 'comicEmbed' && !isRoomFocusTransitionActive()) {
-        activeTvSelection = 'comic';
-        if (ENABLE_TV_SHOWCASE) {
-          // Sofort zurück zur TV-Auswahl ohne Kamerafahrt.
-          roomFocusFromTarget = 'tvSelect';
-          roomFocusTarget = 'tvSelect';
-          roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
-          syncStartFlowToPreview();
-        } else {
-          focusRoomTarget('overview');
-        }
-      }
-
-      return;
-    }
-
-    if (action === 'activate-comic-from-tv') {
-      if (ENABLE_TV_SHOWCASE && startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
-        activeTvSelection = 'comic';
-        syncPanels();
-      }
-
-      return;
-    }
-
-    if (action === 'activate-horror-from-tv') {
-      if (ENABLE_TV_SHOWCASE && startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
-        activeTvSelection = 'horror';
-        syncPanels();
-      }
-
-      return;
-    }
-
-    if (action === 'toggle-tv-selection') {
-      if (ENABLE_TV_SHOWCASE && startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
-        activeTvSelection = activeTvSelection === 'comic' ? 'horror' : 'comic';
-        syncPanels();
-      }
-
-      return;
-    }
-
-    if (action === 'select-comic-from-tv') {
-      if (ENABLE_TV_SHOWCASE && startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
-        activeTvSelection = 'comic';
-        // Sofort umschalten ohne Kamerafahrt
-        roomFocusFromTarget = 'comicEmbed';
-        roomFocusTarget = 'comicEmbed';
-        roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
-        syncStartFlowToPreview();
-      }
-
-      return;
-    }
-
-    if (action === 'select-horror-from-tv') {
-      if (ENABLE_TV_SHOWCASE && startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
-        activeTvSelection = 'horror';
-        // Sofort umschalten ohne Kamerafahrt
-        roomFocusFromTarget = 'horrorEmbed';
-        roomFocusTarget = 'horrorEmbed';
-        roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
-        syncStartFlowToPreview();
-      }
-
-      return;
-    }
-
-    if (action === 'back-from-tv-select') {
-      if (ENABLE_TV_SHOWCASE && startFlowState === 'roomExplore' && roomFocusTarget === 'tvSelect' && !isRoomFocusTransitionActive()) {
-        focusRoomTarget('overview');
-      }
-
-      return;
-    }
-
-    if (action === 'back-from-horror-embed') {
-      if (ENABLE_TV_SHOWCASE && startFlowState === 'roomExplore' && roomFocusTarget === 'horrorEmbed' && !isRoomFocusTransitionActive()) {
-        activeTvSelection = 'horror';
-        // Sofort zurück zur TV-Auswahl ohne Kamerafahrt.
-        roomFocusFromTarget = 'tvSelect';
-        roomFocusTarget = 'tvSelect';
-        roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
-        syncStartFlowToPreview();
-      }
-
-      return;
-    }
-
-    if (action === 'legal-impressum' || action === 'legal-datenschutz') {
-      if (startFlowState === 'menu' || startFlowState === 'roomExplore') {
-        legalWallTab = action === 'legal-impressum' ? 'impressum' : 'datenschutz';
-        if (startFlowState === 'menu') {
-          beginStartFlowTransitionToTarget('legalWall');
-        } else {
-          focusRoomTarget('legalWall');
-        }
-      }
-      return;
-    }
-
     if (action === 'legal-to-overview') {
       if (startFlowState === 'roomExplore' && roomFocusTarget === 'legalWall') {
         focusRoomTarget('overview');
@@ -441,7 +258,7 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
     }
 
     if (action === 'return-to-room') {
-      if (startFlowState === 'boardFocus' || startFlowState === 'displayCaseFocus') {
+      if (startFlowState === 'boardFocus') {
         returnToRoomExplore();
       }
 
@@ -459,14 +276,6 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
       return;
     }
 
-    if (action === 'return-to-overview-from-tv') {
-      if (startFlowState === 'roomExplore' && !isRoomFocusTransitionActive()) {
-        focusRoomTarget('overview');
-      }
-
-      return;
-    }
-
     if (action === 'return-to-menu-from-focus') {
       if (startFlowState === 'roomExplore' && !isRoomFocusTransitionActive()) {
         returnToMenuFromFocus();
@@ -475,29 +284,7 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
       return;
     }
 
-    if (action === 'back-from-picture-frame-detail') {
-      if (startFlowState === 'roomExplore' && roomFocusTarget === 'pictureFrameDetail' && !isRoomFocusTransitionActive()) {
-        focusRoomTarget('pictureFrame');
-      }
-
-      return;
-    }
-
     if (startFlowState !== 'boardFocus') {
-      return;
-    }
-
-    if (action === 'piece-asset-set') {
-      const requestedAssetSet = button.dataset.pieceAssetSet;
-
-      if (
-        (requestedAssetSet === 'starter' || requestedAssetSet === 'blockout') &&
-        !isPieceAssetToggleLocked() &&
-        requestedAssetSet !== preview.getSnapshot().assets.pieceAssetSet
-      ) {
-        void loadPieceAssets(requestedAssetSet);
-      }
-
       return;
     }
 
@@ -556,12 +343,6 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
     const hotspotButton = target.closest<HTMLButtonElement>('[data-room-hotspot]');
 
     if (!hotspotButton || hotspotButton.disabled) {
-      // Prüfe auf Bilderrahmen-Klick
-      const frameDiv = target.closest<HTMLElement>('[data-frame-id]');
-      if (frameDiv) {
-        activePictureFrameDetailId = frameDiv.dataset.frameId ?? 'frame0';
-        focusRoomTarget('pictureFrameDetail');
-      }
       return;
     }
 
@@ -574,7 +355,6 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
 
   const handleRoomHotspotPointerLeave = (): void => {
     hoveredRoomHotspot = null;
-    hoveredPictureFrameId = null;
     hoveredCertificateTopicId = null;
   };
 
@@ -583,7 +363,6 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
 
     if (!(target instanceof HTMLElement)) {
       hoveredRoomHotspot = null;
-      hoveredPictureFrameId = null;
       hoveredCertificateTopicId = null;
       return;
     }
@@ -591,9 +370,6 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
     const hotspotButton = target.closest<HTMLButtonElement>('[data-room-hotspot]');
     const hotspotId = hotspotButton?.dataset.roomHotspot;
     hoveredRoomHotspot = isRoomHotspotId(hotspotId) ? hotspotId : null;
-
-    const frameDiv = target.closest<HTMLElement>('[data-frame-id]');
-    hoveredPictureFrameId = frameDiv?.dataset.frameId ?? null;
 
     const certificateButton = target.closest<HTMLElement>('[data-certificate-topic]');
     hoveredCertificateTopicId = certificateButton?.dataset.certificateTopic ?? null;
@@ -624,95 +400,6 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
 
   document.addEventListener('click', handleGlobalLegalClick);
 
-  const syncEmbeddedVideoNav = (): void => {
-    const activeNav = roomHotspotsRoot.querySelector<HTMLElement>(
-      '.comic-screen-overlay .web-embed-nav, .horror-screen-overlay .web-embed-nav'
-    );
-    const activeFrame = roomHotspotsRoot.querySelector<HTMLIFrameElement>(
-      '.comic-screen-overlay iframe, .horror-screen-overlay iframe'
-    );
-
-    if (!activeNav || !activeFrame || window.innerWidth < 768) {
-      if (activeNav) {
-        activeNav.style.left = '';
-        activeNav.style.right = '';
-        activeNav.style.width = '';
-        activeNav.style.maxWidth = '';
-        activeNav.style.transform = '';
-      }
-      return;
-    }
-
-    const applyPosition = (): void => {
-      const frameRect = activeFrame.getBoundingClientRect();
-      let clipLeft = 0;
-      let clipWidth = frameRect.width;
-
-      try {
-        const frameWindow = activeFrame.contentWindow;
-        const frameDocument = activeFrame.contentDocument;
-        if (frameWindow && frameDocument?.documentElement) {
-          const frameStyles = frameWindow.getComputedStyle(frameDocument.documentElement);
-          const leftRaw = (
-            frameStyles.getPropertyValue('--media-frame-left') ||
-            frameStyles.getPropertyValue('--comic-frame-left') ||
-            '0px'
-          ).trim();
-          const widthRaw = (
-            frameStyles.getPropertyValue('--media-frame-width') ||
-            frameStyles.getPropertyValue('--comic-frame-width') ||
-            ''
-          ).trim();
-
-          if (leftRaw.endsWith('px')) {
-            const leftValue = parseFloat(leftRaw);
-            if (Number.isFinite(leftValue)) {
-              clipLeft = leftValue;
-            }
-          }
-
-          if (widthRaw.endsWith('px')) {
-            const widthValue = parseFloat(widthRaw);
-            if (Number.isFinite(widthValue) && widthValue > 0) {
-              clipWidth = widthValue;
-            }
-          }
-        }
-      } catch {
-        // Same-origin iframes expose sizing data; if not available we keep the default nav layout.
-      }
-
-      if (clipWidth >= frameRect.width - 4) {
-        activeNav.style.left = '';
-        activeNav.style.right = '';
-        activeNav.style.width = '';
-        activeNav.style.maxWidth = '';
-        activeNav.style.transform = '';
-        return;
-      }
-
-      const insetX = 56;
-      const alignedWidth = Math.max(0, clipWidth - insetX);
-      activeNav.style.left = `${Math.round(frameRect.left + clipLeft + insetX)}px`;
-      activeNav.style.right = 'auto';
-      activeNav.style.width = `${Math.round(alignedWidth)}px`;
-      activeNav.style.maxWidth = `${Math.round(alignedWidth)}px`;
-      activeNav.style.transform = 'none';
-    };
-
-    if (activeFrame.dataset.navSyncBound !== '1') {
-      activeFrame.dataset.navSyncBound = '1';
-      activeFrame.addEventListener('load', () => {
-        window.requestAnimationFrame(applyPosition);
-        window.setTimeout(applyPosition, 120);
-        window.setTimeout(applyPosition, 320);
-      });
-    }
-
-    window.requestAnimationFrame(applyPosition);
-  };
-
-  window.addEventListener('resize', syncEmbeddedVideoNav);
 
   const syncMonitorPageFrame = (): void => {
     const frame = roomHotspotsRoot.querySelector<HTMLDivElement>('.monitor-page-frame');
@@ -749,12 +436,8 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
   const syncPanels = (): void => {
     if (startFlowState !== 'roomExplore') {
       hoveredRoomHotspot = null;
-      hoveredPictureFrameId = null;
       hoveredCertificateTopicId = null;
     } else {
-      if (roomFocusTarget !== 'pictureFrame') {
-        hoveredPictureFrameId = null;
-      }
       if (roomFocusTarget !== 'overview') {
         hoveredCertificateTopicId = null;
       }
@@ -778,9 +461,8 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
 
     controlsRoot.innerHTML =
       snapshot.startFlow.state === 'boardFocus'
-        ? renderControls({
+          ? renderControls({
             cameraLocked: snapshot.camera.controlsLocked,
-            gameOver: snapshot.gameOver,
             restartAvailable: snapshot.restartAvailable,
             showReturnToRoom: true,
             undoAvailable: snapshot.undoAvailable
@@ -798,7 +480,7 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
     if (activeMonitorPageKey === null || mountedMonitorPageKey !== activeMonitorPageKey) {
       roomHotspotsRoot.innerHTML =
         (snapshot.startFlow.state === 'roomExplore' || snapshot.startFlow.state === 'menu')
-          ? renderRoomHotspots(snapshot, hoveredRoomHotspot, hoveredPictureFrameId, hoveredCertificateTopicId)
+          ? renderRoomHotspots(snapshot, hoveredRoomHotspot, hoveredCertificateTopicId)
           : '';
       syncMonitorPageFrame();
     }
@@ -817,13 +499,6 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
     document.body.classList.toggle('about-embed-active', isAboutEmbed);
     document.body.classList.toggle('portfolio-embed-active', isPortfolioEmbed);
 
-    // Body-Klasse umschalten für comicEmbed/tvSelect/horrorEmbed (Header/Footer ausblenden)
-    const isComicEmbed =
-      !snapshot.startFlow.roomFocusTransitionActive &&
-      (currentTarget === 'comicEmbed' ||
-        (ENABLE_TV_SHOWCASE && (currentTarget === 'tvSelect' || currentTarget === 'horrorEmbed')));
-    document.body.classList.toggle('comic-embed-active', isComicEmbed);
-
     // Legal Overlay ein-/ausblenden wenn legalWall Transition abgeschlossen
     const isAtLegalWall =
       !snapshot.startFlow.roomFocusTransitionActive &&
@@ -840,8 +515,6 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
     document.querySelectorAll<HTMLButtonElement>('[data-legal-tab]').forEach(btn => {
       btn.disabled = !legalFooterActive;
     });
-
-    syncEmbeddedVideoNav();
   };
 
   const preview = createBoardPreviewScene({
@@ -866,7 +539,7 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
   syncSceneFromState(engine.getSnapshot(), { immediate: true });
   syncPresentationState();
   void loadBoardAssets();
-  void loadPieceAssets(DEFAULT_PIECE_ASSET_SET, { showLoadingState: false });
+  void loadPieceAssets();
 
   return {
     advanceTime: (ms: number) => {
@@ -982,8 +655,7 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
         'performance-embed-active',
         'certificate-embed-active',
         'about-embed-active',
-        'portfolio-embed-active',
-        'comic-embed-active'
+        'portfolio-embed-active'
       );
       preview.dispose();
       root.innerHTML = '';
@@ -1002,10 +674,6 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
     const engineSnapshot = engine.getSnapshot();
 
     return {
-      assetLoading: {
-        pendingPieceAssetSet: pieceAssetSetLoading ? pendingPieceAssetSet : null,
-        pieces: pieceAssetSetLoading
-      },
       ...renderSnapshot,
       capturedPieces: engineSnapshot.capturedPieces,
       checkedKingSquare: engineSnapshot.checkedKingSquare,
@@ -1024,14 +692,11 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
       },
       startFlow: {
         activeCertificateTopicId,
-        activePictureFrameDetailId,
-        activeTvSelection,
         aboutEmbedReady: monitorPageReadyTarget === 'aboutEmbed',
         certificateEmbedReady: monitorPageReadyTarget === 'certificateEmbed',
         currentRoomFocusTarget: startFlowState === 'menu' ? null : roomFocusTarget,
         gameplayInteractionEnabled: isGameplayInteractionEnabled(),
         hoveredRoomHotspot,
-        introTransitionActive: startFlowState === 'introTransition',
         performanceEmbedReady: monitorPageReadyTarget === 'performanceEmbed',
         portfolioEmbedReady: monitorPageReadyTarget === 'portfolioEmbed',
         roomFocusTransitionActive: isRoomFocusTransitionActive(),
@@ -1140,22 +805,11 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
     }
   }
 
-  async function loadPieceAssets(
-    nextPieceAssetSet: PieceAssetSet,
-    options: { showLoadingState?: boolean } = {}
-  ): Promise<void> {
-    const requestId = ++pieceAssetRequestId;
-    pendingPieceAssetSet = nextPieceAssetSet;
-    pieceAssetSetLoading = options.showLoadingState ?? true;
-    syncPanels();
-
+  async function loadPieceAssets(): Promise<void> {
     try {
-      const assets = await loadPieceVisualAssets(
-        nextPieceAssetSet,
-        progress => reportInitialLoadProgress('pieces', progress)
-      );
+      const assets = await loadPieceVisualAssets(progress => reportInitialLoadProgress('pieces', progress));
 
-      if (isDisposed || requestId !== pieceAssetRequestId) {
+      if (isDisposed) {
         return;
       }
 
@@ -1163,12 +817,9 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
     } catch {
       // Figuren-Asset-Laden ist optional; bestehende GLBs oder Platzhalter bleiben aktiv bei Fehler.
     } finally {
-      if (!isDisposed && requestId === pieceAssetRequestId) {
-        pieceAssetSetLoading = false;
-        pendingPieceAssetSet = null;
+      if (!isDisposed) {
         reportInitialLoadProgress('pieces', 1);
         resolvePiecesLoaded();
-        syncPanels();
       }
     }
   }
@@ -1180,10 +831,8 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
 
   function beginStartFlowTransition(): void {
     resetMonitorPageReveal();
-    // Überspringe introTransition — die Menü-Kamera zeigt bereits die Übersicht,
-    // also landen wir direkt in roomExplore in der Übersicht-Position ohne
-    // Kamera-Bewegung. Der introTransition-Status und advanceStartFlow-Pfad
-    // werden aus Rückwärts-Compat behalten aber werden hier nicht mehr betreten.
+    // Menü und Übersicht teilen dieselbe Kamerapose; der Raum kann deshalb
+    // unmittelbar ohne zusätzliche Zwischenanimation geöffnet werden.
     startFlowState = 'roomExplore';
     hoveredRoomHotspot = null;
     roomFocusFromTarget = 'overview';
@@ -1194,7 +843,6 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
   }
 
   function beginStartFlowTransitionToTarget(target: Exclude<RoomFocusTargetId, 'overview'>): void {
-    const publicTarget = normalizePublicRoomFocusTarget(target) as Exclude<RoomFocusTargetId, 'overview'>;
     resetMonitorPageReveal();
 
     // Animiere direkt von Übersicht (= Menü-Kamera) zum gegebenen Ziel ohne
@@ -1204,7 +852,7 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
     startFlowState = 'roomExplore';
     hoveredRoomHotspot = null;
     roomFocusFromTarget = 'overview';
-    roomFocusTarget = publicTarget;
+    roomFocusTarget = target;
     roomFocusElapsedMs = 0;
     syncStartFlowToPreview();
     ensureStartFlowLoop();
@@ -1215,7 +863,6 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
     // Menü-Ka mera passt zur Übersicht-Position, deshalb kein sichtbarer Sprung.
     startFlowState = 'menu';
     hoveredRoomHotspot = null;
-    hoveredPictureFrameId = null;
     hoveredCertificateTopicId = null;
     roomFocusFromTarget = 'overview';
     roomFocusTarget = 'overview';
@@ -1233,26 +880,6 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
   }
 
   function advanceStartFlow(ms: number): void {
-    if (startFlowState === 'introTransition') {
-      startFlowElapsedMs = Math.min(startFlowElapsedMs + Math.max(ms, 0), START_FLOW_INTRO_DURATION_MS);
-
-      if (startFlowElapsedMs >= START_FLOW_INTRO_DURATION_MS) {
-        startFlowElapsedMs = START_FLOW_INTRO_DURATION_MS;
-        startFlowState = 'roomExplore';
-        hoveredRoomHotspot = null;
-        roomFocusFromTarget = 'overview';
-        roomFocusTarget = 'overview';
-        roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
-        resetMonitorPageReveal();
-        syncStartFlowToPreview();
-        stopStartFlowLoop();
-        return;
-      }
-
-      syncStartFlowToPreview();
-      return;
-    }
-
     const safeMs = Math.max(ms, 0);
 
     if (isRoomFocusTransitionActive()) {
@@ -1410,14 +1037,7 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
       focusProgress: isRoomFocusTransitionActive() ? roomFocusElapsedMs / ROOM_FOCUS_TRANSITION_DURATION_MS : 1,
       focusTarget: roomFocusTarget,
       mode: startFlowState,
-      pendingMenuReturn,
-      pictureFrameDetailId: activePictureFrameDetailId,
-      progress:
-        startFlowState === 'introTransition'
-          ? startFlowElapsedMs / START_FLOW_INTRO_DURATION_MS
-          : startFlowState === 'boardFocus' || startFlowState === 'roomExplore'
-            ? 1
-            : 0
+      pendingMenuReturn
     });
   }
 
@@ -1426,20 +1046,18 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
   }
 
   function focusRoomTarget(nextTarget: RoomFocusTargetId): void {
-    const publicTarget = normalizePublicRoomFocusTarget(nextTarget);
-
     if (
       startFlowState !== 'roomExplore' ||
       isRoomFocusTransitionActive() ||
       getMonitorPageSettleTarget() !== null ||
-      publicTarget === roomFocusTarget
+      nextTarget === roomFocusTarget
     ) {
       return;
     }
 
     resetMonitorPageReveal();
     roomFocusFromTarget = roomFocusTarget;
-    roomFocusTarget = publicTarget;
+    roomFocusTarget = nextTarget;
     roomFocusElapsedMs = 0;
     syncStartFlowToPreview();
     ensureStartFlowLoop();
@@ -1454,26 +1072,12 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
     stopStartFlowLoop();
   }
 
-  function enterDisplayCaseFocus(): void {
-    resetMonitorPageReveal();
-    startFlowState = 'displayCaseFocus';
-    hoveredRoomHotspot = null;
-    roomFocusElapsedMs = ROOM_FOCUS_TRANSITION_DURATION_MS;
-    syncStartFlowToPreview();
-    stopStartFlowLoop();
-  }
-
   function returnToRoomExplore(): void {
     resetMonitorPageReveal();
-    // Leite Kamera-Ursprung für Rückkehr-Bewegung von welchem
-    // Fokus-Modus gerade aktiv ist. Szene getRoomFocusTargetPreset() löst
-    // 'board' zur Live-boardCameraControls-Position und 'displayCase' zur
-    // festen displayCase-Preset auf — deshalb existierender lerpCameraPreset-Pfad
-    // handhabt volle Transition ohne neuen Kamera-Code.
+    // Beim Verlassen des Bretts beginnt die Rückfahrt an der aktuellen
+    // Board-Kamerapose; ansonsten am zuletzt fokussierten Raumziel.
     const fromTarget: RoomFocusTargetId =
-      startFlowState === 'boardFocus'       ? 'board'       :
-      startFlowState === 'displayCaseFocus' ? 'displayCase' :
-      roomFocusTarget; // wenn bereits in roomExplore, starten vom aktuellen Ziel
+      startFlowState === 'boardFocus' ? 'board' : roomFocusTarget;
 
     startFlowState = 'roomExplore';
     hoveredRoomHotspot = null;
@@ -1507,7 +1111,6 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
 
   function isStartFlowAnimationActive(): boolean {
     return (
-      startFlowState === 'introTransition' ||
       isRoomFocusTransitionActive() ||
       getMonitorPageSettleTarget() !== null
     );
@@ -1553,7 +1156,6 @@ const ROOM_HOTSPOT_SUBTITLES: Record<string, string> = {
 function renderRoomHotspots(
   snapshot: GameSnapshot,
   hoveredRoomHotspot: RoomFocusTargetId | null,
-  hoveredPictureFrameId: string | null,
   hoveredCertificateTopicId: string | null
 ): string {
   const isRoomExplore = snapshot.startFlow.state === 'roomExplore';
@@ -1703,8 +1305,7 @@ function renderRoomHotspots(
       : '';
 
   // ── Leistungsnachweise im linken Monitor ─────────────────────────────
-  // Der neue öffentliche Ablauf ist vom alten Bilderrahmen-/Dokumentpfad
-  // getrennt. Das iframe erscheint erst nach Abschluss der Kamerafahrt.
+  // Das iframe erscheint erst nach Abschluss der Kamerafahrt.
   const performanceEmbedOverlay =
     snapshot.startFlow.performanceEmbedReady &&
     snapshot.startFlow.currentRoomFocusTarget === 'performanceEmbed'
@@ -1741,8 +1342,7 @@ function renderRoomHotspots(
       : '';
 
   // ── Über mich im rechten Monitor ────────────────────────────────────
-  // Der öffentliche Pfad ist vollständig vom optionalen Comic-/Video-
-  // Showcase getrennt und verwendet dieselbe Ankunftsphase wie links.
+  // Der rechte Monitor verwendet dieselbe Ankunftsphase wie links.
   const aboutEmbedOverlay =
     snapshot.startFlow.aboutEmbedReady &&
     snapshot.startFlow.currentRoomFocusTarget === 'aboutEmbed'
@@ -1778,69 +1378,8 @@ function renderRoomHotspots(
          </div>`
       : '';
 
-  // ── Bilderrahmen-Glanz-Ringe (nur pictureFrame Fokus) ────────────────
-  const pictureFrameGlows =
-    !snapshot.startFlow.roomFocusTransitionActive &&
-    snapshot.startFlow.currentRoomFocusTarget === 'pictureFrame'
-      ? snapshot.roomExplore.pictureFrames
-          .filter((f) => f.isVisible)
-          .map(
-            (f, index) => `
-            <button
-              class="picture-frame-hotspot ${hoveredPictureFrameId === f.id ? 'picture-frame-hotspot--hovered' : ''}"
-              data-frame-id="${f.id}"
-              type="button"
-              aria-label="Semester ${index + 1} öffnen"
-              style="left: ${f.screenX}px; top: ${f.screenY}px;"
-            >
-              <span>Semester ${index + 1}</span>
-            </button>
-          `
-          )
-          .join('')
-      : '';
-
-  // ── Bilderrahmen-Detail-Platzhalter (nur pictureFrameDetail Fokus) ──────
-  // Ordnet Rahmen-IDs zu Semester-Nummern (oben-links → unten-rechts Reihenfolge).
-  const FRAME_SEMESTER: Record<string, number> = {
-    frame0: 1, frame2: 2, frame3: 3, frame4: 4,
-    frame1: 5, frame5: 6, frame6: 7, frame7: 8
-  };
-  const FRAME_DOCUMENTS: Record<string, { alt: string; src: string; title: string }> = {
-    frame0: {
-      alt: 'Notenspiegel Semester 1',
-      src: '/assets/leistungsnachweise/notenspiegel-semester-1.png',
-      title: 'Notenspiegel Semester 1'
-    }
-  };
-  const pictureFrameDetailOverlay =
-    !snapshot.startFlow.roomFocusTransitionActive &&
-    snapshot.startFlow.currentRoomFocusTarget === 'pictureFrameDetail'
-      ? (() => {
-          const semester = FRAME_SEMESTER[snapshot.startFlow.activePictureFrameDetailId] ?? '?';
-          const document = FRAME_DOCUMENTS[snapshot.startFlow.activePictureFrameDetailId];
-          if (document) {
-            return `
-            <div class="document-viewer-overlay">
-              <div class="document-viewer-shell" role="dialog" aria-label="${document.title}">
-                <img class="document-viewer-image" src="${document.src}" alt="${document.alt}" loading="eager" decoding="async" />
-              </div>
-            </div>`;
-          }
-          return `
-            <div class="frame-detail-overlay">
-              <p class="frame-detail-semester">Semester ${semester}</p>
-              <p class="frame-detail-placeholder">
-                Hier folgen Leistungsnachweise sobald<br>
-                sie für das jeweilige Semester vorhanden sind.
-              </p>
-            </div>`;
-        })()
-      : '';
-
   // ── Portfolio im mittleren Monitor ──────────────────────────────────
-  // Der öffentliche Platzhalterpfad bleibt von der bisherigen React-App
-  // getrennt und verwendet dieselbe Ankunftsphase wie die anderen Monitore.
+  // Die Portfolioseite verwendet dieselbe Ankunftsphase wie die anderen Monitore.
   const portfolioEmbedOverlay =
     snapshot.startFlow.portfolioEmbedReady &&
     snapshot.startFlow.currentRoomFocusTarget === 'portfolioEmbed'
@@ -1866,145 +1405,12 @@ function renderRoomHotspots(
                Portfolio wird ge&ouml;ffnet&nbsp;&hellip;
              </div>
              <iframe
-                src="/portfolio-platzhalter/index.html"
+                src="/portfolio/index.html"
                 title="Portfolio"
                 loading="eager"
                 referrerpolicy="no-referrer"
                 allow="accelerometer 'none'; camera 'none'; display-capture 'none'; encrypted-media 'none'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; microphone 'none'; midi 'none'; payment 'none'; picture-in-picture 'none'; publickey-credentials-get 'none'; usb 'none'"
              ></iframe>
-           </div>
-         </div>`
-      : '';
-
-  // TV-Auswahl-Overlay (tvSelect Fokus)
-  const tvSelectOverlay =
-    ENABLE_TV_SHOWCASE &&
-    !snapshot.startFlow.roomFocusTransitionActive &&
-    snapshot.startFlow.currentRoomFocusTarget === 'tvSelect'
-      ? (() => {
-          const tvPrograms: Record<TvSelectionId, {
-            activateControl: string;
-            ariaLabel: string;
-            channel: string;
-            cta: string;
-            meta: string;
-            playControl: string;
-            posterSrc: string;
-            title: string;
-          }> = {
-            comic: {
-              activateControl: 'activate-comic-from-tv',
-              ariaLabel: 'Ueber mich abspielen',
-              channel: 'CH 01 - Persoenlich',
-              cta: 'Jetzt ansehen',
-              meta: 'Comic-Flow - 10 Szenen - ca. 3 Min.',
-              playControl: 'select-comic-from-tv',
-              posterSrc: '/comic-film/cover.webp',
-              title: 'Ueber mich'
-            },
-            horror: {
-              activateControl: 'activate-horror-from-tv',
-              ariaLabel: 'KI-Trailer abspielen',
-              channel: 'CH 02 - Genre',
-              cta: 'Trailer starten',
-              meta: 'Horror-Trailer - 1:36 Min. - Cinematic',
-              playControl: 'select-horror-from-tv',
-              posterSrc: '/horror-film/cover.webp',
-              title: 'KI-Trailer'
-            }
-          };
-
-          const activeId = snapshot.startFlow.activeTvSelection;
-          const standbyId: TvSelectionId = activeId === 'comic' ? 'horror' : 'comic';
-          const activeProgram = tvPrograms[activeId];
-          const standbyProgram = tvPrograms[standbyId];
-          const renderTvCard = (program: typeof activeProgram, state: 'active' | 'standby'): string => {
-            const isActive = state === 'active';
-            return `
-              <button
-                class="tv-select-card tv-select-card--${state}"
-                data-control="${isActive ? program.playControl : program.activateControl}"
-                type="button"
-                aria-label="${isActive ? program.ariaLabel : program.title + ' als aktiven Sender waehlen'}"
-                ${isActive ? 'aria-current="true"' : ''}
-              >
-                <span class="tv-select-card__poster" aria-hidden="true">
-                  <img src="${program.posterSrc}" alt="" loading="eager" decoding="async">
-                </span>
-                <span class="tv-select-card__body">
-                  <span class="tv-select-card__channel">${program.channel}</span>
-                  <span class="tv-select-card__title">${program.title}</span>
-                  <span class="tv-select-card__meta">${program.meta}</span>
-                  <span class="tv-select-card__cta">${isActive ? program.cta : 'Zum Kanal'}</span>
-                </span>
-              </button>`;
-          };
-
-          return `<div class="tv-select-overlay">
-            <div class="mobile-landscape-lock" role="status" aria-live="polite">
-              <div class="mobile-landscape-lock__message">In Landscape Ansicht nicht verf&uuml;gbar</div>
-            </div>
-            <div class="tv-select-shell">
-              <div class="tv-select-header">
-                <h2 class="tv-select-title">Heute im Showcase</h2>
-              </div>
-              <div class="tv-select-track" aria-label="Programmauswahl">
-                <div class="tv-select-carousel">
-                  ${renderTvCard(activeProgram, 'active')}
-                  ${renderTvCard(standbyProgram, 'standby')}
-                </div>
-              </div>
-            </div>
-            <div class="web-embed-nav">
-              <button class="web-embed-nav__btn" data-control="back-from-tv-select" type="button">Zur&uuml;ck</button>
-              <button class="web-embed-nav__btn" data-control="return-to-menu-from-focus" type="button">Zum Hauptmen&uuml;</button>
-            </div>
-          </div>`;
-        })()
-      : '';
-
-  const comicEmbedNavButtons = ENABLE_TV_SHOWCASE
-    ? `<button class="web-embed-nav__btn" data-control="back-from-comic-embed" type="button">Zurück</button>
-       <button class="web-embed-nav__btn" data-control="return-to-overview-from-tv" type="button">Zur Übersicht</button>
-       <button class="web-embed-nav__btn" data-control="return-to-menu-from-focus" type="button">Zum Hauptmenü</button>`
-    : `<button class="web-embed-nav__btn" data-control="back-from-comic-embed" type="button">Zurück</button>
-       <button class="web-embed-nav__btn" data-control="return-to-menu-from-focus" type="button">Zum Hauptmenü</button>`;
-
-  const comicEmbedOverlay =
-    ENABLE_TV_SHOWCASE &&
-    !snapshot.startFlow.roomFocusTransitionActive &&
-    snapshot.startFlow.currentRoomFocusTarget === 'comicEmbed'
-      ? `<div class="comic-screen-overlay">
-           <iframe
-             src="/comic-film/index.html"
-             title="Über mich"
-             referrerpolicy="no-referrer"
-             allow="fullscreen; accelerometer 'none'; camera 'none'; display-capture 'none'; encrypted-media 'none'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; microphone 'none'; midi 'none'; payment 'none'; picture-in-picture 'none'; publickey-credentials-get 'none'; usb 'none'"
-             allowfullscreen
-           ></iframe>
-           <div class="web-embed-nav">
-             ${comicEmbedNavButtons}
-           </div>
-         </div>`
-      : '';
-
-  // ── Horror-Embed-Overlay (nur horrorEmbed Fokus) ────────────────────────
-  const horrorEmbedOverlay =
-    ENABLE_TV_SHOWCASE &&
-    !snapshot.startFlow.roomFocusTransitionActive &&
-    snapshot.startFlow.currentRoomFocusTarget === 'horrorEmbed'
-      ? `<div class="horror-screen-overlay">
-           <iframe
-             src="/horror-film/index.html"
-             title="KI-Trailer"
-             referrerpolicy="no-referrer"
-             allow="autoplay; fullscreen; accelerometer 'none'; camera 'none'; display-capture 'none'; encrypted-media 'none'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; microphone 'none'; midi 'none'; payment 'none'; picture-in-picture 'none'; publickey-credentials-get 'none'; usb 'none'"
-             allowfullscreen
-           ></iframe>
-           <div class="web-embed-nav">
-             <button class="web-embed-nav__btn" data-control="back-from-horror-embed" type="button">Zurück</button>
-             <button class="web-embed-nav__btn" data-control="return-to-overview-from-tv" type="button">Zur Übersicht</button>
-             <button class="web-embed-nav__btn" data-control="return-to-menu-from-focus" type="button">Zum Hauptmenü</button>
            </div>
          </div>`
       : '';
@@ -2018,11 +1424,6 @@ function renderRoomHotspots(
       ${performanceEmbedOverlay}
       ${aboutEmbedOverlay}
       ${portfolioEmbedOverlay}
-      ${pictureFrameGlows}
-      ${pictureFrameDetailOverlay}
-      ${tvSelectOverlay}
-      ${comicEmbedOverlay}
-      ${horrorEmbedOverlay}
       ${infoPlate}
     </div>
   `;
@@ -2033,20 +1434,6 @@ function renderStartFlowControls(
   currentRoomFocusTarget: RoomFocusTargetId | null,
   roomFocusTransitionActive: boolean
 ): string {
-  // ── Vitrine-Fokus: einzelner Zurück-Button ──────────────────────────────
-  if (startFlowState === 'displayCaseFocus') {
-    return `
-      <div class="control-group">
-        <p class="control-label">Vitrine</p>
-        <div class="control-row">
-          <button class="control-button control-button--secondary" data-control="return-to-room" type="button">
-            Zurück zum Raum
-          </button>
-        </div>
-      </div>
-    `;
-  }
-
   // ── Raum erkunden: nur Zur Übersicht + kontextuelle Aktion ────────────────
   if (startFlowState === 'roomExplore') {
     // Vollbild-Embeds rendern ihre Navigation direkt im jeweiligen Overlay.
@@ -2062,11 +1449,6 @@ function renderStartFlowControls(
       return '';
     }
 
-    // comicEmbed/tvSelect/horrorEmbed: Buttons werden im jeweiligen Overlay gerendert
-    if (!roomFocusTransitionActive && (currentRoomFocusTarget === 'comicEmbed' || currentRoomFocusTarget === 'comicScreen' || currentRoomFocusTarget === 'tvSelect' || currentRoomFocusTarget === 'horrorEmbed')) {
-      return '';
-    }
-
     // legalWall: Impressum / Datenschutz — Zur Übersicht + Zum Hauptmenü
     if (!roomFocusTransitionActive && currentRoomFocusTarget === 'legalWall') {
       return `
@@ -2078,37 +1460,6 @@ function renderStartFlowControls(
             </button>
             <button class="control-button control-button--secondary" data-control="legal-to-menu" type="button">
               Zum Hauptmenü
-            </button>
-          </div>
-        </div>
-      `;
-    }
-
-    // pictureFrame: Überblick aller Rahmen — Zurück-zum-Menü anbieten
-    if (!roomFocusTransitionActive && currentRoomFocusTarget === 'pictureFrame') {
-      return `
-        <div class="control-group">
-          <p class="control-label">Leistungsnachweise</p>
-          <div class="control-row">
-            <button class="control-button control-button--secondary" data-control="room-focus" data-room-focus-target="overview" type="button">
-              Zur Übersicht
-            </button>
-            <button class="control-button control-button--secondary" data-control="return-to-menu-from-focus" type="button">
-              Zum Hauptmenü
-            </button>
-          </div>
-        </div>
-      `;
-    }
-
-    // pictureFrameDetail: nur ein Zurück-zu-Bilderrahmen-Button
-    if (!roomFocusTransitionActive && currentRoomFocusTarget === 'pictureFrameDetail') {
-      return `
-        <div class="control-group">
-          <p class="control-label">Leistungsnachweise</p>
-          <div class="control-row">
-            <button class="control-button control-button--secondary" data-control="back-from-picture-frame-detail" type="button">
-              Zurück
             </button>
           </div>
         </div>
@@ -2201,9 +1552,9 @@ function renderStartFlowControls(
 }
 
 function isRoomFocusTargetId(value: string | undefined): value is RoomFocusTargetId {
-  return value === 'aboutEmbed' || value === 'certificateEmbed' || value === 'portfolioEmbed' || value === 'board' || value === 'comicEmbed' || value === 'comicScreen' || value === 'displayCase' || value === 'horrorEmbed' || value === 'legalWall' || value === 'overview' || value === 'performanceEmbed' || value === 'tvSelect' || value === 'workbench' || value === 'pictureFrame' || value === 'pictureFrameDetail';
+  return value === 'aboutEmbed' || value === 'board' || value === 'certificateEmbed' || value === 'legalWall' || value === 'overview' || value === 'performanceEmbed' || value === 'portfolioEmbed';
 }
 
 function isRoomHotspotId(value: string | undefined): value is Exclude<RoomFocusTargetId, 'overview'> {
-  return value === 'aboutEmbed' || value === 'portfolioEmbed' || value === 'board' || value === 'comicEmbed' || value === 'comicScreen' || value === 'displayCase' || value === 'horrorEmbed' || value === 'performanceEmbed' || value === 'pictureFrame' || value === 'tvSelect' || value === 'workbench';
+  return value === 'aboutEmbed' || value === 'board' || value === 'performanceEmbed' || value === 'portfolioEmbed';
 }

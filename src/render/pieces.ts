@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { squareToWorld } from '../chess/mapping';
 import type { BoardSquare, ChessPieceColor, ChessPieceState, ChessPieceType } from '../chess/state';
-import type { CombatFeedbackSnapshot } from './combat-feedback';
 import {
   createCombatPresentationController,
   type CombatPresentationBindings,
@@ -83,21 +82,7 @@ export interface PiecePresentationDebugSnapshot {
 
 export interface PieceLayerAnimationSnapshot extends PieceAnimationSnapshot {
   combat: CombatPresentationSnapshot;
-  feedback: CombatFeedbackSnapshot;
 }
-
-const PIECE_ONLY_COMBAT_FEEDBACK: Readonly<CombatFeedbackSnapshot> = {
-  active: false,
-  attackerFlavorLabel: null,
-  corePulseActive: false,
-  impactPulseActive: false,
-  phase: null,
-  progress: 0,
-  servoAccentActive: false,
-  shutdownActive: false,
-  sparkActive: false,
-  victimFlavorLabel: null
-};
 
 export interface ChessPieceLayer {
   clearCombatPresentation: (options?: { removeVictim?: boolean; snapToFinal?: boolean }) => void;
@@ -230,7 +215,6 @@ export function createPieceLayer(initialPieces: ChessPieceState[] = []): ChessPi
         captureDurationMs: getCaptureAnimationDurationMs(),
         combat: combatSnapshot,
         durationMs: moveSnapshot.durationMs,
-        feedback: PIECE_ONLY_COMBAT_FEEDBACK,
         isAnimating: moveSnapshot.isAnimating || capturePieceIds.length > 0 || combatSnapshot.active
       };
     },

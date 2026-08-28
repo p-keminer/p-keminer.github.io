@@ -1,52 +1,47 @@
-# Portfolio - Philip Keminer
+# Portfolio – Philip Keminer
 
 [![Live](https://img.shields.io/badge/Live-p--keminer.github.io-0d1117?style=flat&logo=github)](https://p-keminer.github.io)
 
-Eine interaktive 3D-Portfolio-Website. Kein klassisches Layout - stattdessen ein begehbarer Arbeitsraum im Browser mit kinematischen Kamerafahrten, einem spielbaren Schachspiel und eigenstaendigen Monitorseiten fuer Portfolio, Leistungsnachweise und den kuenftigen Ueber-mich-Bereich.
+Eine interaktive 3D-Portfolio-Website: Ein modellierter Arbeitsraum verbindet
+Projektübersicht, Profil, Leistungsnachweise und Zertifikate mit einem
+spielbaren Schachbrett.
 
 ---
 
-## Tech Stack
+## Funktionen
 
-**3D-Shell** - TypeScript · Three.js · chess.js · Vite · Blender  
-**Monitorseiten** - HTML · CSS · JavaScript · responsive iframe-Einbettungen
+- **Interaktiver 3D-Raum** – Kamerafahrten, freie Erkundung und Hotspots führen
+  direkt zu den einzelnen Bereichen.
+- **Spielbares Schach** – Lokales Zwei-Spieler-Spiel mit vollständiger
+  Regelvalidierung, animierten Schlagzügen und synthetischen Audioeffekten.
+- **Portfolio-Monitor** – Kompakte Übersicht der veröffentlichten Projekte.
+- **Über-mich-Monitor** – Profil, Werdegang und technische Schwerpunkte.
+- **Leistungsnachweise** – Semesterweise Ansicht der hinterlegten Dokumente.
+- **Zertifikatsbereich** – Thematisch geordnete Zertifikate und Kursnachweise.
+- **Adaptive Darstellung** – Die Qualitätsstufen `high`, `medium` und `low`
+  passen Schatten, Bloom und Antialiasing an das Gerät an.
+- **Responsive Bedienung** – Unterstützung für Maus, Tastatur und Touch-Geräte.
 
----
+## Technik
 
-## Features
-
-- **Begehbarer 3D-Raum** - Blender-modellierter Cyberpunk-Arbeitsraum mit freier Kamerasteuerung und 3D-Hotspot-Navigation
-- **Spielbares Schachspiel** - Lokales Zwei-Spieler-Schach mit vollstaendiger Regelvalidierung, Kampfsequenzen bei Schlagzuegen und prozeduralem Audio
-- **Portfolio im Monitor** - Eigene videofreie Platzhalterseite mit direkter Kamerafahrt und vorbereitetem Projektraster
-- **Leistungsnachweise im Monitor** - Eigene eingebettete Semesteransicht mit direkter Kamerafahrt, Platzhaltern und Vor-/Zurueck-Navigation
-- **Ueber mich im Monitor** - Eigene videofreie Platzhalterseite mit direkter Fahrt in den rechten Monitor und Ruecknavigation zum Raum oder Hauptmenue
-- **Zertifikatsvitrine** - Praesentation von Zertifikaten und Achievements
-- **Custom Render-Pipeline** - HDR-Bloom (eigene GLSL-Shader), Schatten, Neon-Beleuchtung, ACES Tonemapping
-- **Adaptive Performance** - Drei Device-Tiers (high/mid/low) mit angepassten Schatten, Bloom und Antialias
-- **Responsive** - Touch-Steuerung, Landscape-Lock auf Mobile, Tablet-Support
-
----
-
-## Projektstruktur
+`TypeScript` · `Three.js` · `chess.js` · `Vite` · `Blender` · `HTML` · `CSS`
 
 ```text
 src/
-  app/        Orchestrierung, Start Flow, Combat-State-Machine
-  chess/      chess.js-Wrapper, Zustandstypen, Board-Mapping
-  render/     Three.js-Szene, Bloom, Kamera, Figuren, Licht
-  ui/         Steuerleiste, HUD, Overlays
-  audio/      Web Audio API - synthetische Combat-Cues
-  styles/     Globales CSS
+  app/       Anwendungsablauf und Zustandssteuerung
+  audio/     Synthetische Audioeffekte
+  chess/     Schachlogik und Board-Mapping
+  render/    Three.js-Szene, Modelle, Licht und Kamera
+  styles/    Globale Oberflächenstile
+  ui/        Bedienelemente und rechtliche Hinweise
 
-public/portfolio-platzhalter/ Eigenstaendige Portfolio-Projektseite
-public/comic-film/   Nicht verlinkter Legacy-Comic mit Szenenlogik, Timeline und Overlays
-public/leistungsnachweise/ Eigenstaendige Semester- und Dokumentansicht
-public/ueber-mich/   Eigenstaendige videofreie Platzhalterseite
-public/horror-film/  Nicht verlinkter Legacy-Trailer mit eigenen Controls
-public/models/       GLB-Assets (Raum, Brett, Figuren)
+public/
+  portfolio/            Projektübersicht
+  ueber-mich/           Profilbereich
+  leistungsnachweise/   Semester- und Dokumentansicht
+  zertifikate/          Zertifikatsbereich
+  models/               GLB-Modelle und Texturen
 ```
-
----
 
 ## Lokal starten
 
@@ -57,10 +52,8 @@ npm install
 npm run dev
 ```
 
-Gesamtes Projekt vor dem Deploy pruefen:
+Produktionsbuild einschließlich der statischen Sicherheitsprüfung:
 
 ```bash
 npm run build
 ```
-
----
