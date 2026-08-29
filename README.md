@@ -22,9 +22,17 @@ Projektseiten und spielbarem Schachbrett.
 
 `TypeScript` · `Three.js` · `chess.js` · `Vite` · `Blender`
 
-[`Live-Seite`](https://p-keminer.github.io/) [`Übersicht`](#de-uebersicht)
-[`Bereiche`](#de-bereiche) [`Technik`](#de-technik)
-[`Lokaler Start`](#de-lokaler-start) [`Build`](#de-build) [`Lizenz`](#de-lizenz)
+</div>
+
+<div align="center">
+
+[![Live-Seite](https://img.shields.io/badge/Live--Seite-24292f?style=for-the-badge)](https://p-keminer.github.io/)
+[![Übersicht](https://img.shields.io/badge/%C3%9Cbersicht-24292f?style=for-the-badge)](#de-uebersicht)
+[![Bereiche](https://img.shields.io/badge/Bereiche-24292f?style=for-the-badge)](#de-bereiche)
+[![Technik](https://img.shields.io/badge/Technik-24292f?style=for-the-badge)](#de-technik)
+[![Lokaler Start](https://img.shields.io/badge/Lokaler_Start-24292f?style=for-the-badge)](#de-lokaler-start)
+[![Build](https://img.shields.io/badge/Build-24292f?style=for-the-badge)](#de-build)
+[![Lizenz](https://img.shields.io/badge/Lizenz-24292f?style=for-the-badge)](#de-lizenz)
 
 </div>
 
@@ -119,7 +127,7 @@ Lizenzen.
 
 <div align="center">
 
-[`Nach oben`](#top)
+[![Nach oben](https://img.shields.io/badge/⬆_Nach_oben-24292f?style=for-the-badge)](#top)
 
 </div>
 
@@ -138,9 +146,17 @@ project pages, and a playable chessboard.
 
 `TypeScript` · `Three.js` · `chess.js` · `Vite` · `Blender`
 
-[`Live site`](https://p-keminer.github.io/) [`Overview`](#en-overview)
-[`Sections`](#en-sections) [`Technology`](#en-technology)
-[`Local setup`](#en-local-setup) [`Build`](#en-build) [`License`](#en-license)
+</div>
+
+<div align="center">
+
+[![Live site](https://img.shields.io/badge/Live_site-24292f?style=for-the-badge)](https://p-keminer.github.io/)
+[![Overview](https://img.shields.io/badge/Overview-24292f?style=for-the-badge)](#en-overview)
+[![Sections](https://img.shields.io/badge/Sections-24292f?style=for-the-badge)](#en-sections)
+[![Technology](https://img.shields.io/badge/Technology-24292f?style=for-the-badge)](#en-technology)
+[![Local setup](https://img.shields.io/badge/Local_setup-24292f?style=for-the-badge)](#en-local-setup)
+[![Build](https://img.shields.io/badge/Build-24292f?style=for-the-badge)](#en-build)
+[![License](https://img.shields.io/badge/License-24292f?style=for-the-badge)](#en-license)
 
 </div>
 
@@ -235,6 +251,6 @@ licenses.
 
 <div align="center">
 
-[`Back to top`](#top)
+[![Back to top](https://img.shields.io/badge/⬆_Back_to_top-24292f?style=for-the-badge)](#top)
 
 </div>
