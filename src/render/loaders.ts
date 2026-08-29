@@ -6,12 +6,8 @@ import {
   getStarterPieceSlotPalette
 } from './piece-material-style';
 
-export const BOARD_MODEL_FILE = 'board.glb';
 export const BOARD_CYBER_MODEL_FILE = 'board_cyber.glb';
 export const ROOM_REDESIGN_MODEL_FILE = 'room-redesign.glb';
-export const LEGACY_ROOM_MODEL_FILE = 'room.glb';
-
-const ROOM_MODEL_CANDIDATES = [ROOM_REDESIGN_MODEL_FILE, LEGACY_ROOM_MODEL_FILE] as const;
 
 // ─── Cyber-Board-Ausrichtungskonstanten ──────────────────────────────────────
 // Das Blender-Cyber-Board verwendet SQ=0,50 und GAP=0,012, sodass jeder
@@ -103,23 +99,16 @@ export async function loadRoomAsset(onProgress?: AssetLoadProgressReporter): Pro
   const reportProgress = createMonotonicProgressReporter(onProgress);
   reportProgress(0);
 
-  for (const candidateFile of ROOM_MODEL_CANDIDATES) {
-    try {
-      const room = await loadModel(candidateFile, reportProgress);
-      if (candidateFile === ROOM_REDESIGN_MODEL_FILE) {
-        applyRoomRedesignMaterialOverrides(room);
-      }
-      room.userData.roomAssetFile = candidateFile;
-      reportProgress(1);
-      return room;
-    } catch {
-      // Das Redesign ist das primaere Asset. Der bestehende Raum bleibt als
-      // bewusst nicht-destruktiver Rueckfall erhalten.
-    }
+  try {
+    const room = await loadModel(ROOM_REDESIGN_MODEL_FILE, reportProgress);
+    applyRoomRedesignMaterialOverrides(room);
+    room.userData.roomAssetFile = ROOM_REDESIGN_MODEL_FILE;
+    reportProgress(1);
+    return room;
+  } catch {
+    reportProgress(1);
+    return null;
   }
-
-  reportProgress(1);
-  return null;
 }
 
 export function getBoardAssetMode(boardTemplate: THREE.Group | null): BoardAssetMode {
@@ -140,25 +129,20 @@ export async function loadBoardVisualAsset(onProgress?: AssetLoadProgressReporte
   const reportProgress = createMonotonicProgressReporter(onProgress);
   reportProgress(0);
 
-  // Versuchen Sie zuerst das Cyber-Board; Fallback zum ursprünglichen board.glb, wenn nicht vorhanden.
-  for (const candidateFile of [BOARD_CYBER_MODEL_FILE, BOARD_MODEL_FILE]) {
-    try {
-      const board = prepareBoardTemplate(await loadModel(candidateFile, reportProgress), candidateFile);
-      reportProgress(1);
-      return {
-        board,
-        loadedBoardFile: candidateFile
-      };
-    } catch {
-      // Fehlender oder beschädigter Kandidat — versuchen Sie den nächsten.
-    }
+  try {
+    const board = prepareBoardTemplate(await loadModel(BOARD_CYBER_MODEL_FILE, reportProgress));
+    reportProgress(1);
+    return {
+      board,
+      loadedBoardFile: BOARD_CYBER_MODEL_FILE
+    };
+  } catch {
+    reportProgress(1);
+    return {
+      board: null,
+      loadedBoardFile: null
+    };
   }
-
-  reportProgress(1);
-  return {
-    board: null,
-    loadedBoardFile: null
-  };
 }
 
 export async function loadPieceVisualAssets(
@@ -291,80 +275,78 @@ async function loadModel(
   return root;
 }
 
-function prepareBoardTemplate(root: THREE.Group, sourceFile: string): THREE.Group {
+function prepareBoardTemplate(root: THREE.Group): THREE.Group {
   root.name = 'board-template';
 
-  if (sourceFile === BOARD_CYBER_MODEL_FILE) {
-    // Skalieren Sie das Blender-Asset so, dass sein 0,512-Unit-Quadratschritt
-    // dem 1,0-Unit-Quadratschritt des Spiels entspricht. Nach dieser Transformation
-    // sitzt die Board-Oberfläche bei ungefähr Y ≈ 0,068, was mit dem Fallback-Board-
-    // Platzhalter übereinstimmt (dessen Quadratoberflächenspitzen bei Y ≈ 0,07 liegen).
-    // Es wird keine zusätzliche Y-Verschiebung angewendet, damit die Figuren mit ihren
-    // Basen bei Y = 0 stehen bleiben.
-    root.scale.setScalar(BOARD_CYBER_SCALE);
+  // Skalieren Sie das Blender-Asset so, dass sein 0,512-Unit-Quadratschritt
+  // dem 1,0-Unit-Quadratschritt des Spiels entspricht. Nach dieser Transformation
+  // sitzt die Board-Oberfläche bei ungefähr Y ≈ 0,068, was mit dem prozeduralen
+  // Platzhalter übereinstimmt (dessen Quadratoberflächenspitzen bei Y ≈ 0,07 liegen).
+  // Es wird keine zusätzliche Y-Verschiebung angewendet, damit die Figuren mit ihren
+  // Basen bei Y = 0 stehen bleiben.
+  root.scale.setScalar(BOARD_CYBER_SCALE);
 
-    // Stellen Sie das Emissiv-Glühen wieder her, das die ACESFilmic-Tonabbildung
-    // komprimiert. Materialien mit dem Namen emit_* sind die Cyan-Akzentstreifen,
-    // Eckenstifte und der Energiekern. Das Einstellen von toneMapped=false ermöglicht
-    // das Rendern mit voller HDR-Helligkeit, statt von der Tonkurve in die
-    // Mitte-Grau gezogen zu werden.
-    root.traverse((node) => {
-      if (!(node instanceof THREE.Mesh)) {
-        return;
+  // Stellen Sie das Emissiv-Glühen wieder her, das die ACESFilmic-Tonabbildung
+  // komprimiert. Materialien mit dem Namen emit_* sind die Cyan-Akzentstreifen,
+  // Eckenstifte und der Energiekern. Das Einstellen von toneMapped=false ermöglicht
+  // das Rendern mit voller HDR-Helligkeit, statt von der Tonkurve in die
+  // Mitte-Grau gezogen zu werden.
+  root.traverse((node) => {
+    if (!(node instanceof THREE.Mesh)) {
+      return;
+    }
+
+    const materials = Array.isArray(node.material) ? node.material : [node.material];
+
+    for (const material of materials) {
+      if (!(material instanceof THREE.MeshStandardMaterial)) {
+        continue;
       }
 
-      const materials = Array.isArray(node.material) ? node.material : [node.material];
+      // Cyan-Akzentstreifen, Eckenstifte, Energiekern — verstärken Sie die
+      // Blender-Emissionsstärke, die die ACESFilmic-Tonabbildung komprimieren würde.
+      if (material.name.toLowerCase().startsWith('emit_')) {
+        material.toneMapped = false;
+        material.emissiveIntensity = material.emissiveIntensity > 0
+          ? Math.max(material.emissiveIntensity, 1.0) * 2.0
+          : 3.0;
+      }
 
-      for (const material of materials) {
-        if (!(material instanceof THREE.MeshStandardMaterial)) {
-          continue;
+      // Holografische Projektionskacheln — Blender definiert die Basisfarbe,
+      // Emission und Alpha (sq_light: emit 5,0 alpha 0,52; sq_dark: emit 2,5
+      // alpha 0,28). GLTF trägt alles davon über KHR_materials_emissive_strength
+      // + alphaMode=BLEND. Wir müssen nur die Tonabbildung deaktivieren, damit
+      // die projizierte Lichtfarbe nicht komprimiert wird. depthWrite=false
+      // stellt sicher, dass Hervorhebungsmarkierungen (Hover, Auswahl, Schach)
+      // immer über den halbtransparenten Projektionskacheln sichtbar sind.
+      if (material.name === 'sq_light' || material.name === 'sq_dark') {
+        material.toneMapped = false;
+        material.depthWrite = false;
+        // Fallback-Intensitäten, wenn KHR_materials_emissive_strength nicht vorhanden ist.
+        if (material.emissiveIntensity === 0) {
+          material.emissiveIntensity = material.name === 'sq_light' ? 5.0 : 2.0;
         }
-
-        // Cyan-Akzentstreifen, Eckenstifte, Energiekern — verstärken Sie die
-        // Blender-Emissionsstärke, die die ACESFilmic-Tonabbildung komprimieren würde.
-        if (material.name.toLowerCase().startsWith('emit_')) {
-          material.toneMapped = false;
-          material.emissiveIntensity = material.emissiveIntensity > 0
-            ? Math.max(material.emissiveIntensity, 1.0) * 2.0
-            : 3.0;
-        }
-
-        // Holografische Projektionskacheln — Blender definiert die Basisfarbe,
-        // Emission und Alpha (sq_light: emit 5,0 alpha 0,52; sq_dark: emit 2,5
-        // alpha 0,28). GLTF trägt alles davon über KHR_materials_emissive_strength
-        // + alphaMode=BLEND. Wir müssen nur die Tonabbildung deaktivieren, damit
-        // die projizierte Lichtfarbe nicht komprimiert wird. depthWrite=false
-        // stellt sicher, dass Hervorhebungsmarkierungen (Hover, Auswahl, Schach)
-        // immer über den halbtransparenten Projektionskacheln sichtbar sind.
-        if (material.name === 'sq_light' || material.name === 'sq_dark') {
-          material.toneMapped = false;
-          material.depthWrite = false;
-          // Fallback-Intensitäten, wenn KHR_materials_emissive_strength nicht vorhanden ist.
-          if (material.emissiveIntensity === 0) {
-            material.emissiveIntensity = material.name === 'sq_light' ? 5.0 : 2.0;
-          }
-          // Fallback-Transparenz, wenn alphaMode nicht übertragen wurde.
-          if (!material.transparent) {
-            material.transparent = true;
-            material.opacity = material.name === 'sq_light' ? 0.38 : 0.16;
-          }
-        }
-
-        // Einheitliches Projektionsfeld — die große durchscheinende Ebene zwischen
-        // der physischen Basis und den schwebenden Quadratkacheln. Mit depthWrite=false
-        // gekennzeichnet, damit es die Kacheln oder Hervorhebungsmarkierungen darüber
-        // niemals verdeckt.
-        if (material.name === 'proj_field_mat') {
-          material.toneMapped = false;
-          material.depthWrite = false;
-          if (!material.transparent) {
-            material.transparent = true;
-            material.opacity = 0.14;
-          }
+        // Fallback-Transparenz, wenn alphaMode nicht übertragen wurde.
+        if (!material.transparent) {
+          material.transparent = true;
+          material.opacity = material.name === 'sq_light' ? 0.38 : 0.16;
         }
       }
-    });
-  }
+
+      // Einheitliches Projektionsfeld — die große durchscheinende Ebene zwischen
+      // der physischen Basis und den schwebenden Quadratkacheln. Mit depthWrite=false
+      // gekennzeichnet, damit es die Kacheln oder Hervorhebungsmarkierungen darüber
+      // niemals verdeckt.
+      if (material.name === 'proj_field_mat') {
+        material.toneMapped = false;
+        material.depthWrite = false;
+        if (!material.transparent) {
+          material.transparent = true;
+          material.opacity = 0.14;
+        }
+      }
+    }
+  });
 
   enableShadows(root);
   return root;

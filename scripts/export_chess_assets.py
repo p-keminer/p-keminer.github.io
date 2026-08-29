@@ -41,10 +41,6 @@ def ensure_materials() -> dict[str, bpy.types.Material]:
         "piece_body": create_material("PieceBody", (0.82, 0.76, 0.68, 1.0), 0.08, 0.54),
         "piece_trim": create_material("PieceTrim", (0.72, 0.58, 0.32, 1.0), 0.18, 0.38),
         "piece_accent": create_material("PieceAccent", (0.94, 0.87, 0.52, 1.0), 0.24, 0.3),
-        "board_frame": create_material("BoardFrame", (0.19, 0.12, 0.08, 1.0), 0.12, 0.72),
-        "board_plinth": create_material("BoardPlinth", (0.11, 0.09, 0.08, 1.0), 0.05, 0.84),
-        "board_light": create_material("BoardLight", (0.85, 0.74, 0.58, 1.0), 0.04, 0.58),
-        "board_dark": create_material("BoardDark", (0.34, 0.23, 0.15, 1.0), 0.06, 0.66),
     }
 
 
@@ -196,44 +192,6 @@ def export_selected(root: bpy.types.Object, file_name: str) -> None:
     )
 
 
-def build_board(materials: dict[str, bpy.types.Material]) -> None:
-    reset_scene()
-    root = create_root("board")
-
-    frame = add_cube(
-        "board_frame",
-        (9.2, 9.2, 0.42),
-        (0.0, 0.0, -0.21),
-        materials["board_frame"],
-    )
-    plinth = add_cylinder(
-        "board_plinth",
-        7.15,
-        0.32,
-        (0.0, 0.0, -0.64),
-        materials["board_plinth"],
-        vertices=64,
-    )
-    add_bevel(frame, 0.06, 3)
-    add_bevel(plinth, 0.04, 2)
-
-    squares: list[bpy.types.Object] = []
-
-    for rank in range(8):
-        for file_index in range(8):
-            is_light_square = (file_index + rank) % 2 == 0
-            square = add_cube(
-                f"square_{chr(97 + file_index)}{rank + 1}",
-                (0.96, 0.96, 0.08),
-                (-3.5 + file_index, 3.5 - rank, 0.04),
-                materials["board_light"] if is_light_square else materials["board_dark"],
-            )
-            squares.append(square)
-
-    parent_to_root(root, [frame, plinth, *squares])
-    export_selected(root, "board.glb")
-
-
 def build_pawn(materials: dict[str, bpy.types.Material]) -> None:
     reset_scene()
     root = create_root("pawn")
@@ -376,7 +334,6 @@ def build_king(materials: dict[str, bpy.types.Material]) -> None:
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 materials = ensure_materials()
 
-build_board(materials)
 build_pawn(materials)
 build_rook(materials)
 build_knight(materials)

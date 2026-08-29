@@ -206,13 +206,13 @@ interface StageScene {
 }
 
 // ── Raum-Kalibrierung beim Import ──────────────────────────────────────────
-// raum.glb wurde mit Schachfeld-Schrittweite 0.512 Blender-Units exportiert.
+// room-redesign.glb wurde mit Schachfeld-Schrittweite 0.512 Blender-Units exportiert.
 // ROOM_SCALE konvertiert Blender-Units zu Three.js-Spielunits (1 Unit = 1 Feld).
 // ROOM_OFFSET positioniert den Raum so, dass die Schachfeld-Mitte mit dem
 // Three.js-Ursprung (0, 0, 0) übereinstimmt.
 //
 // Nach einem frischen Blender-Export neu kalibrieren:
-//   1. Öffnen Sie die neue room.glb in Three.js (oder nutzen das Debug-Overlay).
+//   1. Öffnen Sie die neue room-redesign.glb in Three.js (oder nutzen das Debug-Overlay).
 //   2. Messen Sie die Seitenlänge eines Feldes in Blender-Units = BLENDER_STEP.
 //   3. Setzen Sie ROOM_SCALE = 1.0 / BLENDER_STEP.
 //   4. Finden Sie die Schachfeld-Mitte in Blender-Koordinaten (x, y, z) = BC.
@@ -230,7 +230,6 @@ const ROOM_OFFSET = new THREE.Vector3(-11.123, -3.833, 15.426);
 const BOARD_SURFACE_Y = 0.898; // = 2.4221 * ROOM_SCALE + ROOM_OFFSET.y
 
 interface RoomCalibration {
-  isRedesign: boolean;
   offset: THREE.Vector3;
   scale: number;
 }
@@ -247,7 +246,6 @@ function resolveRoomCalibration(room: THREE.Object3D): RoomCalibration {
   const chessAnchor = chessAnchors[0];
   if (!chessAnchor) {
     return {
-      isRedesign: false,
       offset: ROOM_OFFSET.clone(),
       scale: ROOM_SCALE
     };
@@ -258,7 +256,6 @@ function resolveRoomCalibration(room: THREE.Object3D): RoomCalibration {
 
   if (!Number.isFinite(squareStep) || squareStep <= 0 || !Number.isFinite(boardSurfaceSourceY)) {
     return {
-      isRedesign: false,
       offset: ROOM_OFFSET.clone(),
       scale: ROOM_SCALE
     };
@@ -269,7 +266,6 @@ function resolveRoomCalibration(room: THREE.Object3D): RoomCalibration {
   const scale = 1 / squareStep;
 
   return {
-    isRedesign: true,
     offset: new THREE.Vector3(
       -boardCenter.x * scale,
       BOARD_SURFACE_Y - boardSurfaceSourceY * scale,
@@ -1610,26 +1606,22 @@ function createStageScene(
       }
 
       roomGroup.updateMatrixWorld(true);
-      if (calibration.isRedesign) {
-        applyRedesignOverviewPreset(roomGroup);
-        applyRedesignLegalCornerPreset(roomGroup);
-        applyRedesignMonitorNavigation(roomGroup);
-        applyRedesignCertificateNavigation(roomGroup);
-        lights.applyRoomRedesignProfile(roomGroup);
-        scene.background = new THREE.Color('#01040b');
-        scene.fog = new THREE.Fog('#01040b', 80, 150);
-        scene.environmentIntensity = 0.05;
+      applyRedesignOverviewPreset(roomGroup);
+      applyRedesignLegalCornerPreset(roomGroup);
+      applyRedesignMonitorNavigation(roomGroup);
+      applyRedesignCertificateNavigation(roomGroup);
+      lights.applyRoomRedesignProfile(roomGroup);
+      scene.background = new THREE.Color('#01040b');
+      scene.fog = new THREE.Fog('#01040b', 80, 150);
+      scene.environmentIntensity = 0.05;
 
-        if (lightMap) {
-          const lightmappedMeshes = roomQuality.apply(roomGroup, lightMap);
-          if (lightmappedMeshes > 0) {
-            lights.applyBakedRoomProfile();
-          } else {
-            lightMap.dispose();
-          }
+      if (lightMap) {
+        const lightmappedMeshes = roomQuality.apply(roomGroup, lightMap);
+        if (lightmappedMeshes > 0) {
+          lights.applyBakedRoomProfile();
+        } else {
+          lightMap.dispose();
         }
-      } else {
-        lightMap?.dispose();
       }
 
       roomGroup.traverse((node) => {

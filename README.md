@@ -1,30 +1,65 @@
-# Portfolio – Philip Keminer
+<a id="top"></a>
 
-[![Live](https://img.shields.io/badge/Live-p--keminer.github.io-0d1117?style=flat&logo=github)](https://p-keminer.github.io)
+<div align="center">
 
-Eine interaktive 3D-Portfolio-Website: Ein modellierter Arbeitsraum verbindet
-Projektübersicht, Profil, Leistungsnachweise und Zertifikate mit einem
-spielbaren Schachbrett.
+[![Deutsch](https://img.shields.io/badge/🇩🇪_Deutsch-24292f?style=for-the-badge)](#deutsch)
+[![English](https://img.shields.io/badge/🇬🇧_English-24292f?style=for-the-badge)](#english)
+
+</div>
 
 ---
 
-## Funktionen
+<a id="deutsch"></a>
 
-- **Interaktiver 3D-Raum** – Kamerafahrten, freie Erkundung und Hotspots führen
-  direkt zu den einzelnen Bereichen.
-- **Spielbares Schach** – Lokales Zwei-Spieler-Spiel mit vollständiger
-  Regelvalidierung, animierten Schlagzügen und synthetischen Audioeffekten.
-- **Portfolio-Monitor** – Kompakte Übersicht der veröffentlichten Projekte.
-- **Über-mich-Monitor** – Profil, Werdegang und technische Schwerpunkte.
-- **Leistungsnachweise** – Semesterweise Ansicht der hinterlegten Dokumente.
-- **Zertifikatsbereich** – Thematisch geordnete Zertifikate und Kursnachweise.
-- **Adaptive Darstellung** – Die Qualitätsstufen `high`, `medium` und `low`
-  passen Schatten, Bloom und Antialiasing an das Gerät an.
-- **Responsive Bedienung** – Unterstützung für Maus, Tastatur und Touch-Geräte.
+<div align="center">
+
+`INTERACTIVE 3D` · `PORTFOLIO` · `CHESS`
+
+# Portfolio – Philip Keminer
+
+Interaktive 3D-Portfolio-Website mit erkundbarem Arbeitsraum, eingebetteten
+Projektseiten und spielbarem Schachbrett.
+
+`TypeScript` · `Three.js` · `chess.js` · `Vite` · `Blender`
+
+[`Live-Seite`](https://p-keminer.github.io/) [`Übersicht`](#de-uebersicht)
+[`Bereiche`](#de-bereiche) [`Technik`](#de-technik)
+[`Lokaler Start`](#de-lokaler-start) [`Build`](#de-build) [`Lizenz`](#de-lizenz)
+
+</div>
+
+---
+
+<a id="de-uebersicht"></a>
+
+## Übersicht
+
+Die Startseite verbindet einen modellierten 3D-Arbeitsraum mit vier direkt
+erreichbaren Inhaltsbereichen. Kamerafahrten und Hotspots führen zu den
+eingebetteten Seiten; das Schachbrett bleibt als eigenständige lokale
+Zwei-Spieler-Anwendung nutzbar.
+
+| Funktion | Umsetzung |
+|---|---|
+| 3D-Arbeitsraum | Kamerasteuerung, Hotspots, Licht, Bloom und geräteabhängige Qualitätsstufen |
+| Schach | Zugprüfung mit `chess.js`, animierte Schlagzüge und synthetische Audioeffekte |
+| Inhalte | Portfolio, Profil, Leistungsnachweise und Zertifikate als lokale Seiten |
+| Bedienung | Maus-, Tastatur- und Touch-Unterstützung mit responsiver Oberfläche |
+
+<a id="de-bereiche"></a>
+
+## Bereiche
+
+| Bereich | Inhalt | Direktlink |
+|---|---|---|
+| Portfolio | Übersicht der veröffentlichten Projekte | [Öffnen](https://p-keminer.github.io/portfolio/) |
+| Über mich | Profil, Werdegang und technische Schwerpunkte | [Öffnen](https://p-keminer.github.io/ueber-mich/) |
+| Leistungsnachweise | Semesterweise Darstellung der hinterlegten Dokumente | [Öffnen](https://p-keminer.github.io/leistungsnachweise/) |
+| Zertifikate | Thematisch geordnete Kurs- und Zertifikatsnachweise | [Öffnen](https://p-keminer.github.io/zertifikate/) |
+
+<a id="de-technik"></a>
 
 ## Technik
-
-`TypeScript` · `Three.js` · `chess.js` · `Vite` · `Blender` · `HTML` · `CSS`
 
 ```text
 src/
@@ -40,20 +75,166 @@ public/
   ueber-mich/           Profilbereich
   leistungsnachweise/   Semester- und Dokumentansicht
   zertifikate/          Zertifikatsbereich
-  models/               GLB-Modelle und Texturen
+  models/               Aktive 3D-Modelle und Texturen
 ```
 
-## Lokal starten
+Alle Laufzeitressourcen werden lokal ausgeliefert. Der Produktionsbuild prüft
+unter anderem Content Security Policies, lokale Assets, veröffentlichte
+Dokumente, fehlende Tracker und den selbst gehosteten Draco-Decoder.
+
+<a id="de-lokaler-start"></a>
+
+## Lokaler Start
 
 ```bash
 git clone https://github.com/p-keminer/p-keminer.github.io.git
 cd p-keminer.github.io
-npm install
+npm ci
 npm run dev
 ```
 
-Produktionsbuild einschließlich der statischen Sicherheitsprüfung:
+Vite stellt die lokale Entwicklungsumgebung bereit und zeigt die Adresse im
+Terminal an.
+
+<a id="de-build"></a>
+
+## Build und Veröffentlichung
 
 ```bash
 npm run build
+npm run preview
 ```
+
+`npm run build` führt den TypeScript-Check, den Vite-Produktionsbuild und die
+statische Sicherheitsprüfung aus. Pushes auf `main` werden anschließend über
+GitHub Actions auf GitHub Pages veröffentlicht.
+
+<a id="de-lizenz"></a>
+
+## Lizenz
+
+Der Quellcode steht unter der [MIT-Lizenz](LICENSE). Eingebundene Schriftarten,
+Bibliotheken, Modelle und weitere Drittinhalte behalten ihre jeweiligen
+Lizenzen.
+
+<div align="center">
+
+[`Nach oben`](#top)
+
+</div>
+
+---
+
+<a id="english"></a>
+
+<div align="center">
+
+`INTERACTIVE 3D` · `PORTFOLIO` · `CHESS`
+
+# Portfolio – Philip Keminer
+
+Interactive 3D portfolio website with an explorable workspace, embedded
+project pages, and a playable chessboard.
+
+`TypeScript` · `Three.js` · `chess.js` · `Vite` · `Blender`
+
+[`Live site`](https://p-keminer.github.io/) [`Overview`](#en-overview)
+[`Sections`](#en-sections) [`Technology`](#en-technology)
+[`Local setup`](#en-local-setup) [`Build`](#en-build) [`License`](#en-license)
+
+</div>
+
+---
+
+<a id="en-overview"></a>
+
+## Overview
+
+The landing page combines a modeled 3D workspace with four directly
+accessible content sections. Camera transitions and hotspots lead to the
+embedded pages, while the chessboard remains available as a standalone local
+two-player application.
+
+| Feature | Implementation |
+|---|---|
+| 3D workspace | Camera controls, hotspots, lighting, bloom, and device-based quality tiers |
+| Chess | Move validation through `chess.js`, animated captures, and synthesized audio effects |
+| Content | Portfolio, profile, academic records, and certificates as local pages |
+| Controls | Mouse, keyboard, and touch support with a responsive interface |
+
+<a id="en-sections"></a>
+
+## Sections
+
+| Section | Content | Direct link |
+|---|---|---|
+| Portfolio | Overview of published projects | [Open](https://p-keminer.github.io/portfolio/) |
+| About | Profile, background, and technical focus areas | [Open](https://p-keminer.github.io/ueber-mich/) |
+| Academic records | Semester-based view of the published documents | [Open](https://p-keminer.github.io/leistungsnachweise/) |
+| Certificates | Certificates and course records grouped by topic | [Open](https://p-keminer.github.io/zertifikate/) |
+
+<a id="en-technology"></a>
+
+## Technology
+
+```text
+src/
+  app/       Application flow and state control
+  audio/     Synthesized audio effects
+  chess/     Chess logic and board mapping
+  render/    Three.js scene, models, lighting, and camera
+  styles/    Global interface styles
+  ui/        Controls and legal information
+
+public/
+  portfolio/            Project overview
+  ueber-mich/           Profile section
+  leistungsnachweise/   Semester and document view
+  zertifikate/          Certificate section
+  models/               Active 3D models and textures
+```
+
+All runtime resources are served locally. The production build verifies, among
+other things, Content Security Policies, local assets, published documents,
+the absence of trackers, and the self-hosted Draco decoder.
+
+<a id="en-local-setup"></a>
+
+## Local Setup
+
+```bash
+git clone https://github.com/p-keminer/p-keminer.github.io.git
+cd p-keminer.github.io
+npm ci
+npm run dev
+```
+
+Vite starts the local development environment and prints its address in the
+terminal.
+
+<a id="en-build"></a>
+
+## Build and Deployment
+
+```bash
+npm run build
+npm run preview
+```
+
+`npm run build` runs the TypeScript check, the Vite production build, and the
+static security verification. Pushes to `main` are then deployed to GitHub
+Pages through GitHub Actions.
+
+<a id="en-license"></a>
+
+## License
+
+The source code is available under the [MIT License](LICENSE). Bundled fonts,
+libraries, models, and other third-party content retain their respective
+licenses.
+
+<div align="center">
+
+[`Back to top`](#top)
+
+</div>
