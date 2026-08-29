@@ -13,8 +13,6 @@
 
 <div align="center">
 
-`INTERACTIVE 3D` · `PORTFOLIO` · `CHESS`
-
 # Portfolio – Philip Keminer
 
 Interaktive 3D-Portfolio-Website mit erkundbarem Arbeitsraum, eingebetteten
@@ -136,8 +134,6 @@ Lizenzen.
 <a id="english"></a>
 
 <div align="center">
-
-`INTERACTIVE 3D` · `PORTFOLIO` · `CHESS`
 
 # Portfolio – Philip Keminer
 
