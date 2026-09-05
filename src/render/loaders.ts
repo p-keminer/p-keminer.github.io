@@ -12,9 +12,11 @@ export const BOARD_MODEL_FILE = 'board.glb';
 export const BOARD_CYBER_MODEL_FILE = 'board_cyber.glb';
 export const DEFAULT_PIECE_ASSET_SET = 'starter';
 export const ROOM_REDESIGN_MODEL_FILE = 'room-redesign.glb';
+export const ROOM_REFINED_MODEL_FILE = 'room-refined.glb';
+export const ROOM_REFINED_ASSET_VERSION = 6;
 export const LEGACY_ROOM_MODEL_FILE = 'room.glb';
 
-const ROOM_MODEL_CANDIDATES = [ROOM_REDESIGN_MODEL_FILE, LEGACY_ROOM_MODEL_FILE] as const;
+const ROOM_MODEL_CANDIDATES = [ROOM_REFINED_MODEL_FILE, ROOM_REDESIGN_MODEL_FILE, LEGACY_ROOM_MODEL_FILE] as const;
 
 // ─── Cyber-Board-Ausrichtungskonstanten ──────────────────────────────────────
 // Das Blender-Cyber-Board verwendet SQ=0,50 und GAP=0,012, sodass jeder
@@ -187,13 +189,26 @@ function applyRoomRedesignMaterialOverrides(root: THREE.Object3D): void {
 
 const BLOCKOUT_NEON_COMMAND_INTENSITY = 2.35;
 
-export async function loadRoomAsset(onProgress?: AssetLoadProgressReporter): Promise<THREE.Group | null> {
-  const reportProgress = createMonotonicProgressReporter(onProgress);
+export async function loadRoomAsset(
+  onProgress?: AssetLoadProgressReporter,
+  options: { skipRefined?: boolean; isCancelled?: () => boolean } = {}
+): Promise<THREE.Group | null> {
+  const isCancelled = options.isCancelled ?? (() => false);
+  const reportProgress = createMonotonicProgressReporter(progress => {
+    if (!isCancelled()) onProgress?.(progress);
+  });
   reportProgress(0);
 
-  for (const candidateFile of ROOM_MODEL_CANDIDATES) {
+  const candidates = options.skipRefined || (import.meta.env.DEV && new URLSearchParams(window.location.search).get('room') === 'original')
+    ? ROOM_MODEL_CANDIDATES.slice(1) : ROOM_MODEL_CANDIDATES;
+  for (const candidateFile of candidates) {
+    if (isCancelled()) return null;
     try {
       const room = await loadModel(candidateFile, reportProgress);
+      if (isCancelled()) {
+        createModelResourceDisposer(room)();
+        return null;
+      }
       if (candidateFile === ROOM_REDESIGN_MODEL_FILE) {
         applyRoomRedesignMaterialOverrides(room);
       }
@@ -208,6 +223,34 @@ export async function loadRoomAsset(onProgress?: AssetLoadProgressReporter): Pro
 
   reportProgress(1);
   return null;
+}
+
+/** Capture imported resources before runtime materials replace any of them. */
+export function createModelResourceDisposer(root: THREE.Object3D): () => void {
+  const geometries = new Set<THREE.BufferGeometry>();
+  const materials = new Set<THREE.Material>();
+  const textures = new Set<THREE.Texture>();
+  root.traverse(node => {
+    if (!(node instanceof THREE.Mesh)) return;
+    geometries.add(node.geometry);
+    for (const material of Array.isArray(node.material) ? node.material : [node.material]) {
+      materials.add(material);
+      for (const value of Object.values(material)) {
+        if (value instanceof THREE.Texture) textures.add(value);
+      }
+    }
+  });
+  let disposed = false;
+  return () => {
+    if (disposed) return;
+    disposed = true;
+    for (const texture of textures) texture.dispose();
+    for (const material of materials) material.dispose();
+    for (const geometry of geometries) geometry.dispose();
+    textures.clear();
+    materials.clear();
+    geometries.clear();
+  };
 }
 
 export function getExpectedModelFiles(pieceAssetSet: PieceAssetSet = DEFAULT_PIECE_ASSET_SET): string[] {
@@ -378,7 +421,7 @@ export function createPieceAssetInstance(
 }
 
 export function modelPath(fileName: string): string {
-  return `/models/${fileName}?v=37`;
+  return `/models/${fileName}?v=${fileName === ROOM_REFINED_MODEL_FILE ? ROOM_REFINED_ASSET_VERSION : 37}`;
 }
 
 function clampLoadProgress(value: number): number {
@@ -411,6 +454,9 @@ async function loadModel(
   reportProgress(1);
   const root = new THREE.Group();
   root.name = fileName.replace('.glb', '').replace(/\//g, '-');
+  // Lighting metadata belongs to the scene in glTF. Retain it when wrapping
+  // its children, so a refined model can only use its matching baked atlas.
+  root.userData = { ...gltf.scene.userData };
 
   for (const child of gltf.scene.children.slice()) {
     root.add(child);

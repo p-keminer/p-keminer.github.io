@@ -1,7 +1,8 @@
 import * as THREE from 'three';
-import type { AssetLoadProgressReporter } from './loaders';
+import { ROOM_REFINED_ASSET_VERSION, type AssetLoadProgressReporter } from './loaders';
 
 const ROOM_LIGHTMAP_URL = '/models/room-redesign-lightmap.png?v=27';
+const REFINED_LIGHTMAP_URL = `/models/room-refined-lightmap.webp?v=${ROOM_REFINED_ASSET_VERSION}`;
 const DETAIL_TEXTURE_SIZE = 128;
 
 interface DetailTextureSet {
@@ -9,13 +10,20 @@ interface DetailTextureSet {
   roughness: THREE.DataTexture;
 }
 
+interface AuthoredRoomLighting {
+  scale: number;
+  multiplierPower: 1 | 2;
+  environment: THREE.Texture | null;
+}
+
 export interface RoomQualityController {
-  apply: (roomRoot: THREE.Object3D, lightMap: THREE.Texture) => number;
+  apply: (roomRoot: THREE.Object3D, lightMap: THREE.Texture, authoredLighting?: AuthoredRoomLighting) => number;
   dispose: () => void;
 }
 
 export async function loadRoomRedesignLightMap(
-  onProgress?: AssetLoadProgressReporter
+  onProgress?: AssetLoadProgressReporter,
+  refined = false
 ): Promise<THREE.Texture | null> {
   onProgress?.(0);
   let objectUrl: string | null = null;
@@ -23,15 +31,28 @@ export async function loadRoomRedesignLightMap(
   try {
     const fileLoader = new THREE.FileLoader();
     fileLoader.setResponseType('blob');
-    const lightMapBlob = await fileLoader.loadAsync(ROOM_LIGHTMAP_URL, event => {
+    const lightMapBlob = await fileLoader.loadAsync(refined ? REFINED_LIGHTMAP_URL : ROOM_LIGHTMAP_URL, event => {
       if (event.total > 0) {
         // Reserve the final six percent for image decoding and texture setup.
         onProgress?.(Math.min(0.94, (event.loaded / event.total) * 0.94));
       }
     }) as unknown as Blob;
-    objectUrl = URL.createObjectURL(lightMapBlob);
-    const lightMap = await new THREE.TextureLoader().loadAsync(objectUrl);
-    lightMap.name = 'room-redesign-lightmap';
+    let lightMap: THREE.Texture;
+    if (refined) {
+      // RGBM alpha stores an HDR multiplier, not opacity. Browser image
+      // decoding must preserve RGB even for pixels with a small multiplier.
+      const bitmap = await createImageBitmap(lightMapBlob, {
+        premultiplyAlpha: 'none', colorSpaceConversion: 'none', imageOrientation: 'none'
+      });
+      lightMap = new THREE.Texture(bitmap);
+      lightMap.premultiplyAlpha = false;
+      lightMap.addEventListener('dispose', () => bitmap.close());
+      lightMap.needsUpdate = true;
+    } else {
+      objectUrl = URL.createObjectURL(lightMapBlob);
+      lightMap = await new THREE.TextureLoader().loadAsync(objectUrl);
+    }
+    lightMap.name = refined ? 'room-refined-lightmap' : 'room-redesign-lightmap';
     lightMap.flipY = false;
     lightMap.colorSpace = THREE.SRGBColorSpace;
     lightMap.channel = 1;
@@ -137,6 +158,23 @@ function createDetailTextures(
 }
 
 export function createRoomQualityController(renderer: THREE.WebGLRenderer): RoomQualityController {
+  // DEV A/B only. The baked-material patch below already discards directDiffuse;
+  // this variant omits only its two side-effect-free additions in Three r183.
+  let leanPhysicalChunk: string | null = null;
+  let leanShaderReported = false;
+  if (import.meta.env.DEV && new URLSearchParams(window.location.search).get('bakedShader') === 'lean') {
+    const physical = THREE.ShaderChunk.lights_physical_pars_fragment;
+    const discardedStatements = [
+      'reflectedLight.directDiffuse += lightColor * material.diffuseContribution * LTC_Evaluate( normal, viewDir, position, mat3( 1.0 ), rectCoords );',
+      'reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseContribution );'
+    ];
+    if (discardedStatements.every(statement => physical.split(statement).length === 2) &&
+        physical.split('reflectedLight.directDiffuse +=').length === 3) {
+      leanPhysicalChunk = discardedStatements.reduce((chunk, statement) => chunk.replace(statement, ''), physical);
+    } else {
+      console.warn('[room baked shader] Reference retained: unexpected Three shader chunk.');
+    }
+  }
   const plaster = createDetailTextures('plaster', 7, 5);
   const wood = createDetailTextures('wood', 4, 10);
   const fabric = createDetailTextures('fabric', 9, 9);
@@ -152,6 +190,11 @@ export function createRoomQualityController(renderer: THREE.WebGLRenderer): Room
 
   for (const texture of detailTextures) {
     texture.anisotropy = maxAnisotropy;
+    // DataTexture defaults to nearest filtering without mipmaps. That makes
+    // small fabric/wood details sparkle and alias at room-view distances.
+    texture.magFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.generateMipmaps = true;
   }
 
   const configuredMaterials = new Set<THREE.MeshStandardMaterial>();
@@ -159,6 +202,7 @@ export function createRoomQualityController(renderer: THREE.WebGLRenderer): Room
   const readableWorkSurfaceMaterialCache = new Map<THREE.MeshStandardMaterial, THREE.MeshStandardMaterial>();
   const ownedMaterials = new Set<THREE.MeshStandardMaterial>();
   let activeLightMap: THREE.Texture | null = null;
+  let authoredLighting: AuthoredRoomLighting | undefined;
 
   const configureSurface = (material: THREE.MeshStandardMaterial): void => {
     if (configuredMaterials.has(material)) {
@@ -167,6 +211,31 @@ export function createRoomQualityController(renderer: THREE.WebGLRenderer): Room
 
     configuredMaterials.add(material);
     const name = material.name.toLowerCase();
+
+    if (authoredLighting) {
+      // Preserve Blender's albedo, roughness, metalness and emission. The
+      // previous profile recolored black surfaces and added artificial glow.
+      // An explicit envMap makes the per-material reflection intensity apply
+      // in Three.js r183; scene.environmentIntensity otherwise overrides it.
+      material.envMap = authoredLighting.environment;
+      material.envMapIntensity = 0.10;
+      if (name.includes('warm_plaster')) {
+        material.normalMap = plaster.normal;
+        material.normalScale.set(0.045, 0.045);
+      } else if (name.includes('walnut') || name.includes('dark_wood_floor')) {
+        material.normalMap = wood.normal;
+        material.normalScale.set(0.07, 0.045);
+      } else if (name.includes('curtain_fabric')) {
+        // The modeled folds already describe the cloth. UV0 of the authored
+        // curtains is unsuitable for the tiled fabric normal; keep it quiet.
+        material.normalMap = null;
+      } else if (/rug|chair_fabric/.test(name)) {
+        material.normalMap = fabric.normal;
+        material.normalScale.set(0.07, 0.07);
+      }
+      material.needsUpdate = true;
+      return;
+    }
 
     if (name.includes('warm_plaster')) {
       material.normalMap = plaster.normal;
@@ -263,7 +332,42 @@ export function createRoomQualityController(renderer: THREE.WebGLRenderer): Room
     const clone = material.clone();
     clone.name = material.name + '_Lightmapped';
     clone.lightMap = lightMap;
-    clone.lightMapIntensity = 1.50;
+    // Blender's DIFFUSE bake is a unit-albedo Lambert response. Three expects
+    // irradiance and applies 1/pi, so restore both pi and the atlas HDR scale.
+    clone.lightMapIntensity = authoredLighting ? authoredLighting.scale * Math.PI : 1.50;
+    if (authoredLighting) {
+      const multiplierPower = authoredLighting.multiplierPower;
+      clone.onBeforeCompile = shader => {
+        // The atlas already includes direct and bounced diffuse light. Keep
+        // view-dependent specular reflections, but don't light the bake again.
+        // Three r183 decodes sRGB RGB in hardware; alpha stays linear. The
+        // squared multiplier has finer steps in shadows, avoiding bright
+        // contours when neighboring RGB/multiplier values are filtered.
+        const bakedLightMaps = THREE.ShaderChunk.lights_fragment_maps
+          .replace('lightMapTexel.rgb * lightMapIntensity',
+            multiplierPower === 2
+              ? 'lightMapTexel.rgb * lightMapTexel.a * lightMapTexel.a * lightMapIntensity'
+              : 'lightMapTexel.rgb * lightMapTexel.a * lightMapIntensity')
+          .replace('irradiance += lightMapIrradiance;', 'irradiance = lightMapIrradiance;')
+          .replace('iblIrradiance += getIBLIrradiance( geometryNormal );', 'iblIrradiance = vec3( 0.0 );');
+        shader.fragmentShader = shader.fragmentShader
+          .replace('#include <lights_fragment_maps>', bakedLightMaps)
+          .replace('#include <lights_fragment_end>',
+            '#include <lights_fragment_end>\nreflectedLight.directDiffuse = vec3( 0.0 );');
+        if (leanPhysicalChunk !== null) {
+          const include = '#include <lights_physical_pars_fragment>';
+          const reset = '#include <lights_fragment_end>\nreflectedLight.directDiffuse = vec3( 0.0 );';
+          if (shader.fragmentShader.split(include).length === 2 && shader.fragmentShader.split(reset).length === 2) {
+            shader.fragmentShader = shader.fragmentShader.replace(include, leanPhysicalChunk);
+            if (!leanShaderReported) console.info('[room baked shader] Lean variant compiled; diffuse additions omitted.');
+          } else if (!leanShaderReported) {
+            console.warn('[room baked shader] Reference retained: unexpected shader includes.');
+          }
+          leanShaderReported = true;
+        }
+      };
+      clone.customProgramCacheKey = () => `room-authored-rgbm-power-${multiplierPower}${leanPhysicalChunk === null ? '' : '-lean-direct-diffuse-v1'}`;
+    }
     clone.needsUpdate = true;
     configuredMaterials.add(clone);
     lightmappedMaterialCache.set(material, clone);
@@ -271,7 +375,8 @@ export function createRoomQualityController(renderer: THREE.WebGLRenderer): Room
     return clone;
   };
 
-  const apply = (roomRoot: THREE.Object3D, lightMap: THREE.Texture): number => {
+  const apply: RoomQualityController['apply'] = (roomRoot, lightMap, lighting) => {
+    authoredLighting = lighting;
     activeLightMap = lightMap;
     lightMap.anisotropy = maxAnisotropy;
     let lightmappedMeshes = 0;
@@ -282,6 +387,10 @@ export function createRoomQualityController(renderer: THREE.WebGLRenderer): Room
       }
 
       const materials = Array.isArray(node.material) ? node.material : [node.material];
+      if (authoredLighting && node.name === 'Left_Decor_Lamp_Globe') {
+        // Blender visible_shadow=false is not represented in glTF.
+        node.castShadow = false;
+      }
       for (const material of materials) {
         if (material instanceof THREE.MeshStandardMaterial) {
           configureSurface(material);
@@ -290,7 +399,7 @@ export function createRoomQualityController(renderer: THREE.WebGLRenderer): Room
 
       const needsReadableWorkSurface =
         /^(Prototype_|Printer_|Keyboard_|Mouse(?:_|$)|Desk_Input_Mat$)/.test(node.name);
-      if (needsReadableWorkSurface) {
+      if (needsReadableWorkSurface && !authoredLighting) {
         node.material = Array.isArray(node.material)
           ? node.material.map((material) =>
               material instanceof THREE.MeshStandardMaterial &&
@@ -304,7 +413,7 @@ export function createRoomQualityController(renderer: THREE.WebGLRenderer): Room
             : node.material;
       }
 
-      if (!node.geometry.getAttribute('uv1')) {
+      if (!node.geometry.getAttribute('uv1') || (authoredLighting && !node.userData.room_lightmapped)) {
         return;
       }
 

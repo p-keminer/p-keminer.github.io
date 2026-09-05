@@ -5,6 +5,7 @@ export interface RoomCameraControls {
   animateExit: (onComplete: () => void) => void;
   dispose: () => void;
   getPose: () => CameraPreset;
+  isAnimating: () => boolean;
   setEnabled: (enabled: boolean) => void;
   setLandscapeLock: (locked: boolean) => void;
   setPortraitMode: (portrait: boolean) => void;
@@ -48,6 +49,17 @@ export function createRoomCameraControls({
   let exitStartRadius = baseRadius;
   let exitOnComplete: (() => void) | null = null;
 
+  function cancelEntrance(): void {
+    cancelAnimationFrame(entranceRafId);
+    entranceRafId = 0;
+  }
+
+  function cancelExit(): void {
+    cancelAnimationFrame(exitRafId);
+    exitRafId = 0;
+    exitOnComplete = null;
+  }
+
   // ── Touch-Pinch-zum-Zoomen ──────────────────────────────────────────────
   const activeTouches = new Map<number, { x: number; y: number }>();
   let pinchStartDistance = 0;
@@ -78,14 +90,15 @@ export function createRoomCameraControls({
       domElement.removeEventListener('touchmove', handleTouchMove);
       domElement.removeEventListener('touchend', handleTouchEnd);
       domElement.removeEventListener('touchcancel', handleTouchEnd);
-      cancelAnimationFrame(entranceRafId);
-      cancelAnimationFrame(exitRafId);
+      cancelEntrance();
+      cancelExit();
     },
     getPose: () => buildCurrentPose(),
+    isAnimating: () => entranceRafId !== 0 || exitRafId !== 0,
     setEnabled: (nextEnabled: boolean) => {
       enabled = nextEnabled;
       if (!nextEnabled) {
-        cancelAnimationFrame(entranceRafId);
+        cancelEntrance();
       }
     },
     setLandscapeLock: (locked: boolean) => {
@@ -99,16 +112,16 @@ export function createRoomCameraControls({
       spherical.radius = Math.min(spherical.radius, getOverviewRadius());
     },
     animateExit: (onComplete: () => void) => {
-      cancelAnimationFrame(entranceRafId);
-      cancelAnimationFrame(exitRafId);
+      cancelEntrance();
+      cancelExit();
       exitStartRadius = spherical.radius;
       exitOnComplete = onComplete;
       exitStartTime = performance.now();
       animateExit();
     },
     setPose: (preset: CameraPreset) => {
-      cancelAnimationFrame(entranceRafId);
-      cancelAnimationFrame(exitRafId);
+      cancelEntrance();
+      cancelExit();
       const pos = new THREE.Vector3(preset.position.x, preset.position.y, preset.position.z);
       target.set(preset.target.x, preset.target.y, preset.target.z);
       const offset = pos.clone().sub(target);
@@ -121,7 +134,7 @@ export function createRoomCameraControls({
         : baseRadius * ZOOM_FACTOR_PER_STEP;
     },
     startEntranceAnimation: () => {
-      cancelAnimationFrame(entranceRafId);
+      cancelEntrance();
       // Beginnen von der nicht gezoomten Übersichtsposition und einblenden.
       spherical.radius = baseRadius;
       entranceStartRadius = baseRadius;
@@ -135,6 +148,7 @@ export function createRoomCameraControls({
   };
 
   function animateEntrance(): void {
+    entranceRafId = 0;
     const elapsed = performance.now() - entranceStartTime;
     const t = Math.min(elapsed / ENTRANCE_DURATION_MS, 1);
     const eased = 1 - Math.pow(1 - t, 3); // Ease-Out-Kubisch
@@ -146,6 +160,7 @@ export function createRoomCameraControls({
   }
 
   function animateExit(): void {
+    exitRafId = 0;
     const elapsed = performance.now() - exitStartTime;
     const t = Math.min(elapsed / EXIT_DURATION_MS, 1);
     const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // Ease-In-Out-Quadratisch
@@ -174,7 +189,7 @@ export function createRoomCameraControls({
     }
 
     event.preventDefault();
-    cancelAnimationFrame(entranceRafId);
+    cancelEntrance();
 
     // Zooming out stops at the composed overview distance.  The larger
     // unzoomed base radius exposes the ceiling and room shell, so it is kept
@@ -202,7 +217,7 @@ export function createRoomCameraControls({
     }
 
     if (activeTouches.size >= 2) {
-      cancelAnimationFrame(entranceRafId);
+      cancelEntrance();
       pinchStartDistance = getTouchDistance();
       pinchStartRadius = spherical.radius;
       event.preventDefault();

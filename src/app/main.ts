@@ -16,6 +16,8 @@ if (!rootElement) {
 
 const appRoot = rootElement;
 let app: MountedGame | undefined;
+// Opt-in local diagnostics: native timestamps only, no storage or telemetry.
+const measureStartup = new URLSearchParams(window.location.search).has('timing');
 
 function setIntroLoadingPhase(
   phase: 'core' | 'room' | 'ready',
@@ -53,12 +55,14 @@ function createIntroOverlay(): () => void {
 
       overlayRemoved = true;
       overlay.remove();
+      if (measureStartup) performance.mark('portfolio:overlay-removed');
     };
 
     overlay.setAttribute('aria-busy', 'false');
     overlay.classList.add('intro-hidden');
     document.body.classList.remove('app-loading');
     document.body.classList.add('app-ready');
+    if (measureStartup) performance.mark('portfolio:app-ready');
     window.dispatchEvent(new CustomEvent('portfolio:app-ready'));
 
     overlay.addEventListener('transitionend', removeOverlay, { once: true });
@@ -70,6 +74,7 @@ const hideIntroOverlay =
   typeof document !== 'undefined' ? createIntroOverlay() : () => undefined;
 
 function boot(): void {
+  if (measureStartup) performance.mark('portfolio:boot-start');
   app?.destroy();
   app = mountGame(appRoot, {
     onLoadProgress: progress => setIntroLoadingProgress(12 + progress * 88)
@@ -111,6 +116,7 @@ window.setTimeout(() => {
   );
 }, 360);
 app!.assetsReady.then(() => {
+  if (measureStartup) performance.mark('portfolio:assets-ready');
   if (new URLSearchParams(window.location.search).get('entry') === 'room') {
     app?.enterRoom();
   }

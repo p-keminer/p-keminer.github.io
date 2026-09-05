@@ -4,7 +4,7 @@
  * Pipeline:
  *   1. Szene rendern → HDR Render-Target (Tone-Mapping AUS)
  *   2. Schwellen-Pass  → helle Pixel extrahieren
- *   3. Horizontale Unschärfe → halb-auflösendes Unschärfe-Target
+ *   3. Horizontale Unschärfe → verkleinertes Unschärfe-Target
  *   4. Vertikale Unschärfe   → halb-auflösendes Unschärfe-Target
  *   5. Zusammensetzen       → Bildschirm (Blender-nahes AgX + Bloom)
  *
@@ -58,7 +58,26 @@ uniform sampler2D tScene;
 uniform sampler2D tBloom;
 uniform float uStrength;
 uniform float uExposure;
+uniform vec3 uDisplayGain;
+uniform bool uUseBlenderLook;
+uniform sampler2D tBlenderLook;
 varying vec2 vUv;
+
+// 64-cubed LUT exported through Blender's actual AgX / Medium High Contrast
+// display transform (-0.2 EV). It returns display sRGB, not scene-linear RGB.
+vec3 applyBlenderLook(vec3 sceneLinear) {
+  sceneLinear = max(sceneLinear, vec3(0.0));
+  if (max(sceneLinear.r, max(sceneLinear.g, sceneLinear.b)) <= 0.0) return vec3(0.0);
+  const float minEV = -12.47393;
+  const float maxEV = 6.026069;
+  vec3 coordinates = clamp((log2(max(sceneLinear, vec3(exp2(minEV)))) - minEV)
+    / (maxEV - minEV), 0.0, 1.0) * 63.0;
+  float lowerBlue = floor(coordinates.b);
+  float upperBlue = min(lowerBlue + 1.0, 63.0);
+  vec2 lowerUV = vec2(lowerBlue * 64.0 + coordinates.r + 0.5, coordinates.g + 0.5) / vec2(4096.0, 64.0);
+  vec2 upperUV = vec2(upperBlue * 64.0 + coordinates.r + 0.5, coordinates.g + 0.5) / vec2(4096.0, 64.0);
+  return mix(texture2D(tBlenderLook, lowerUV).rgb, texture2D(tBlenderLook, upperUV).rgb, fract(coordinates.b));
+}
 
 const mat3 LINEAR_REC2020_TO_LINEAR_SRGB = mat3(
   vec3(1.6605, -0.1246, -0.0182),
@@ -125,7 +144,14 @@ vec3 linearToSRGB(vec3 color) {
 void main() {
   vec3 hdr = texture2D(tScene, vUv).rgb;
   vec3 bloom = texture2D(tBloom, vUv).rgb;
-  vec3 color = agxMediumHighContrast(hdr + bloom * uStrength);
+  // Small browser display adjustment, applied in linear light before AgX.
+  // A neutral gain leaves the legacy profile and original LUT unchanged.
+  vec3 displayInput = (hdr + bloom * uStrength) * uDisplayGain;
+  if (uUseBlenderLook) {
+    gl_FragColor = vec4(applyBlenderLook(displayInput), 1.0);
+    return;
+  }
+  vec3 color = agxMediumHighContrast(displayInput);
   gl_FragColor = vec4(linearToSRGB(color), 1.0);
 }`;
 
@@ -142,11 +168,16 @@ export interface BloomOptions {
   exposure?: number;
 }
 
+export type BloomPassName = 'scene' | 'threshold' | 'blur-horizontal' | 'blur-vertical' | 'composite';
+
 export interface BloomEffect {
   /** Ersetzen Sie renderer.render(scene, camera) damit. */
-  render(scene: THREE.Scene, camera: THREE.Camera): void;
+  render(scene: THREE.Scene, camera: THREE.Camera, onPass?: (pass: BloomPassName) => void): void;
   /** Aufrufen, wenn die Canvas-Größe geändert wird. */
-  setSize(width: number, height: number): void;
+  setSize(width: number, height: number, referenceWidth?: number, referenceHeight?: number): void;
+  setExposure(exposure: number): void;
+  setDisplayGrade(exposureEV: number, whiteBalance: readonly number[]): void;
+  setDisplayLut(texture: THREE.Texture): void;
   dispose(): void;
 }
 
@@ -219,7 +250,10 @@ export function createBloomEffect(
       tScene:    { value: null },
       tBloom:    { value: null },
       uStrength: { value: strength },
-      uExposure: { value: exposure }
+      uExposure: { value: exposure },
+      uDisplayGain: { value: new THREE.Vector3(1, 1, 1) },
+      uUseBlenderLook: { value: false },
+      tBlenderLook: { value: null }
     },
     vertexShader:   VERT,
     fragmentShader: COMPOSITE_FRAG,
@@ -229,14 +263,18 @@ export function createBloomEffect(
 
   // ── Größenverfolgung ───────────────────────────────────────────────────────
   let fullW = 1, fullH = 1, halfW = 1, halfH = 1;
+  let blurScaleX = 1, blurScaleY = 1;
   const bloomDiv = deviceTier === 'high' ? 3 : 4;
   const compensatedBlurScale = blurScale * (2 / bloomDiv);
 
-  function setSize(width: number, height: number): void {
+  function setSize(width: number, height: number, referenceWidth = width, referenceHeight = height): void {
     fullW = width;
     fullH = height;
     halfW = Math.max(1, Math.floor(width / bloomDiv));
     halfH = Math.max(1, Math.floor(height / bloomDiv));
+    // Keep the glow radius in display pixels when the scene resolution changes.
+    blurScaleX = halfW / Math.max(1, Math.floor(referenceWidth / bloomDiv));
+    blurScaleY = halfH / Math.max(1, Math.floor(referenceHeight / bloomDiv));
 
     sceneRT .setSize(fullW, fullH);
     brightRT.setSize(halfW, halfH);
@@ -245,7 +283,8 @@ export function createBloomEffect(
   }
 
   // ── Render-Pipeline ─────────────────────────────────────────────────────
-  function render(scene: THREE.Scene, camera: THREE.Camera): void {
+  function render(scene: THREE.Scene, camera: THREE.Camera, onPass?: (pass: BloomPassName) => void): void {
+    if (import.meta.env.DEV) onPass?.('scene');
     // Renderer-Status speichern
     const prevToneMapping = renderer.toneMapping;
     const prevOutputCS    = renderer.outputColorSpace;
@@ -260,22 +299,25 @@ export function createBloomEffect(
 
     // Post-Process-Passes laufen auch in linearem + Nicht-Ton-Raum.
 
-    // 2. Schwellen-Pass → halb-auflösendes brightRT
+    // 2. Schwellen-Pass → je Achse 1/3 (high), sonst 1/4 der Hauptauflösung.
+    if (import.meta.env.DEV) onPass?.('threshold');
     thresholdMat.uniforms.tDiffuse.value = sceneRT.texture;
     quadMesh.material = thresholdMat;
     renderer.setRenderTarget(brightRT);
     renderer.render(quadScene, orthoCamera);
 
     // 3. Horizontale Unschärfe
+    if (import.meta.env.DEV) onPass?.('blur-horizontal');
     blurHMat.uniforms.tDiffuse.value = brightRT.texture;
-    blurHMat.uniforms.uDir.value.set(compensatedBlurScale / halfW, 0);
+    blurHMat.uniforms.uDir.value.set(compensatedBlurScale * blurScaleX / halfW, 0);
     quadMesh.material = blurHMat;
     renderer.setRenderTarget(blurHRT);
     renderer.render(quadScene, orthoCamera);
 
     // 4. Vertikale Unschärfe
+    if (import.meta.env.DEV) onPass?.('blur-vertical');
     blurVMat.uniforms.tDiffuse.value = blurHRT.texture;
-    blurVMat.uniforms.uDir.value.set(0, compensatedBlurScale / halfH);
+    blurVMat.uniforms.uDir.value.set(0, compensatedBlurScale * blurScaleY / halfH);
     quadMesh.material = blurVMat;
     renderer.setRenderTarget(blurVRT);
     renderer.render(quadScene, orthoCamera);
@@ -283,6 +325,7 @@ export function createBloomEffect(
     // 5. Zusammensetzen → Bildschirm.
     //    Der Composite-Shader wendet AgX und eine exakte lineare-sRGB-Ausgabe selbst an.
     //    Wir verwenden LinearSRGBColorSpace, damit der Renderer KEINE zweite sRGB-Konvertierung auf unserer bereits Gamma-korrigierten Ausgabe anwendet.
+    if (import.meta.env.DEV) onPass?.('composite');
     renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
     compositeMat.uniforms.tScene.value = sceneRT.texture;
     compositeMat.uniforms.tBloom.value = blurVRT.texture;
@@ -305,7 +348,20 @@ export function createBloomEffect(
     blurHMat.dispose();
     blurVMat.dispose();
     compositeMat.dispose();
+    compositeMat.uniforms.tBlenderLook.value?.dispose();
   }
 
-  return { render, setSize, dispose };
+  return { render, setSize, dispose,
+    setExposure: value => { compositeMat.uniforms.uExposure.value = value; },
+    setDisplayGrade: (exposureEV, whiteBalance) => {
+      compositeMat.uniforms.uDisplayGain.value
+        .set(whiteBalance[0], whiteBalance[1], whiteBalance[2])
+        .multiplyScalar(2 ** exposureEV);
+    },
+    setDisplayLut: texture => {
+      compositeMat.uniforms.tBlenderLook.value?.dispose();
+      compositeMat.uniforms.tBlenderLook.value = texture;
+      compositeMat.uniforms.uUseBlenderLook.value = true;
+    }
+  };
 }

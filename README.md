@@ -22,7 +22,7 @@ Eine interaktive 3D-Portfolio-Website. Kein klassisches Layout - stattdessen ein
 - **Ueber mich im Monitor** - Eigene videofreie Platzhalterseite mit direkter Fahrt in den rechten Monitor und Ruecknavigation zum Raum oder Hauptmenue
 - **Zertifikatsvitrine** - Praesentation von Zertifikaten und Achievements
 - **Custom Render-Pipeline** - HDR-Bloom (eigene GLSL-Shader), Schatten, Neon-Beleuchtung, ACES Tonemapping
-- **Adaptive Performance** - Drei Device-Tiers (high/mid/low) mit angepassten Schatten, Bloom und Antialias
+- **Adaptive Performance** - Drei Geräteklassen mit angepassten Renderparametern, Ruhemodus für statische Raumansichten und bedarfsgerecht reduzierter Auflösung während Kamerafahrten; anschließend wieder volle Basisauflösung
 - **Responsive** - Touch-Steuerung, Landscape-Lock auf Mobile, Tablet-Support
 
 ---
@@ -62,5 +62,7 @@ Gesamtes Projekt vor dem Deploy pruefen:
 ```bash
 npm run build
 ```
+
+Die [Blender-zu-Three.js-Pipeline für die Raumverfeinerung](docs/room-refinement-workflow.md) beschreibt den separaten Geometrieexport, den passenden Lichtatlas, den AgX-Look und die lokalen Vergleichsansichten.
 
 ---

@@ -17,17 +17,23 @@ import {
 import type { CombatPresentationStateInput } from './combat-presentation';
 import { applyCameraPreset, createBoardCamera, type CameraPreset, resizeCamera } from './camera';
 import { deviceTier, isMobileDevice } from './device-tier';
+import { createDemandFrameLoop, type DemandFrameLoop } from './demand-frame-loop';
+import { createAdaptiveResolution, getBaseRenderDpr, type ResolutionMode } from './adaptive-resolution';
+import { createRoomRenderTiming } from './room-render-timing';
+import { profileRoomPasses } from './room-pass-timing';
 import { createBoardInteraction, type BoardInteractionLayer } from './interaction';
 import { createSceneLights, type SceneLights } from './lights';
+import eveningProfile from './room-evening-profile.json';
 import {
   createRoomQualityController,
-  loadRoomRedesignLightMap,
   type RoomQualityController
 } from './room-quality';
+import { loadRoomPresentationAssets } from './room-assets';
+import { createRoomStaticBatches } from './room-static-batches';
 import { createBloomEffect, type BloomEffect } from './bloom';
 import {
   DEFAULT_PIECE_ASSET_SET,
-  loadRoomAsset,
+  ROOM_REFINED_MODEL_FILE,
   type BoardAssetMode,
   type BoardVisualAssets,
   type ChessVisualAssets,
@@ -220,6 +226,7 @@ interface StageScene {
   roomGroup: THREE.Group;
   roomPieceNodes: THREE.Object3D[];
   roomQuality: RoomQualityController;
+  disposeRoomResources: () => void;
   scene: THREE.Scene;
 }
 
@@ -324,6 +331,21 @@ function applyRedesignOverviewPreset(roomGroup: THREE.Group): void {
   // Die Punkte liegen bereits im von glTF verwendeten Y-up-Koordinatensystem.
   const position = roomGroup.localToWorld(new THREE.Vector3(1.0, 2.25, 7.8));
   const target = roomGroup.localToWorld(new THREE.Vector3(0.75, 1.16, -1.08));
+  if (import.meta.env.DEV) {
+    // Repeatable browser close-ups of the real exported meshes and shaders.
+    const views: Record<string, [number[], number[]]> = {
+      mouse: [[0.95, 1.20, -1.15], [0.47, 0.90, -2.0]],
+      lamp: [[-2.45, 1.4, -1.2], [-3.18, 1.0, -2.04]],
+      instruments: [[1.85, 1.4, -0.85], [2.02, 1.1, -2.1]],
+      chair: [[1.15, 1.55, 1.5], [0.1, 0.9, -0.48]],
+      curtains: [[-0.55, 1.82, 1.25], [-3.315, 1.85, -1.10]]
+    };
+    const view = views[new URLSearchParams(window.location.search).get('inspect') ?? ''];
+    if (view) {
+      position.copy(roomGroup.localToWorld(new THREE.Vector3().fromArray(view[0])));
+      target.copy(roomGroup.localToWorld(new THREE.Vector3().fromArray(view[1])));
+    }
+  }
   const preset: CameraPreset = {
     position: { x: position.x, y: position.y, z: position.z },
     target: { x: target.x, y: target.y, z: target.z }
@@ -720,6 +742,14 @@ export function createBoardPreviewScene({
   onSquareClick,
   pieces
 }: CreateBoardPreviewSceneOptions): BoardPreviewApp {
+  let isDisposed = false;
+  let dirty = true;
+  let frameLoop: DemandFrameLoop | undefined;
+  function markDirty(): void {
+    if (isDisposed) return;
+    dirty = true;
+    frameLoop?.request();
+  }
   let currentPieces = pieces.map((piece) => ({ ...piece }));
   let loadedBoardFile: string | null = null;
   let loadedPieceModelFiles: string[] = [];
@@ -733,6 +763,7 @@ export function createBoardPreviewScene({
     onRoomAssetReady,
     onSquareClick,
     currentPieces,
+    () => isDisposed,
     markDirty
   );
   // onChange-Throttle: Touch-Move feuert bei jedem Pixel — wir coalesce auf
@@ -746,7 +777,7 @@ export function createBoardPreviewScene({
         lookAroundStateChangePending = true;
         requestAnimationFrame(() => {
           lookAroundStateChangePending = false;
-          onStateChange?.();
+          if (!isDisposed) onStateChange?.();
         });
       }
     }
@@ -767,8 +798,6 @@ export function createBoardPreviewScene({
   let activeCertificateTopicId = 'cs50';
   let roomCameraFree = false;
   let startFlowPendingMenuReturn = false;
-  let frameHandle = 0;
-  let lastFrameTime = performance.now();
 
   // Look-around state must exist before the initial camera pose is applied.
   // The menu is draggable now, so these values are read during the first
@@ -788,35 +817,90 @@ export function createBoardPreviewScene({
   let lookAroundFadeStartMs = 0;
   const LOOK_AROUND_FADE_DURATION_MS = 900;
 
-  // ── On-Demand Rendering ────────────────────────────────────────────────
-  // Dirty-Flag verhindert dass die 5-Pass Bloom-Pipeline jeden Frame läuft
-  // wenn sich nichts geändert hat. markDirty() wird von allen State-Änderungen
-  // aufgerufen; step() rendert nur wenn dirty === true.
-  let dirty = true;
-  function markDirty(): void { dirty = true; }
-
   let isPortrait = false;
+  const measureStartup = new URLSearchParams(window.location.search).has('timing');
+  const measurePasses = import.meta.env.DEV && new URLSearchParams(window.location.search).get('timing') === 'passes';
+  let timingFrameId = 0;
+  const profileRendering = import.meta.env.DEV && new URLSearchParams(window.location.search).has('profile');
+  const requestedResolution = import.meta.env.DEV ? new URLSearchParams(window.location.search).get('resolution') : null;
+  const resolutionMode: ResolutionMode = requestedResolution === 'full' || requestedResolution === 'motion'
+    || requestedResolution === 'reduced' || requestedResolution === 'reference'
+    ? requestedResolution : 'adaptive';
+  let presentationReady = false;
+  let hasRenderedCameraPose = false;
+  const renderedCameraPosition = new THREE.Vector3();
+  const renderedCameraQuaternion = new THREE.Quaternion();
+  const drawingBufferSize = new THREE.Vector2();
+  let renderCssWidth = 1, renderCssHeight = 1, baseRenderDpr = 1;
+  let appliedCssWidth = 0, appliedCssHeight = 0, appliedDpr = 0, appliedBaseDpr = 0;
+  const gl = stage.renderer.getContext();
+  const renderTiming = import.meta.env.DEV && measureStartup && gl instanceof WebGL2RenderingContext
+    ? createRoomRenderTiming(gl, measurePasses ? 128 : 32) : null;
+  const viewportLimits = gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array;
+  const maxTargetSize = Math.min(stage.renderer.capabilities.maxTextureSize, gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number);
+  const renderLimits = { width: Math.min(maxTargetSize, viewportLimits[0]), height: Math.min(maxTargetSize, viewportLimits[1]) };
+  const resolution = createAdaptiveResolution(resolutionMode, (scale, reason) => {
+    if (profileRendering) console.info('[room resolution]', JSON.stringify({ mode: resolutionMode, scale, reason }));
+    markDirty();
+  });
+
+  function applyRenderSize(): boolean {
+    const dpr = baseRenderDpr * resolution.getScale();
+    // Collapsed panels can round the main or smaller transmission buffer to zero.
+    // Wait for their next layout update instead of creating an invalid framebuffer.
+    const bufferWidth = Math.floor(renderCssWidth * dpr);
+    const bufferHeight = Math.floor(renderCssHeight * dpr);
+    if (Math.floor(bufferWidth * stage.renderer.transmissionResolutionScale) < 1 ||
+        Math.floor(bufferHeight * stage.renderer.transmissionResolutionScale) < 1) return false;
+    if (renderCssWidth === appliedCssWidth && renderCssHeight === appliedCssHeight &&
+        dpr === appliedDpr && baseRenderDpr === appliedBaseDpr) return true;
+    // This path only changes render buffers. Layout/controls/camera projection
+    // must not be reset when a camera animation changes resolution.
+    stage.renderer.setDrawingBufferSize(renderCssWidth, renderCssHeight, dpr);
+    stage.renderer.getDrawingBufferSize(drawingBufferSize);
+    stage.bloom.setSize(drawingBufferSize.x, drawingBufferSize.y,
+      Math.floor(renderCssWidth * baseRenderDpr), Math.floor(renderCssHeight * baseRenderDpr));
+    appliedCssWidth = renderCssWidth;
+    appliedCssHeight = renderCssHeight;
+    appliedDpr = dpr;
+    appliedBaseDpr = baseRenderDpr;
+    if (profileRendering) console.info('[room buffer]', JSON.stringify({
+      mode: resolutionMode, scale: resolution.getScale(), width: drawingBufferSize.x, height: drawingBufferSize.y
+    }));
+    return true;
+  }
+
+  let profileSteps = 0;
+  let lastRenderProfile: Record<string, number | undefined> | null = null;
+  frameLoop = createDemandFrameLoop(step, profileRendering ? () => {
+    console.info('[room idle]', JSON.stringify({ steps: profileSteps, mode: startFlowMode, render: lastRenderProfile }));
+  } : undefined);
+  const handleVisibilityChange = (): void => {
+    frameLoop?.setEnabled(!document.hidden);
+    resolution.reset();
+    hasRenderedCameraPose = false;
+    if (!document.hidden) markDirty();
+  };
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  handleVisibilityChange();
 
   applyStartFlowCameraPose();
   syncStartFlowInteractionLock();
 
   const resize = (): void => {
+    if (isDisposed) return;
     const width = Math.max(container.clientWidth, 1);
     const height = Math.max(container.clientHeight, 1);
 
-    // Ein Pixelbudget verhindert, dass HiDPI- und 4K-Displays die vollständige
-    // fünfstufige Post-Process-Pipeline mit unnötig vielen Renderpixeln belasten.
-    const maxDpr = deviceTier === 'high' ? 1.5 : deviceTier === 'medium' ? 1.25 : 1;
-    const maxPixels = deviceTier === 'high' ? 4_000_000 : deviceTier === 'medium' ? 2_500_000 : 1_500_000;
-    const nativeDpr = Math.min(window.devicePixelRatio || 1, maxDpr);
-    const budgetDpr = Math.sqrt(maxPixels / (width * height));
-    const dpr = Math.min(nativeDpr, Math.max(0.75, budgetDpr));
-    stage.renderer.setPixelRatio(dpr);
-    stage.renderer.setSize(width, height, false);
-    stage.bloom.setSize(
-      Math.floor(width * dpr),
-      Math.floor(height * dpr)
-    );
+    const nextBaseDpr = getBaseRenderDpr(width, height, window.devicePixelRatio || 1, deviceTier, renderLimits);
+    if (width !== renderCssWidth || height !== renderCssHeight || nextBaseDpr !== baseRenderDpr) {
+      renderCssWidth = width;
+      renderCssHeight = height;
+      baseRenderDpr = nextBaseDpr;
+      resolution.reset(true);
+      hasRenderedCameraPose = false;
+    }
+    applyRenderSize();
     resizeCamera(stage.camera, width, height);
     isPortrait = stage.camera.aspect < 1;
     const isMobileLandscape = isMobileDevice && !isPortrait;
@@ -838,7 +922,7 @@ export function createBoardPreviewScene({
     // vollständiger Initialisierung (preview-Rückgabe in game.ts) aufgerufen
     // wird und keinen synchronen ResizeObserver-Feedback-Loop auslöst.
     if (startFlowMode === 'roomExplore') {
-      window.requestAnimationFrame(() => onStateChange?.());
+      window.requestAnimationFrame(() => { if (!isDisposed) onStateChange?.(); });
     }
   };
 
@@ -849,17 +933,9 @@ export function createBoardPreviewScene({
   resizeObserver.observe(container);
   resize();
 
-  const animate = (timestamp: number): void => {
-    const rawDeltaMs = timestamp - lastFrameTime;
-    const deltaMs = Math.min(rawDeltaMs, 32);
-    lastFrameTime = timestamp;
-    step(deltaMs);
-    frameHandle = window.requestAnimationFrame(animate);
-  };
-
-  frameHandle = window.requestAnimationFrame(animate);
-
-  function step(deltaMs: number): void {
+  function step(deltaMs: number): boolean {
+    if (isDisposed) return false;
+    if (profileRendering) profileSteps += 1;
     clockState.elapsedMs += deltaMs;
 
     const seconds = clockState.elapsedMs / 1000;
@@ -890,9 +966,12 @@ export function createBoardPreviewScene({
         markDirty();
       }
     }
-    stage.pieceLayer.step(deltaMs);
-    // Aktive Figuren-Animationen (Zug, Capture, Combat, Hover) erfordern Render.
-    if (stage.pieceLayer.getAnimationState().isAnimating) {
+    const piecesWereAnimating = stage.pieceLayer.getAnimationState().isAnimating;
+    if (piecesWereAnimating) stage.pieceLayer.step(deltaMs);
+    const piecesAreAnimating = piecesWereAnimating && stage.pieceLayer.getAnimationState().isAnimating;
+    // Draw the final move/capture frame too: step can finish an animation and
+    // remove its active flag while still changing the visible final pose.
+    if (piecesWereAnimating) {
       markDirty();
     }
     // Combat-Kamera-Transitions melden true wenn sich die Pose geändert hat.
@@ -900,20 +979,73 @@ export function createBoardPreviewScene({
       markDirty();
     }
     stage.cctvScreen.tick(clockState.elapsedMs);
-    syncCameraControlLock();
+    const cameraLockChanged = syncCameraControlLock();
     applyStartFlowCameraPose();
+    // Camera return can finish after the app's combat state has settled.
+    // Publish the final unlock so controls do not retain a stale disabled state.
+    if (cameraLockChanged) onStateChange?.();
 
     if (dirty) {
       dirty = false;
       render();
     }
+    const cameraMode = stage.cameraController.getMode();
+    // App transitions and room/look controls request their own frames through
+    // markDirty. Only these scene-owned animations need a continuing loop.
+    return startFlowMode === 'boardFocus' || piecesAreAnimating ||
+      cameraMode === 'combatTransitionIn' || cameraMode === 'combatTransitionOut';
   }
 
+  let profileFrames = 0;
   function render(): void {
-    // CCTV-Feed in sein Off-Screen-Ziel rendern VOR dem Hauptpass
-    // damit die Bildschirm-Textur aktuell ist wenn Bloom die Szene zusammenstellt.
-    stage.cctvScreen.renderToTarget(stage.scene, stage.renderer);
-    stage.bloom.render(stage.scene, stage.camera);
+    if (isDisposed) return;
+    const cameraMoved = presentationReady && hasRenderedCameraPose &&
+      (renderedCameraPosition.distanceToSquared(stage.camera.position) > 1e-10 ||
+       1 - Math.abs(renderedCameraQuaternion.dot(stage.camera.quaternion)) > 1e-10);
+    const cameraMode = stage.cameraController.getMode();
+    const continuousCamera = startFlowMode === 'introTransition' || startFlowFocusProgress < 1 ||
+      stage.roomCameraControls.isAnimating() || cameraMode === 'combatTransitionIn' || cameraMode === 'combatTransitionOut';
+    resolution.observeCameraFrame(performance.now(), cameraMoved, continuousCamera && !document.hidden);
+    if (!applyRenderSize()) return;
+    const previousAutoReset = stage.renderer.info.autoReset;
+    if (profileRendering) {
+      stage.renderer.info.autoReset = false;
+      stage.renderer.info.reset();
+    }
+    if (measurePasses && renderTiming) {
+      // Pass queries replace the whole-frame query; elapsed queries cannot nest.
+      stage.cctvScreen.renderToTarget(stage.scene, stage.renderer);
+      profileRoomPasses(stage.renderer, renderTiming, {
+        moving: cameraMoved, continuous: continuousCamera && !document.hidden,
+        width: stage.renderer.domElement.width, height: stage.renderer.domElement.height,
+        frameId: ++timingFrameId
+      }, onPass => stage.bloom.render(stage.scene, stage.camera, onPass));
+    } else {
+      renderTiming?.beginFrame({
+        moving: cameraMoved, continuous: continuousCamera && !document.hidden,
+        width: stage.renderer.domElement.width, height: stage.renderer.domElement.height
+      });
+      try {
+        // Current monitor surfaces are static; this hook remains for optional feeds.
+        stage.cctvScreen.renderToTarget(stage.scene, stage.renderer);
+        stage.bloom.render(stage.scene, stage.camera);
+      } finally {
+        renderTiming?.endFrame();
+      }
+    }
+    renderedCameraPosition.copy(stage.camera.position);
+    renderedCameraQuaternion.copy(stage.camera.quaternion);
+    hasRenderedCameraPose = true;
+    if (profileRendering) {
+      lastRenderProfile = {
+        calls: stage.renderer.info.render.calls, triangles: stage.renderer.info.render.triangles,
+        textures: stage.renderer.info.memory.textures, programs: stage.renderer.info.programs?.length,
+        transmissionScale: stage.renderer.transmissionResolutionScale,
+        width: stage.renderer.domElement.width, height: stage.renderer.domElement.height
+      };
+      if (profileFrames++ % 60 === 0) console.info('[room render]', JSON.stringify(lastRenderProfile));
+      stage.renderer.info.autoReset = previousAutoReset;
+    }
   }
 
   function getSnapshot(): BoardPreviewSnapshot {
@@ -1010,10 +1142,10 @@ export function createBoardPreviewScene({
     return JSON.stringify(getSnapshot());
   }
 
-  function syncCameraControlLock(): void {
+  function syncCameraControlLock(): boolean {
     stage.interaction.setHighlightsVisible(presentationMode !== 'combat');
     const cameraMode = stage.cameraController.getMode();
-    stage.boardCameraControls.setLocked(startFlowMode !== 'boardFocus' || presentationMode === 'combat' || cameraMode !== 'board');
+    return stage.boardCameraControls.setLocked(startFlowMode !== 'boardFocus' || presentationMode === 'combat' || cameraMode !== 'board');
   }
 
   function syncStartFlowInteractionLock(): void {
@@ -1336,7 +1468,12 @@ export function createBoardPreviewScene({
       onStateChange?.();
     },
     dispose: () => {
-      window.cancelAnimationFrame(frameHandle);
+      if (isDisposed) return;
+      isDisposed = true;
+      frameLoop?.dispose();
+      resolution.dispose();
+      renderTiming?.dispose();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       resizeObserver.disconnect();
       stage.boardCameraControls.dispose();
       stage.roomCameraControls.dispose();
@@ -1345,6 +1482,7 @@ export function createBoardPreviewScene({
       stage.pieceLayer.dispose();
       stage.bloom.dispose();
       stage.roomQuality.dispose();
+      stage.disposeRoomResources();
       lookAround.dispose();
       stage.cctvScreen.dispose();
       stage.renderer.dispose();
@@ -1352,15 +1490,23 @@ export function createBoardPreviewScene({
     },
     getSnapshot,
     prepareInitialRender: async (onProgress) => {
+      // assetsReady is a readiness signal. A destroyed instance must never
+      // resolve it and let an old continuation dismiss a new instance's intro.
+      const cancelled = (): Promise<void> => new Promise(() => {});
+      if (isDisposed) return cancelled();
       onProgress?.(0.08);
+      if (measureStartup) performance.mark('portfolio:warmup-start');
 
       try {
         await stage.renderer.compileAsync(stage.scene, stage.camera);
       } catch {
+        if (isDisposed) return cancelled();
         stage.renderer.compile(stage.scene, stage.camera);
       }
 
+      if (isDisposed) return cancelled();
       onProgress?.(0.78);
+      if (measureStartup) performance.mark('portfolio:shaders-ready');
       dirty = false;
       render();
 
@@ -1369,6 +1515,11 @@ export function createBoardPreviewScene({
           window.requestAnimationFrame(() => resolve());
         });
       });
+      if (isDisposed) return cancelled();
+      presentationReady = true;
+      if (measureStartup) performance.mark('portfolio:room-ready');
+      resolution.reset();
+      if (profileRendering) console.info('[room ready render]', JSON.stringify(lastRenderProfile));
       onProgress?.(1);
     },
     resetCameraState: () => {
@@ -1644,6 +1795,7 @@ function createStageScene(
   onRoomAssetReady: (() => void) | undefined,
   onSquareClick: ((square: BoardSquare) => void) | undefined,
   pieces: ChessPieceState[],
+  isDisposed: () => boolean,
   onDirty?: () => void
 ): StageScene {
   const scene = new THREE.Scene();
@@ -1660,7 +1812,10 @@ function createStageScene(
   // Transmissive Lampen-/Fenstergläser benötigen intern einen zusätzlichen
   // Szenenpass. Eine kleinere Auflösung spart dort viele Samples, ohne die
   // eigentliche Raumdarstellung oder Materialparameter zu verändern.
-  renderer.transmissionResolutionScale = deviceTier === 'high' ? 0.5 : 0.35;
+  const referenceGlass = import.meta.env.DEV && new URLSearchParams(window.location.search).get('glass') === 'reference';
+  renderer.transmissionResolutionScale = referenceGlass
+    ? (deviceTier === 'high' ? 0.5 : 0.35)
+    : (deviceTier === 'high' ? 0.35 : 0.25);
   // outputColorSpace + toneMapping werden in BloomEffect's Composite
   // Shader behandelt (ACESFilmic + sRGB Gamma). Wir setzen NoToneMapping auf dem Renderer
   // deshalb wendet er keine doppelte Tone-Mapping an beim Rendern zum Scene RT.
@@ -1742,7 +1897,10 @@ function createStageScene(
   // Niedriges Sigma (0.04) behält scharfe Reflexionen auf polierten Oberflächen.
   // environmentIntensity bleibt niedrig damit Reflexionen Glanz hinzufügen ohne
   // die dunkle Cyber-Atmosphäre auszuwaschen.
-  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  const roomEnvironment = new RoomEnvironment();
+  const environmentTarget = pmrem.fromScene(roomEnvironment, 0.04);
+  scene.environment = environmentTarget.texture;
+  roomEnvironment.dispose();
   scene.environmentIntensity = 0.12;
   pmrem.dispose();
 
@@ -1769,30 +1927,46 @@ function createStageScene(
   const roomPieceNodes: THREE.Object3D[] = [];
   const ROOM_PIECE_PATTERN = /^[wb]_(bishop|rook|knight|queen|king|pawn)/i;
   const cctvScreen = createCCTVScreen();
+  let disposeRoomModel: (() => void) | undefined;
+  let disposeRoomBatches: (() => void) | undefined;
   let roomModelProgress = 0;
   let roomLightMapProgress = 0;
   const reportRoomAssetProgress = (): void => {
-    // The lightmap is roughly seven times larger than the room GLB, so the
-    // combined value follows the bytes users are actually waiting for.
-    onRoomAssetProgress?.(roomModelProgress * 0.12 + roomLightMapProgress * 0.88);
+    if (!isDisposed()) onRoomAssetProgress?.(roomModelProgress * 0.5 + roomLightMapProgress * 0.5);
   };
 
   onRoomAssetProgress?.(0);
 
-  Promise.all([
-    loadRoomAsset(progress => {
+  void loadRoomPresentationAssets({
+    skipRefined: import.meta.env.DEV && new URLSearchParams(window.location.search).get('room') === 'original',
+    isCancelled: isDisposed,
+    onModelProgress: progress => {
       roomModelProgress = Math.max(roomModelProgress, progress);
       reportRoomAssetProgress();
-    }),
-    loadRoomRedesignLightMap(progress => {
+    },
+    onLightMapProgress: progress => {
       roomLightMapProgress = Math.max(roomLightMapProgress, progress);
       reportRoomAssetProgress();
-    })
-  ]).then(([room, lightMap]) => {
-    if (room) {
+    }
+  }).then(pair => {
+    if (!pair) return;
+    const { room, lightMap, disposeModel } = pair;
+    let { displayLut } = pair;
+    if (isDisposed()) {
+      lightMap?.dispose();
+      displayLut?.dispose();
+      disposeModel();
+      return;
+    }
+    let unclaimedLightMap = lightMap;
+    disposeRoomModel = disposeModel;
+    try {
       const calibration = resolveRoomCalibration(room);
       roomGroup.scale.setScalar(calibration.scale);
       roomGroup.position.copy(calibration.offset);
+      const authoredScale = Number(room.userData.room_lightmap_scale);
+      const authoredLighting = Number.isFinite(authoredScale) && authoredScale > 0;
+      const authoredMultiplierPower = room.userData.room_lightmap_multiplier_power === 2 ? 2 : 1;
 
       for (const child of room.children.slice()) {
         roomGroup.add(child);
@@ -1810,15 +1984,33 @@ function createStageScene(
         scene.environmentIntensity = 0.05;
 
         if (lightMap) {
-          const lightmappedMeshes = roomQuality.apply(roomGroup, lightMap);
+          // apply() takes ownership before configuring individual materials,
+          // including when the model has no eligible lightmapped meshes.
+          unclaimedLightMap = null;
+          const lightmappedMeshes = roomQuality.apply(roomGroup, lightMap, authoredLighting
+            ? { scale: authoredScale, multiplierPower: authoredMultiplierPower, environment: scene.environment } : undefined);
           if (lightmappedMeshes > 0) {
-            lights.applyBakedRoomProfile();
-          } else {
-            lightMap.dispose();
+            lights.applyBakedRoomProfile(authoredLighting);
+            if (authoredLighting) {
+              bloom.setExposure(2 ** -0.2);
+              bloom.setDisplayGrade(eveningProfile.browserDisplay.exposureEV, eveningProfile.browserDisplay.whiteBalance);
+              if (displayLut) {
+                displayLut.colorSpace = THREE.NoColorSpace;
+                displayLut.flipY = false;
+                displayLut.minFilter = THREE.LinearFilter;
+                displayLut.magFilter = THREE.LinearFilter;
+                displayLut.generateMipmaps = false;
+                bloom.setDisplayLut(displayLut);
+                displayLut = null; // Bloom owns the texture from this point on.
+              }
+            }
+            if (import.meta.env.DEV) console.info('[room lighting]', JSON.stringify({
+              authoredLighting, lightmappedMeshes, lightmapScale: authoredScale || null,
+              lightmapMultiplierPower: authoredMultiplierPower,
+              meshCount: roomGroup.getObjectsByProperty('isMesh', true).length
+            }));
           }
         }
-      } else {
-        lightMap?.dispose();
       }
 
       roomGroup.traverse((node) => {
@@ -1829,13 +2021,33 @@ function createStageScene(
       });
       cctvScreen.attach(roomGroup);
       attachSemesterOneFrameTexture(roomGroup, semesterOnePreviewTexture);
+      const mergeDisabled = import.meta.env.DEV && new URLSearchParams(window.location.search).get('roomMerge') === 'off';
+      if (room.userData.roomAssetFile === ROOM_REFINED_MODEL_FILE && !mergeDisabled) {
+        // Material overrides and individually hidden GLB pieces must be final first.
+        try {
+          const batches = createRoomStaticBatches(roomGroup);
+          disposeRoomBatches = batches.dispose;
+          if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('profile')) {
+            console.info('[room batches]', JSON.stringify(batches.stats));
+          }
+        } catch (error) {
+          // The helper restores source visibility if preparation fails.
+          console.warn('Room batching unavailable; using individual meshes', error);
+        }
+      }
       renderer.shadowMap.needsUpdate = true;
       onDirty?.();
       onStateChange?.();
-    } else {
-      lightMap?.dispose();
+    } finally {
+      // Release resources not consumed by the controllers, including if scene
+      // setup throws before the corresponding ownership transfer.
+      unclaimedLightMap?.dispose();
+      displayLut?.dispose();
     }
+  }).catch(error => {
+    if (!isDisposed()) console.warn('Room initialization failed', error);
   }).finally(() => {
+    if (isDisposed()) return;
     onRoomAssetProgress?.(1);
     onRoomAssetReady?.();
   });
@@ -1855,6 +2067,16 @@ function createStageScene(
     roomGroup,
     roomPieceNodes,
     roomQuality,
+    disposeRoomResources: () => {
+      disposeRoomBatches?.();
+      disposeRoomBatches = undefined;
+      disposeRoomModel?.();
+      disposeRoomModel = undefined;
+      semesterOnePreviewTexture.dispose();
+      environmentTarget.dispose();
+      scene.environment = null;
+      roomGroup.clear();
+    },
     scene
   };
 }

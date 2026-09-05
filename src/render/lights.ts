@@ -1,5 +1,7 @@
 import * as THREE from 'three';
+import { RectAreaLightUniformsLib } from 'three-stdlib';
 import { deviceTier } from './device-tier';
+import eveningProfile from './room-evening-profile.json';
 
 export interface LightingPlan {
   ambientIntensity: number;
@@ -9,7 +11,7 @@ export interface LightingPlan {
 
 export interface SceneLights {
   ambient: THREE.AmbientLight;
-  applyBakedRoomProfile: () => void;
+  applyBakedRoomProfile: (authoredLighting?: boolean) => void;
   applyRoomRedesignProfile: (roomRoot: THREE.Object3D) => void;
   ceiling: THREE.PointLight;
   corner: THREE.PointLight;
@@ -42,6 +44,8 @@ export function createLightingPlan(): LightingPlan {
 export function createSceneLights(): SceneLights {
   const plan = createLightingPlan();
   const group = new THREE.Group();
+  let redesignRoot: THREE.Object3D | null = null;
+  const reflectionLights: THREE.RectAreaLight[] = [];
 
   // Legacy defaults remain active until the loaded GLB identifies itself as the
   // redesign room. This keeps the old room as a working fallback.
@@ -190,6 +194,7 @@ export function createSceneLights(): SceneLights {
   };
 
   const applyRoomRedesignProfile = (roomRoot: THREE.Object3D): void => {
+    redesignRoot = roomRoot;
     roomRoot.updateMatrixWorld(true);
 
     ambient.color.set('#07101f');
@@ -254,7 +259,41 @@ export function createSceneLights(): SceneLights {
     rim.position.copy(blenderPointToWorld(roomRoot, -2.4, -1.0, 3.0));
   };
 
-  const applyBakedRoomProfile = (): void => {
+  const applyBakedRoomProfile = (authoredLighting = false): void => {
+    if (authoredLighting) {
+      if (redesignRoot && reflectionLights.length === 0) {
+        RectAreaLightUniformsLib.init();
+        const scale = redesignRoot.getWorldScale(new THREE.Vector3()).x;
+        const orientation = redesignRoot.getWorldQuaternion(new THREE.Quaternion());
+        // Two authored Blender AREA lights restore broad glass/metal highlights.
+        // Baked materials suppress their diffuse term. These add no shadow pass.
+        // Blender's bake reads this same profile: moving the broad fill must
+        // also move its reflection instead of leaving a cold highlight behind.
+        for (const source of eveningProfile.lights) {
+          if (source.reflectionStrength === undefined || !source.position || !source.target || !source.width || !source.height) continue;
+          const light = new THREE.RectAreaLight(
+            new THREE.Color().setRGB(source.color[0], source.color[1], source.color[2]),
+            // LTC and Blender's area-light response differ, especially on
+            // transmitting glass. Calibrated against the browser close-ups.
+            source.reflectionStrength * source.power / (source.width * source.height * Math.PI),
+            source.width * scale, source.height * scale
+          );
+          light.name = source.name + '_Reflection';
+          light.position.copy(blenderPointToWorld(redesignRoot, source.position[0], source.position[1], source.position[2]));
+          light.up.set(0, 1, 0).applyQuaternion(orientation);
+          light.lookAt(blenderPointToWorld(redesignRoot, source.target[0], source.target[1], source.target[2]));
+          reflectionLights.push(light);
+          group.add(light);
+        }
+      }
+      // The full static room now carries the authored Blender illumination.
+      // Retain the gameplay light, quiet fill and two authored reflection lights.
+      for (const child of group.children) {
+        if (child instanceof THREE.Light) child.visible = child === key || child === hemi || child instanceof THREE.RectAreaLight;
+      }
+      hemi.intensity = 0.10;
+      return;
+    }
     // Static walls, floor and desk now receive Blender's direct/indirect light
     // from the lightmap. A soft live fill keeps dark furniture readable and
     // illuminates dynamic chess pieces without flattening the baked shadows.
