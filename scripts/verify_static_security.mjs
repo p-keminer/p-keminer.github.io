@@ -15,11 +15,9 @@ const PUBLIC_HTML_DOCUMENTS = [
   'index.html',
   '404.html',
   'leistungsnachweise/index.html',
-  'portfolio-platzhalter/index.html',
+  'portfolio/index.html',
   'ueber-mich/index.html',
-  'zertifikate/index.html',
-  'comic-film/index.html',
-  'horror-film/index.html'
+  'zertifikate/index.html'
 ];
 
 const MAINTENANCE_HTML_DOCUMENTS = [
@@ -109,8 +107,13 @@ function parseContentSecurityPolicy(documentPath, html) {
   return { policy, directives };
 }
 
+function normalizeTextLineEndings(contents) {
+  return contents.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+}
+
 function hashInlineContent(contents) {
-  return `'sha256-${createHash('sha256').update(contents).digest('base64')}'`;
+  const normalizedContents = normalizeTextLineEndings(contents);
+  return `'sha256-${createHash('sha256').update(normalizedContents).digest('base64')}'`;
 }
 
 async function collectFiles(directoryPath) {
@@ -217,17 +220,21 @@ await Promise.all([
 
 if (!IS_MAINTENANCE_BUILD) {
   const dracoPairs = [
-    [DRACO_WRAPPER_PATH, join(DRACO_PACKAGE_DIRECTORY, 'draco_wasm_wrapper.js')],
-    [DRACO_WASM_PATH, join(DRACO_PACKAGE_DIRECTORY, 'draco_decoder.wasm')]
+    [DRACO_WRAPPER_PATH, join(DRACO_PACKAGE_DIRECTORY, 'draco_wasm_wrapper.js'), true],
+    [DRACO_WASM_PATH, join(DRACO_PACKAGE_DIRECTORY, 'draco_decoder.wasm'), false]
   ];
 
-  for (const [distPath, packagePath] of dracoPairs) {
+  for (const [distPath, packagePath, normalizeLineEndings] of dracoPairs) {
     const [distContents, packageContents] = await Promise.all([
       readFile(distPath),
       readFile(packagePath)
     ]);
+    const matchesPackage = normalizeLineEndings
+      ? normalizeTextLineEndings(distContents.toString('utf8'))
+        === normalizeTextLineEndings(packageContents.toString('utf8'))
+      : distContents.equals(packageContents);
     assert(
-      distContents.equals(packageContents),
+      matchesPackage,
       `${relative(DIST_DIRECTORY, distPath)} does not match the lockfile-bound Three.js Draco decoder.`
     );
   }

@@ -175,30 +175,30 @@
     </text>
     <text x="276.00" y="755.00" font-size="17.5" font-weight="400" font-family="Segoe UI, Helvetica, Arial, sans-serif" fill="#c9d1d9" opacity="0">eines<animate data-word-reveal="true" attributeName="opacity" from="0" to="1" begin="5.057s" dur="0.24s" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1" fill="freeze" />
     </text>
-    <g class="code-pill" data-code-span="de-013" data-source="Raspberry Pi Zero 2 W" opacity="0">
-      <rect x="321.00" y="732.00" width="205.00" height="31" rx="7" fill="#21262d" />
-      <text x="329.00" y="755.00" font-size="17" font-weight="500" font-family="Consolas, ui-monospace, SFMono-Regular, monospace" fill="#f0f6fc" textLength="189.00" lengthAdjust="spacingAndGlyphs">Raspberry Pi Zero 2 W</text>
+    <g class="code-pill" data-code-span="de-013" data-source="Raspberry-Pi-Systems" opacity="0">
+      <rect x="321.00" y="732.00" width="196.00" height="31" rx="7" fill="#21262d" />
+      <text x="329.00" y="755.00" font-size="17" font-weight="500" font-family="Consolas, ui-monospace, SFMono-Regular, monospace" fill="#f0f6fc" textLength="180.00" lengthAdjust="spacingAndGlyphs">Raspberry-Pi-Systems</text>
       <animate data-word-reveal="true" attributeName="opacity" from="0" to="1" begin="5.142s" dur="0.24s" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1" fill="freeze" />
     </g>
-    <text x="531.00" y="755.00" font-size="17.5" font-weight="400" font-family="Segoe UI, Helvetica, Arial, sans-serif" fill="#c9d1d9" opacity="0">als<animate data-word-reveal="true" attributeName="opacity" from="0" to="1" begin="5.227s" dur="0.24s" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1" fill="freeze" />
+    <text x="522.00" y="755.00" font-size="17.5" font-weight="400" font-family="Segoe UI, Helvetica, Arial, sans-serif" fill="#c9d1d9" opacity="0">als<animate data-word-reveal="true" attributeName="opacity" from="0" to="1" begin="5.227s" dur="0.24s" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1" fill="freeze" />
     </text>
-    <text x="557.00" y="755.00" font-size="17.5" font-weight="400" font-family="Segoe UI, Helvetica, Arial, sans-serif" fill="#c9d1d9" opacity="0">Lernplattform<animate data-word-reveal="true" attributeName="opacity" from="0" to="1" begin="5.312s" dur="0.24s" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1" fill="freeze" />
+    <text x="548.00" y="755.00" font-size="17.5" font-weight="400" font-family="Segoe UI, Helvetica, Arial, sans-serif" fill="#c9d1d9" opacity="0">Lernplattform<animate data-word-reveal="true" attributeName="opacity" from="0" to="1" begin="5.312s" dur="0.24s" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1" fill="freeze" />
     </text>
-    <text x="670.00" y="755.00" font-size="17.5" font-weight="400" font-family="Segoe UI, Helvetica, Arial, sans-serif" fill="#c9d1d9" opacity="0">für<animate data-word-reveal="true" attributeName="opacity" from="0" to="1" begin="5.398s" dur="0.24s" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1" fill="freeze" />
+    <text x="661.00" y="755.00" font-size="17.5" font-weight="400" font-family="Segoe UI, Helvetica, Arial, sans-serif" fill="#c9d1d9" opacity="0">für<animate data-word-reveal="true" attributeName="opacity" from="0" to="1" begin="5.398s" dur="0.24s" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1" fill="freeze" />
     </text>
     <g class="code-pill" data-code-span="de-014" data-source="Linux" opacity="0">
-      <rect x="698.00" y="732.00" width="61.00" height="31" rx="7" fill="#21262d" />
-      <text x="706.00" y="755.00" font-size="17" font-weight="500" font-family="Consolas, ui-monospace, SFMono-Regular, monospace" fill="#f0f6fc" textLength="45.00" lengthAdjust="spacingAndGlyphs">Linux</text>
+      <rect x="689.00" y="732.00" width="61.00" height="31" rx="7" fill="#21262d" />
+      <text x="697.00" y="755.00" font-size="17" font-weight="500" font-family="Consolas, ui-monospace, SFMono-Regular, monospace" fill="#f0f6fc" textLength="45.00" lengthAdjust="spacingAndGlyphs">Linux</text>
       <animate data-word-reveal="true" attributeName="opacity" from="0" to="1" begin="5.483s" dur="0.24s" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1" fill="freeze" />
     </g>
-    <text x="759.00" y="755.00" font-size="17.5" font-weight="400" font-family="Segoe UI, Helvetica, Arial, sans-serif" fill="#c9d1d9" opacity="0">,<animate data-word-reveal="true" attributeName="opacity" from="0" to="1" begin="5.483s" dur="0.24s" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1" fill="freeze" />
+    <text x="750.00" y="755.00" font-size="17.5" font-weight="400" font-family="Segoe UI, Helvetica, Arial, sans-serif" fill="#c9d1d9" opacity="0">,<animate data-word-reveal="true" attributeName="opacity" from="0" to="1" begin="5.483s" dur="0.24s" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1" fill="freeze" />
     </text>
     <g class="code-pill" data-code-span="de-015" data-source="Netzwerkkommunikation" opacity="0">
-      <rect x="768.00" y="732.00" width="205.00" height="31" rx="7" fill="#21262d" />
-      <text x="776.00" y="755.00" font-size="17" font-weight="500" font-family="Consolas, ui-monospace, SFMono-Regular, monospace" fill="#f0f6fc" textLength="189.00" lengthAdjust="spacingAndGlyphs">Netzwerkkommunikation</text>
+      <rect x="759.00" y="732.00" width="205.00" height="31" rx="7" fill="#21262d" />
+      <text x="767.00" y="755.00" font-size="17" font-weight="500" font-family="Consolas, ui-monospace, SFMono-Regular, monospace" fill="#f0f6fc" textLength="189.00" lengthAdjust="spacingAndGlyphs">Netzwerkkommunikation</text>
       <animate data-word-reveal="true" attributeName="opacity" from="0" to="1" begin="5.568s" dur="0.24s" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1" fill="freeze" />
     </g>
-    <text x="978.00" y="755.00" font-size="17.5" font-weight="400" font-family="Segoe UI, Helvetica, Arial, sans-serif" fill="#c9d1d9" opacity="0">und<animate data-word-reveal="true" attributeName="opacity" from="0" to="1" begin="5.653s" dur="0.24s" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1" fill="freeze" />
+    <text x="969.00" y="755.00" font-size="17.5" font-weight="400" font-family="Segoe UI, Helvetica, Arial, sans-serif" fill="#c9d1d9" opacity="0">und<animate data-word-reveal="true" attributeName="opacity" from="0" to="1" begin="5.653s" dur="0.24s" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1" fill="freeze" />
     </text>
     <g class="code-pill" data-code-span="de-016" data-source="WLAN-Sicherheitskonzepte" opacity="0">
       <rect x="64.00" y="765.00" width="232.00" height="31" rx="7" fill="#21262d" />

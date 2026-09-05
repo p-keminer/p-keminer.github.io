@@ -1,6 +1,6 @@
 const IMPRESSUM_TEXT = `
 <h2>Impressum</h2>
-<p>Angaben gemäß § 5 TMG</p>
+<p>Angaben gemäß § 5 DDG</p>
 
 <h3>Verantwortlich</h3>
 <p>
@@ -40,13 +40,12 @@ const DATENSCHUTZ_TEXT = `
      target="_blank" rel="noopener noreferrer">GitHub Privacy Statement</a>
 </p>
 
-<h3>Schriften, Styles und eingebettete Medien</h3>
+<h3>Schriften, Styles und Bilder</h3>
 <p>
-  Die auf dieser Website verwendeten Schriftdateien, Stylesheets, Bilder und Videos
-  werden zusammen mit der Website über GitHub Pages ausgeliefert. Für den
-  Über-mich-Film und optionale lokale Trailer-Bereiche werden keine externen
-  Video-Plattformen, Font-CDNs oder Analyse-Dienste eingebunden. Auch der technische
-  Draco-Decoder für den 3D-Bereich wird zusammen mit der Website lokal ausgeliefert.
+  Die auf dieser Website verwendeten Schriftdateien, Stylesheets und Bilder werden
+  zusammen mit der Website über GitHub Pages ausgeliefert. Es werden keine Font-CDNs
+  oder Analyse-Dienste eingebunden. Auch der technische Draco-Decoder für den
+  3D-Bereich wird zusammen mit der Website lokal ausgeliefert.
 </p>
 
 <h3>3D-Modell-Dekompression</h3>

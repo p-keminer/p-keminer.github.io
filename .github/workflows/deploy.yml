@@ -12,7 +12,7 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
-# Voruebergehender Wartungsmodus. Fuer den normalen App-Deploy wieder auf "false" setzen.
+# Vorübergehender Wartungsmodus. Für den normalen App-Deploy wieder auf "false" setzen.
 env:
   MAINTENANCE_MODE: "false"
 

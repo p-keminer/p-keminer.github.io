@@ -7,7 +7,7 @@ Die produktive Seite wird über GitHub Pages ausgeliefert. GitHub erzwingt HTTPS
 Aktuell wirksam sind:
 
 - eine restriktive Meta-CSP für die Hauptseite, die 404-Seite und alle direkt aufrufbaren Unterseiten;
-- exakte SHA-256-Freigaben für die noch vorhandenen Inline-Blöcke der lokalen Filmseiten;
+- exakte SHA-256-Freigaben für vorhandene Inline-Blöcke;
 - `no-referrer` als Referrer-Policy auf jeder Seite;
 - lokal ausgelieferte Schriften, Modelle, Medien und Draco-WASM-Dateien;
 - eingeschränkte `allow`-Attribute und `referrerpolicy="no-referrer"` auf den eingebetteten Monitorseiten;
@@ -35,6 +35,6 @@ Sobald ein Host mit frei konfigurierbaren Response-Headern eingesetzt wird, soll
     npm run build
     npm run check:security
 
-Die statische Pruefung weist veroeffentlichte PDFs mit klassischen Dokumentmetadaten (`/Info`, XMP, Autor, Erstellungssoftware oder Zeitstempel) sowie Text-, EXIF- und XMP-Chunks in den Dokumentvorschauen ab. Damit koennen bereinigte Nachweise nicht unbemerkt durch eine spaetere Originaldatei mit Exportmetadaten ersetzt werden.
+Die statische Prüfung weist veröffentlichte PDFs mit klassischen Dokumentmetadaten (`/Info`, XMP, Autor, Erstellungssoftware oder Zeitstempel) sowie Text-, EXIF- und XMP-Chunks in den Dokumentvorschauen ab. Damit können bereinigte Nachweise nicht unbemerkt durch eine spätere Originaldatei mit Exportmetadaten ersetzt werden.
 
 Zusätzlich ist im Browser zu prüfen, dass nur Ressourcen derselben Origin automatisch angefordert werden, keine CSP-Verletzungen auftreten und Raum, Monitorseiten, Dokumente und Zertifikate vollständig funktionieren.
