@@ -148,6 +148,9 @@ Nach `npm run dev` können die folgenden Query-Parameter an die angezeigte lokal
 | `?inspect=mouse` | Nahansicht der Maus |
 | `?inspect=instruments` | Nahansicht der Messgeräte |
 | `?inspect=curtains` | Ansicht der Gardinen für UV-/Lichtkontrolle |
+| `?inspect=plant` | Nahansicht der Pflanze auf dem rechten Wandbord |
+| `?inspect=plant-left` | Nahansicht der linken Dekorpflanze |
+| `?inspect=plant-shelf` | Nahansicht der Pflanze im Bücherregal |
 | `?profile` | Protokolliert Renderaufrufe, Dreiecke, Texturen, Programme, Renderauflösung und beim Einschlafen den CPU-Schrittzähler als `[room idle]` in der Browserkonsole |
 | `?resolution=full` | Feste Basisauflösung ohne bewegungsabhängige Reduzierung; Pixelbudget bleibt aktiv |
 | `?resolution=reference` | DEV-Vergleich: bisherige Automatik mit ausschließlich 80 Prozent als reduzierter Stufe |
@@ -194,3 +197,17 @@ Die anschließende Raumverlängerung mit Lichtprofil 3 verwendet ebenfalls 64 Sa
 Bei der späteren Fensterkorrektur werden zusätzlich nur die Geometrien von Mond, Sternen und Nachthimmel versetzt. Der Mond liegt mindestens 14,9 cm außerhalb der äußeren Wandfläche; seine Eckpunkte bleiben aus der Übersicht auf denselben Projektionsstrahlen. Der Hintergrund liegt vollständig hinter dem Mond und deckt die Fensteröffnung auch bei schräger Ansicht. Die drei emissiven Objekte sind keine Atlas-Empfänger. Die Korrektur wird nach dem Bake angewendet und verwendet dessen bestehenden indirekten Lichtbeitrag; UV-Koordinaten, Materialwerte, Objektmatrizen und Dreieckszahl bleiben erhalten. Ein neuer Bake aus einer bereits korrigierten Arbeitskopie kann deshalb geringfügig andere indirekte Fensterbeleuchtung liefern als der dokumentierte Lauf aus der Originalquelle.
 
 Das bestehende EXR wurde ohne neuen Bake in Sqrt-RGBM umkodiert. An der zuvor sichtbaren welligen Wandlinie sank der gemessene Filterfehler von +12,75 % auf −0,16 %. Modell und Atlas erhalten gemeinsam Cacheversion 6.
+
+## Gezielte Korrektur der Pflanzenbeleuchtung
+
+Die scheinbaren Löcher in den Pflanzenkronen sind Fehler in der gebackenen Beleuchtung. Alle drei Kronen sind geschlossen und haben je 80 korrekt orientierte Dreiecke. UV-Kanäle, Normalen und Draco-Export wurden geprüft. An einer sichtbaren dunklen Stelle schwankte die dekodierte Beleuchtung innerhalb derselben Facette stark; benachbarte Atlaszeilen unterschieden sich um etwa Faktor 35. Der Fehler blieb im Browser auch ohne Batching und ohne Echtzeitreflexe bestehen.
+
+`scripts/repair_room_foliage_lighting.py` korrigiert ausschließlich die drei Kronen. Ihre Lightmap-UVs erhalten jeweils ein geprüftes freies 128 × 128-Pixel-Feld im bestehenden 2048²-Atlas. Nur diese Empfänger werden neu gebacken; der gesamte Raum bleibt für Schatten und indirektes Licht sichtbar. Die übrigen RGBA-Texel bleiben bytegenau erhalten. Materialfarben, Geometrie, UV0, Objekttransformationen und die Lichtwerte der anderen Raumobjekte ändern sich nicht. Es entstehen keine zusätzlichen Runtime-Texturen, Polygone oder Renderpässe.
+
+Der Helfer arbeitet mit einer getrennten Ausgabe und verweigert das Überschreiben seiner Quelle. SHA256-Prüfungen binden diese gezielte Reparatur an die geprüfte `window-v5`-Blend und deren ursprüngliche Atlas-Texel. Die reservierten Felder werden zusätzlich auf freie Fläche geprüft. Nach einem vollständigen neuen Raum-Bake müssen die freien Bereiche und Quellprüfsummen erneut geprüft und angepasst werden. Auch bei dieser Teilkorrektur gehören das neue GLB und der ergänzte Atlas zusammen. Beide verwenden Cacheversion 7.
+
+```powershell
+blender --background --python scripts/repair_room_foliage_lighting.py -- --source "output/room-refined/window-v5/room-refined.blend" --atlas "output/room-refined/window-v5/room-refined-lightmap.png" --output-dir "output/room-refined/plant-facets/repair-v1"
+```
+
+Der Ausgabeordner muss neu sein. `--image-python` benennt bei Bedarf das System-Python mit Pillow. Der Lauf verwendet 128 Samples und liefert eine separate Blend-Datei, GLB, PNG mit Metadaten sowie ein verlustfreies WebP. Die bereits geprüfte AgX-LUT bleibt erhalten; die lokale Übernahme erfolgt anschließend mit dem vorhandenen `publish_room_refinement.py` und dessen `--look`-Option.

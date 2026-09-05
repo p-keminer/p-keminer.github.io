@@ -316,7 +316,10 @@ function applyRedesignOverviewPreset(roomGroup: THREE.Group): void {
       lamp: [[-2.45, 1.4, -1.2], [-3.18, 1.0, -2.04]],
       instruments: [[1.85, 1.4, -0.85], [2.02, 1.1, -2.1]],
       chair: [[1.15, 1.55, 1.5], [0.1, 0.9, -0.48]],
-      curtains: [[-0.55, 1.82, 1.25], [-3.315, 1.85, -1.10]]
+      curtains: [[-0.55, 1.82, 1.25], [-3.315, 1.85, -1.10]],
+      plant: [[2.42, 2.32, 2.04], [3.34, 2.17, 1.42]],
+      'plant-left': [[-2.34, 1.98, -1.51], [-3.30, 1.60, -2.64]],
+      'plant-shelf': [[2.20, 2.53, -0.72], [3.19, 2.30, -1.27]]
     };
     const view = views[new URLSearchParams(window.location.search).get('inspect') ?? ''];
     if (view) {

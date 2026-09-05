@@ -9,7 +9,7 @@ import {
 export const BOARD_CYBER_MODEL_FILE = 'board_cyber.glb';
 export const ROOM_REDESIGN_MODEL_FILE = 'room-redesign.glb';
 export const ROOM_REFINED_MODEL_FILE = 'room-refined.glb';
-export const ROOM_REFINED_ASSET_VERSION = 6;
+export const ROOM_REFINED_ASSET_VERSION = 7;
 
 const ROOM_MODEL_CANDIDATES = [ROOM_REFINED_MODEL_FILE, ROOM_REDESIGN_MODEL_FILE] as const;
 
