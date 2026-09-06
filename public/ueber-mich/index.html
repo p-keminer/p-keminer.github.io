@@ -16,7 +16,7 @@
     <title>Über mich | p-keminer</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026-08-10-chip-shield" />
     <link rel="stylesheet" href="../monitor-pages/github-dark.css" />
-    <link rel="stylesheet" href="./styles.css?v=2026-08-09-readme-edge-v2" />
+    <link rel="stylesheet" href="./styles.css?v=2026-09-06-selectable" />
   </head>
   <body>
     <a class="skip-link" href="#about-content">Zum Inhalt springen</a>
@@ -79,19 +79,22 @@
                 class="language-switch__button"
                 data-profile-language="de"
                 type="button"
+                aria-controls="profile-readme"
                 aria-pressed="true"
               >Deutsch</button>
               <button
                 class="language-switch__button"
                 data-profile-language="en"
                 type="button"
+                lang="en"
+                aria-controls="profile-readme"
                 aria-pressed="false"
               >English</button>
             </div>
           </header>
 
           <div class="readme-body">
-            <div class="profile-readme" data-profile-readme></div>
+            <div class="profile-readme" id="profile-readme" data-profile-readme></div>
             <noscript>
               <p class="readme-fallback">
                 Die Profil-README ist auch direkt auf
@@ -104,6 +107,102 @@
       </div>
     </main>
 
-    <script type="module" src="./app.js"></script>
+    <template id="profile-text-de">
+      <h2 data-profile-segment="0">Hi, ich bin Philip 👋</h2>
+      <p>Ich bin Quereinsteiger im Tech-Bereich und studiere aktuell Digitalisierung und Informationstechnik an der THGA Bochum.</p>
+      <p>Besonders interessieren mich die Bereiche IT-Sicherheit, systemnahe Programmierung, Netzwerke und Embedded Systems.</p>
+
+      <h3>Aktuelle Schwerpunkte</h3>
+      <ul>
+        <li><strong>Cybersecurity:</strong> Grundlagen der IT-Sicherheit, Angriffsmethoden, Schwachstellenanalyse und defensive Sicherheitsmaßnahmen</li>
+        <li><strong>Netzwerke:</strong> Netzwerkprotokolle, Datenpakete, Schnittstellen und Kommunikation zwischen Systemen</li>
+        <li><strong>Linux:</strong> Administration, Shell, CLI-Tools, Dateisysteme, Benutzerrechte und Netzwerkdienste</li>
+        <li><strong>Windows und Active Directory:</strong> Windows-Administration, Benutzer- und Rechteverwaltung sowie grundlegende AD-Konzepte</li>
+        <li><strong>PowerShell:</strong> Syntax, Scripting und Automatisierung administrativer Aufgaben</li>
+        <li><strong>C und C++:</strong> Systemnahe und objektorientierte Programmierung, Datenstrukturen und Speicherverwaltung</li>
+        <li><strong>Embedded Systems:</strong> Mikrocontroller, Einplatinencomputer, Sensorik, Schnittstellen und hardwarenahe Entwicklung</li>
+      </ul>
+
+      <h3>Aktuelle Projekte</h3>
+      <h4>Raspberry Pi und Netzwerksicherheit</h4>
+      <p>Aufbau und Konfiguration eines Raspberry-Pi-Systems als Lernplattform für Linux, Netzwerkkommunikation und WLAN-Sicherheitskonzepte.</p>
+      <h4>ESP32 und Embedded Development</h4>
+      <p>Entwicklung und Anpassung von ESP32-basierten Hardwareprojekten mit Displays, externen Antennen und verschiedenen Schnittstellen.</p>
+
+      <h3>Praktische Erfahrungen</h3>
+      <h4 data-profile-segment="1"><a href="https://github.com/p-keminer/remote-controlled-robot-arm" target="_blank" rel="noopener noreferrer" aria-label="IMU-gesteuerter Roboter Arm auf GitHub öffnen (neuer Tab)">IMU-gesteuerter Roboter Arm</a></h4>
+      <p>Entwicklung eines IMU-gesteuerten 5-DOF-Roboterarms mit ESP32, ESP-NOW, I2C und MQTT sowie einer Visualisierung als digitaler Zwilling über ROS 2.</p>
+      <h4 data-profile-segment="2"><a href="https://github.com/p-keminer/iot-alarm-system" target="_blank" rel="noopener noreferrer" aria-label="IoT Alarm System auf GitHub öffnen (neuer Tab)">IoT Alarm System</a></h4>
+      <p>Entwicklung einer IoT-Alarmanlage mit ESP8266-Nodes, Arduino Uno, verschiedenen Sensoren und RFID-Zugangskontrolle sowie einem Raspberry-Pi-Dashboard zur Überwachung und Steuerung.</p>
+
+      <h3 data-profile-segment="3">Tech Stack</h3>
+      <dl>
+        <dt>Programmiersprachen</dt>
+        <dd>C · C++ · Python · Bash · SQL · MATLAB</dd>
+        <dt>Web-Grundlagen</dt>
+        <dd>HTML · CSS · Flask · Django · JavaScript</dd>
+        <dt>Entwicklung und Design</dt>
+        <dd>CLion · PyCharm · VS Code · Git · GitHub · Tinkercad · KiCad</dd>
+        <dt>Embedded und Hardware</dt>
+        <dd>ESP32 · Arduino · Raspberry Pi</dd>
+        <dt>Systeme</dt>
+        <dd>Linux · Windows</dd>
+        <dt>KI-Tools</dt>
+        <dd>Codex · Claude Code</dd>
+      </dl>
+
+      <h3>Langfristiges Ziel</h3>
+      <p>M.Sc. mit Schwerpunkt Internetsicherheit sowie ein breites Verständnis komplexer und interaktiver Systeme.</p>
+    </template>
+
+    <template id="profile-text-en">
+      <h2 data-profile-segment="0">Hi, I'm Philip 👋</h2>
+      <p>I am a career changer in the tech field and currently studying Digitalization and Information Technology at THGA Bochum.</p>
+      <p>I am particularly interested in IT security, systems programming, networks, and embedded systems.</p>
+
+      <h3>Current Focus Areas</h3>
+      <ul>
+        <li><strong>Cybersecurity:</strong> Fundamentals of IT security, attack methods, vulnerability analysis, and defensive security measures</li>
+        <li><strong>Networks:</strong> Network protocols, data packets, interfaces, and communication between systems</li>
+        <li><strong>Linux:</strong> Administration, shell, CLI tools, file systems, user permissions, and network services</li>
+        <li><strong>Windows and Active Directory:</strong> Windows administration, user and permission management, as well as basic AD concepts</li>
+        <li><strong>PowerShell:</strong> Syntax, scripting, and automation of administrative tasks</li>
+        <li><strong>C and C++:</strong> Systems programming and object-oriented programming, data structures, and memory management</li>
+        <li><strong>Embedded Systems:</strong> Microcontrollers, single-board computers, sensors, interfaces, and hardware-related development</li>
+      </ul>
+
+      <h3>Current Projects</h3>
+      <h4>Raspberry Pi and Network Security</h4>
+      <p>Setup and configuration of a Raspberry Pi system as a learning platform for Linux, network communication, and Wi-Fi security concepts.</p>
+      <h4>ESP32 and Embedded Development</h4>
+      <p>Development and modification of ESP32-based hardware projects with displays, external antennas, and various interfaces.</p>
+
+      <h3>Practical Experience</h3>
+      <h4 data-profile-segment="1"><a href="https://github.com/p-keminer/remote-controlled-robot-arm" target="_blank" rel="noopener noreferrer" aria-label="Open IMU-Controlled Robotic Arm on GitHub (new tab)">IMU-Controlled Robotic Arm</a></h4>
+      <p>Development of an IMU-controlled 5-DOF robotic arm using ESP32, ESP-NOW, I2C, and MQTT, including visualization as a digital twin using ROS 2.</p>
+      <h4 data-profile-segment="2"><a href="https://github.com/p-keminer/iot-alarm-system" target="_blank" rel="noopener noreferrer" aria-label="Open IoT Alarm System on GitHub (new tab)">IoT Alarm System</a></h4>
+      <p>Development of an IoT alarm system using ESP8266 nodes, an Arduino Uno, various sensors, and RFID access control, as well as a Raspberry Pi dashboard for monitoring and control.</p>
+
+      <h3 data-profile-segment="3">Tech Stack</h3>
+      <dl>
+        <dt>Programming Languages</dt>
+        <dd>C · C++ · Python · Bash · SQL · MATLAB</dd>
+        <dt>Web Fundamentals</dt>
+        <dd>HTML · CSS · Flask · Django · JavaScript</dd>
+        <dt>Development and Design</dt>
+        <dd>CLion · PyCharm · VS Code · Git · GitHub · Tinkercad · KiCad</dd>
+        <dt>Embedded and Hardware</dt>
+        <dd>ESP32 · Arduino · Raspberry Pi</dd>
+        <dt>Operating Systems</dt>
+        <dd>Linux · Windows</dd>
+        <dt>AI Tools</dt>
+        <dd>Codex · Claude Code</dd>
+      </dl>
+
+      <h3>Long-Term Goal</h3>
+      <p>M.Sc. with a focus on Internet Security, as well as a broad understanding of complex and interactive systems.</p>
+    </template>
+
+    <script type="module" src="./app.js?v=2026-09-06-selectable"></script>
   </body>
 </html>

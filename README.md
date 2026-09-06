@@ -59,7 +59,7 @@ Zwei-Spieler-Anwendung nutzbar.
 | Bereich | Inhalt | Direktlink |
 |---|---|---|
 | Portfolio | Übersicht der veröffentlichten Projekte | [Öffnen](https://p-keminer.github.io/portfolio/) |
-| Über mich | Profil, Werdegang und technische Schwerpunkte | [Öffnen](https://p-keminer.github.io/ueber-mich/) |
+| Über mich | Profil, Werdegang und technische Schwerpunkte mit markierbarem Text und deutscher/englischer Sprachwahl | [Öffnen](https://p-keminer.github.io/ueber-mich/) |
 | Leistungsnachweise | Semesterweise Darstellung der hinterlegten Dokumente | [Öffnen](https://p-keminer.github.io/leistungsnachweise/) |
 | Zertifikate | Thematisch geordnete Kurs- und Zertifikatsnachweise | [Öffnen](https://p-keminer.github.io/zertifikate/) |
 
@@ -184,7 +184,7 @@ two-player application.
 | Section | Content | Direct link |
 |---|---|---|
 | Portfolio | Overview of published projects | [Open](https://p-keminer.github.io/portfolio/) |
-| About | Profile, background, and technical focus areas | [Open](https://p-keminer.github.io/ueber-mich/) |
+| About | Profile, background, and technical focus areas with selectable text and German/English language selection | [Open](https://p-keminer.github.io/ueber-mich/) |
 | Academic records | Semester-based view of the published documents | [Open](https://p-keminer.github.io/leistungsnachweise/) |
 | Certificates | Certificates and course records grouped by topic | [Open](https://p-keminer.github.io/zertifikate/) |
 

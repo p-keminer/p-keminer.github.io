@@ -126,6 +126,8 @@ export function showLegalOverlay(tab: 'impressum' | 'datenschutz'): void {
 
   if (!isVisible) {
     isVisible = true;
+    overlay.inert = document.body.classList.contains('orientation-gated') ||
+      document.body.classList.contains('privacy-dialog-open');
     overlay.setAttribute('aria-hidden', 'false');
     overlay.classList.add('legal-overlay--visible');
   }
@@ -136,29 +138,40 @@ export function hideLegalOverlay(): void {
   const overlay = document.getElementById('legal-overlay');
   if (!overlay) return;
   isVisible = false;
+  overlay.inert = true;
   overlay.setAttribute('aria-hidden', 'true');
   overlay.classList.remove('legal-overlay--visible');
 }
 
 function renderOverlayContent(overlay: HTMLElement, activeTab: 'impressum' | 'datenschutz'): void {
-  const content = activeTab === 'impressum' ? IMPRESSUM_TEXT : DATENSCHUTZ_TEXT;
+  const focusedSwitch = document.activeElement instanceof HTMLElement && overlay.contains(document.activeElement)
+    ? document.activeElement.dataset.legalSwitch : undefined;
+  const content = (activeTab === 'impressum' ? IMPRESSUM_TEXT : DATENSCHUTZ_TEXT)
+    .replace('<h2>', '<h2 id="legal-overlay-heading" tabindex="-1">');
   overlay.innerHTML = `
     <div class="legal-overlay__inner">
       <div class="legal-overlay__tabs">
         <button
           class="legal-overlay__tab ${activeTab === 'impressum' ? 'legal-overlay__tab--active' : ''}"
           data-legal-switch="impressum"
+          aria-pressed="${activeTab === 'impressum'}"
           type="button"
         >Impressum</button>
         <button
           class="legal-overlay__tab ${activeTab === 'datenschutz' ? 'legal-overlay__tab--active' : ''}"
           data-legal-switch="datenschutz"
+          aria-pressed="${activeTab === 'datenschutz'}"
           type="button"
         >Datenschutz</button>
       </div>
       <div class="legal-overlay__content">${content}</div>
     </div>
   `;
+
+  if (focusedSwitch && !overlay.inert) {
+    overlay.querySelector<HTMLElement>(`button[data-legal-switch="${focusedSwitch}"]`)
+      ?.focus({ preventScroll: true });
+  }
 
   overlay.querySelectorAll<HTMLElement>('[data-legal-switch]').forEach(control => {
     control.addEventListener('click', event => {

@@ -322,12 +322,12 @@ a:hover {
 
 .button--primary {
   border-color: rgba(240, 246, 252, 0.1);
-  background: #238636;
+  background: #1f7731;
 }
 
 .button--primary:hover:not(:disabled) {
   border-color: rgba(240, 246, 252, 0.1);
-  background: #2ea043;
+  background: #207c32;
 }
 
 .empty-state {

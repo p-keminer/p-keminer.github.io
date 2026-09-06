@@ -45,15 +45,26 @@ const privacyBackgroundElements = [
   document.querySelector<HTMLElement>('#legal-overlay')
 ].filter((element): element is HTMLElement => element !== null);
 
-function setPrivacyBackgroundInert(inert: boolean): void {
+function syncBackgroundInert(): void {
+  const blocked = !privacyGate.hidden || orientationGateWasVisible;
   for (const element of privacyBackgroundElements) {
-    element.inert = inert;
+    // Closing a dialog must not make the closed legal view tabbable again.
+    element.inert = blocked || (element.id === 'legal-overlay' && element.getAttribute('aria-hidden') === 'true');
   }
+  introOverlay.inert = blocked;
 }
 
 let lastFocusedElement: HTMLElement | null = null;
 let appBootPromise: Promise<unknown> | null = null;
 let orientationGateWasVisible = false;
+let orientationUpdateFrame = 0;
+let orientationFocusFrame = 0;
+let orientationReturnFocus: HTMLElement | null = null;
+
+function canRestoreFocus(element: HTMLElement | null): element is HTMLElement {
+  return Boolean(element?.isConnected && !element.closest('[inert], [hidden]') &&
+    !element.matches(':disabled') && element.getClientRects().length);
+}
 
 function syncOrientationGate(): void {
   if (!orientationGate) return;
@@ -62,40 +73,60 @@ function syncOrientationGate(): void {
     document.body.classList.contains(className)
   );
   const shouldBlock =
-    isMobileDevice && portraitOrientation.matches && !portraitCompatibleContentIsActive;
+    isMobileDevice && portraitOrientation.matches && !portraitCompatibleContentIsActive && privacyGate.hidden;
+  if (shouldBlock === orientationGateWasVisible) return;
+
+  if (shouldBlock) {
+    orientationReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  }
+  orientationGateWasVisible = shouldBlock;
   orientationGate.hidden = !shouldBlock;
   document.body.classList.toggle('orientation-gated', shouldBlock);
+  syncBackgroundInert();
 
-  if (shouldBlock && !orientationGateWasVisible) {
-    window.requestAnimationFrame(() => {
-      if (!orientationGate.hidden) {
-        orientationGate.focus({ preventScroll: true });
-      }
-    });
-  } else if (!shouldBlock && orientationGateWasVisible) {
-    window.requestAnimationFrame(() => {
-      if (!orientationGate.hidden) return;
+  window.cancelAnimationFrame(orientationFocusFrame);
+  orientationFocusFrame = window.requestAnimationFrame(() => {
+    if (!orientationGate.hidden) {
+      orientationGate.focus({ preventScroll: true });
+      return;
+    }
+    if (!privacyGate.hidden) {
+      closeButton?.focus({ preventScroll: true });
+      return;
+    }
 
-      const nextFocusTarget =
-        document.querySelector<HTMLElement>('.monitor-page-overlay .web-embed-nav__btn') ??
+    const nextFocusTarget = canRestoreFocus(orientationReturnFocus) && orientationReturnFocus !== document.body
+      ? orientationReturnFocus
+      : document.querySelector<HTMLElement>('.monitor-page-overlay .web-embed-nav__btn:not([disabled])') ??
         document.querySelector<HTMLElement>('#app button:not([disabled])');
-      nextFocusTarget?.focus({ preventScroll: true });
-    });
-  }
+    if (canRestoreFocus(nextFocusTarget)) nextFocusTarget.focus({ preventScroll: true });
+    orientationReturnFocus = null;
+  });
+}
 
-  orientationGateWasVisible = shouldBlock;
+function scheduleOrientationGate(): void {
+  if (orientationUpdateFrame) return;
+  // orientationchange can fire before the viewport has rotated. Read the media
+  // query after layout, and coalesce the accompanying resize/class events.
+  orientationUpdateFrame = window.requestAnimationFrame(() => {
+    orientationUpdateFrame = 0;
+    syncOrientationGate();
+  });
 }
 
 function setupOrientationGate(): void {
-  const contentStateObserver = new MutationObserver(syncOrientationGate);
+  const contentStateObserver = new MutationObserver(scheduleOrientationGate);
   contentStateObserver.observe(document.body, {
     attributes: true,
     attributeFilter: ['class']
   });
-  portraitOrientation.addEventListener?.('change', syncOrientationGate);
-  window.addEventListener('orientationchange', syncOrientationGate);
-  window.addEventListener('resize', syncOrientationGate, { passive: true });
+  portraitOrientation.addEventListener('change', scheduleOrientationGate);
+  window.addEventListener('orientationchange', scheduleOrientationGate);
+  window.screen.orientation?.addEventListener('change', scheduleOrientationGate);
+  window.addEventListener('resize', scheduleOrientationGate, { passive: true });
+  window.visualViewport?.addEventListener('resize', scheduleOrientationGate, { passive: true });
   syncOrientationGate();
+  syncBackgroundInert();
 }
 
 function closeMobileMenu(): void {
@@ -128,9 +159,10 @@ function getFocusableElements(): HTMLElement[] {
 function openPrivacySettings(): void {
   lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
-  setPrivacyBackgroundInert(true);
   privacyGate.hidden = false;
   document.body.classList.add('privacy-dialog-open');
+  syncOrientationGate();
+  syncBackgroundInert();
 
   window.requestAnimationFrame(() => {
     closeButton?.focus();
@@ -139,13 +171,19 @@ function openPrivacySettings(): void {
 
 function closePrivacySettings(): void {
   privacyGate.hidden = true;
-  setPrivacyBackgroundInert(false);
   document.body.classList.remove('privacy-dialog-open');
-  lastFocusedElement?.focus();
+  syncOrientationGate();
+  syncBackgroundInert();
+  if (canRestoreFocus(lastFocusedElement)) lastFocusedElement.focus();
   lastFocusedElement = null;
 }
 
 function handlePrivacyKeydown(event: KeyboardEvent): void {
+  if (orientationGate && !orientationGate.hidden && event.key === 'Tab') {
+    event.preventDefault();
+    orientationGate.focus({ preventScroll: true });
+    return;
+  }
   if (privacyGate.hidden) {
     if (event.key === 'Escape') {
       closeMobileMenu();

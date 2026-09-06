@@ -169,6 +169,66 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
     throw new Error('Missing game shell mount points.');
   }
 
+  let controlsMarkup = '';
+  let hotspotsMarkup = '';
+  let renderedViewKey: string | null = null;
+  let viewReadyForFocus = false;
+  let pendingViewFocus: { key: string; origin: Element | null } | null = null;
+  const rememberedViewFocus = new Map<string, string>();
+
+  const getFocusSelector = (element: Element | null): string | null => {
+    if (!(element instanceof HTMLElement)) return null;
+    if (element.id) return `#${CSS.escape(element.id)}`;
+    const attributes = ['data-control', 'data-room-focus-target', 'data-room-hotspot',
+      'data-certificate-topic', 'data-legal-tab', 'data-legal-switch'];
+    const selector = attributes.filter(attribute => element.hasAttribute(attribute))
+      .map(attribute => `[${attribute}="${CSS.escape(element.getAttribute(attribute)!)}"]`).join('');
+    return selector || null;
+  };
+
+  const focusVisibleElement = (element: HTMLElement | null): boolean => {
+    if (!element?.isConnected || element.matches(':disabled') ||
+        element.closest('[inert], [hidden], [aria-hidden="true"]') || !element.getClientRects().length) {
+      return false;
+    }
+    element.focus({ preventScroll: true });
+    return document.activeElement === element;
+  };
+
+  const settleViewFocus = (): void => {
+    if (!pendingViewFocus || !viewReadyForFocus || isDisposed ||
+        document.body.classList.contains('orientation-gated') ||
+        document.body.classList.contains('privacy-dialog-open')) return;
+    const { key, origin } = pendingViewFocus;
+    const monitor = roomHotspotsRoot.querySelector<HTMLElement>('.monitor-page-overlay');
+    if (isMonitorPageTarget(key as RoomFocusTargetId) && !monitor?.classList.contains('is-ready')) return;
+    // A user may Tab to another control during the unchanged camera flight.
+    // Do not take focus back from that deliberate choice when the flight ends.
+    const active = document.activeElement;
+    if (active && active !== document.body && active !== document.documentElement && active !== origin) {
+      pendingViewFocus = null;
+      return;
+    }
+    const remembered = rememberedViewFocus.get(key);
+    const fallback = key === 'legalWall' ? '#legal-overlay-heading'
+      : monitor ? '.monitor-page-overlay .web-embed-nav__btn'
+      : key === 'overview' ? '[data-room-hotspot], [data-control="return-to-menu"]'
+      : '[data-controls-root] button:not(:disabled)';
+    if ((remembered && focusVisibleElement(document.querySelector<HTMLElement>(remembered))) ||
+        focusVisibleElement(document.querySelector<HTMLElement>(fallback))) {
+      pendingViewFocus = null;
+    }
+  };
+
+  const cancelPendingFocusOnInteraction = (event: Event): void => {
+    if (!pendingViewFocus) return;
+    if (event.type === 'focusin' && (event.target === pendingViewFocus.origin ||
+        event.target === document.body || event.target === document.documentElement)) return;
+    pendingViewFocus = null;
+  };
+  document.addEventListener('focusin', cancelPendingFocusOnInteraction);
+  document.addEventListener('pointerdown', cancelPendingFocusOnInteraction);
+
   const handleControlsClick = (event: Event): void => {
     const target = event.target;
 
@@ -383,9 +443,11 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
   const handleGlobalLegalClick = (event: Event): void => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
-    const btn = target.closest<HTMLButtonElement>('[data-legal-tab]');
-    if (!btn || btn.disabled) return;
-    const tab = btn.dataset.legalTab as 'impressum' | 'datenschutz';
+    const btn = target.closest<HTMLElement>('[data-legal-tab], [data-legal-switch]');
+    if (!btn || btn.matches(':disabled')) return;
+    // Internal legal switches must update the same state as the footer, so a
+    // later resize does not restore the previous tab beneath the current focus.
+    const tab = (btn.dataset.legalTab ?? btn.dataset.legalSwitch) as 'impressum' | 'datenschutz';
     if (tab !== 'impressum' && tab !== 'datenschutz') return;
     legalWallTab = tab;
     if (startFlowState === 'menu' || startFlowState === 'roomExplore') {
@@ -424,6 +486,7 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
             if (frame.isConnected) {
               frame.classList.add('is-ready');
               overlay?.classList.add('is-ready');
+              settleViewFocus();
             }
           });
         });
@@ -444,6 +507,18 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
     }
     const snapshot = buildGameSnapshot();
     const currentTarget = snapshot.startFlow.currentRoomFocusTarget;
+    const focusedBeforeRender = document.activeElement;
+    const focusedSelector = getFocusSelector(focusedBeforeRender);
+    const focusedPanel = controlsRoot.contains(focusedBeforeRender) ? controlsRoot
+      : roomHotspotsRoot.contains(focusedBeforeRender) ? roomHotspotsRoot : null;
+    const nextViewKey = pendingMenuReturn || snapshot.startFlow.state === 'menu' ? 'menu'
+      : snapshot.startFlow.state === 'boardFocus' ? 'boardFocus' : currentTarget ?? 'overview';
+    if (renderedViewKey !== null && renderedViewKey !== nextViewKey) {
+      if (focusedSelector) rememberedViewFocus.set(renderedViewKey, focusedSelector);
+      pendingViewFocus = { key: nextViewKey, origin: focusedBeforeRender };
+    }
+    renderedViewKey = nextViewKey;
+    viewReadyForFocus = !snapshot.startFlow.roomFocusTransitionActive && !pendingMenuReturn;
     const activeMonitorPageKey =
       snapshot.startFlow.certificateEmbedReady && currentTarget === 'certificateEmbed'
         ? `certificateEmbed:${encodeURIComponent(snapshot.startFlow.activeCertificateTopicId)}`
@@ -459,7 +534,7 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
         .querySelector<HTMLElement>('[data-monitor-page-key]')
         ?.dataset.monitorPageKey ?? null;
 
-    controlsRoot.innerHTML =
+    const nextControlsMarkup =
       snapshot.startFlow.state === 'boardFocus'
           ? renderControls({
             cameraLocked: snapshot.camera.controlsLocked,
@@ -472,16 +547,24 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
             snapshot.startFlow.currentRoomFocusTarget,
             snapshot.startFlow.roomFocusTransitionActive
           );
+    if (controlsMarkup !== nextControlsMarkup) {
+      controlsMarkup = nextControlsMarkup;
+      controlsRoot.innerHTML = nextControlsMarkup;
+    }
     // ResizeObserver und andere Szenenupdates synchronisieren weiterhin die
     // Shell, duerfen eine bereits geladene Monitorseite aber nicht neu mounten.
     // Sonst wird das iframe zerstoert, der 3D-Raum blitzt durch und der
     // Ladehinweis erscheint erneut. Bei Ziel-/Themenwechsel wird normal neu
     // gerendert, weil sich der stabile Seitenschluessel dann aendert.
     if (activeMonitorPageKey === null || mountedMonitorPageKey !== activeMonitorPageKey) {
-      roomHotspotsRoot.innerHTML =
+      const nextHotspotsMarkup =
         (snapshot.startFlow.state === 'roomExplore' || snapshot.startFlow.state === 'menu')
-          ? renderRoomHotspots(snapshot, hoveredRoomHotspot, hoveredCertificateTopicId)
-          : '';
+           ? renderRoomHotspots(snapshot, hoveredRoomHotspot, hoveredCertificateTopicId)
+           : '';
+      if (hotspotsMarkup !== nextHotspotsMarkup) {
+        hotspotsMarkup = nextHotspotsMarkup;
+        roomHotspotsRoot.innerHTML = nextHotspotsMarkup;
+      }
       syncMonitorPageFrame();
     }
 
@@ -515,6 +598,13 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
     document.querySelectorAll<HTMLButtonElement>('[data-legal-tab]').forEach(btn => {
       btn.disabled = !legalFooterActive;
     });
+
+    if (!pendingViewFocus && focusedPanel && focusedBeforeRender && !focusedBeforeRender.isConnected) {
+      if (!focusedSelector || !focusVisibleElement(focusedPanel.querySelector<HTMLElement>(focusedSelector))) {
+        focusVisibleElement(focusedPanel.querySelector<HTMLElement>('button:not(:disabled)'));
+      }
+    }
+    settleViewFocus();
   };
 
   const preview = createBoardPreviewScene({
@@ -650,6 +740,8 @@ export function mountGame(root: HTMLDivElement, options: MountGameOptions = {}):
       roomHotspotsRoot.removeEventListener('pointerleave', handleRoomHotspotPointerLeave);
       roomHotspotsRoot.removeEventListener('pointerover', handleRoomHotspotPointerOver);
       document.removeEventListener('click', handleGlobalLegalClick);
+      document.removeEventListener('focusin', cancelPendingFocusOnInteraction);
+      document.removeEventListener('pointerdown', cancelPendingFocusOnInteraction);
       hideLegalOverlay();
       document.body.classList.remove(
         'performance-embed-active',
