@@ -148,6 +148,7 @@ Nach `npm run dev` können die folgenden Query-Parameter an die angezeigte lokal
 | `?inspect=mouse` | Nahansicht der Maus |
 | `?inspect=instruments` | Nahansicht der Messgeräte |
 | `?inspect=curtains` | Ansicht der Gardinen für UV-/Lichtkontrolle |
+| `?inspect=certificates` | Vergleich aller vier beschrifteten Zertifikatsrahmen mit identischer Kamera |
 | `?inspect=plant` | Nahansicht der Pflanze auf dem rechten Wandbord |
 | `?inspect=plant-left` | Nahansicht der linken Dekorpflanze |
 | `?inspect=plant-shelf` | Nahansicht der Pflanze im Bücherregal |
@@ -227,14 +228,34 @@ betroffene Papierprimitive werden unkomprimiert gespeichert; alle anderen 253
 BufferViews bleiben bytegleich. Das GLB wächst um 20.920 Byte; Mesh-, Material-,
 Textur- und Drawcallanzahl bleiben gleich.
 
-Weil die alte Schrift auch Schatten im Lichtatlas hinterlassen hat, verwenden
-ausschließlich die vier UV1-Ecken der Papier05-Vorderseite das bereits gebackene
-leere Nachbarpapier04. Diese lokale Annäherung übernimmt dessen Beleuchtungsverlauf.
-Papiergeometrie, Normalen, UV0 sowie sämtliche übrigen UV1-Koordinaten bleiben
-unverändert. Lichtatlas und AgX-LUT selbst sind bytegleich, es gibt keinen neuen Bake.
-Modell und Atlas verwenden danach Cacheversion 8. Der Altmodell-Fallback bleibt
-unverändert. Bei einer vollständigen Neugenerierung den aktualisierten DataCamp-
-Quelltext aus `create_room_graybox.py` verwenden und den gezielten Patch neu prüfen.
+Der erste Schriftwechsel (Cacheversion 8) legte die vier UV1-Ecken der
+Papier05-Vorderseite auf das leere Nachbarpapier04. Damit verschwanden die alten
+JET/BRAINS-Schatten, aber auch die weiche Hinterlegung, die die anderen
+Beschriftungen aus ihrem ursprünglichen Licht-Bake behalten.
+
+`scripts/update_room_certificate_shadow.mjs` ergänzt deshalb einen gezielten
+Licht-Bake über `bake_datacamp_certificate_shadow.py`. Der Aufruf
+`node scripts/update_room_certificate_shadow.mjs [--blender path] [--python path]`
+verwendet die an SHA256 gebundene Blend-Datei aus der Pflanzenkorrektur sowie das
+geprüfte DataCamp-GLB. Nur Papier05 empfängt einen neuen Bake; die tatsächlichen
+exportierten Schriftgeometrien und die vollständige Raumbeleuchtung bleiben für
+Schatten und indirektes Licht vorhanden. 128 Samples und derselbe OIDN-Denoiser
+wie beim ursprünglichen Atlas erzeugen die fehlende DATA/CAMP-Hinterlegung.
+
+Der Helfer schreibt einen separaten Kandidaten unter `output/room-refined/`, nie
+in `public/`. Die Papierfront behält ihre ursprüngliche Texeldichte; ihr neuer
+41×34-Pixel-Bereich liegt mit über 32 Pixel zusätzlichem Abstand zu anderen
+UV-Inseln in einer überprüften freien Stelle des vorhandenen 2048²-Lichtatlas.
+Außerhalb dieses Bereichs bleiben alle RGBA-Pixel
+exakt erhalten. Im GLB ändern sich nur acht UV1-Floatwerte der vier Frontecken.
+Schrift, sonstige Geometrie, Materialien, Normalen, UV0 und übrige UV1-Werte
+bleiben unverändert. Modellgröße, Texturanzahl und Drawcalls steigen nicht.
+
+GLB und Lichtatlas werden zusammen mit Cacheversion 9 übernommen; die AgX-LUT
+bleibt bytegleich. Die Helfer sind gezielte, quellengebundene Migrationsschritte
+und keine erneut auf die fertigen öffentlichen Assets anzuwendende Pipeline.
+Bei einer vollständigen Neugenerierung den aktualisierten DataCamp-Quelltext aus
+`create_room_graybox.py` verwenden und die Beschriftung regulär mitbacken.
 
 Die reine Entwicklungsansicht `?inspect=certificate` zeigt die tatsächliche
 Beschriftung und Papierbeleuchtung aus der Nähe. Im Produktionsbuild ist sie inaktiv.
