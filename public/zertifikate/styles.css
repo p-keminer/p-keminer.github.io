@@ -236,6 +236,8 @@ a {
   --theme-line: #495057;
   --theme-accent: #ef9aa4;
   --theme-accent-contrast: #1c1f22;
+  --theme-frame-top: var(--theme-accent);
+  --theme-frame-side: #090b0c;
   min-width: 0;
   overflow: hidden;
   border: 1px solid var(--theme-line);
@@ -248,6 +250,7 @@ a {
 .certificate-viewer[data-theme="cs50"] {
   --theme-accent: #79a98b;
   --theme-accent-contrast: #0d1510;
+  --theme-frame-top: #557c63;
   font-family: "PT Sans", "Segoe UI", system-ui, sans-serif;
 }
 
@@ -260,6 +263,7 @@ a {
   --theme-line: #c9d3dc;
   --theme-accent: #0a60ff;
   --theme-accent-contrast: #ffffff;
+  --theme-frame-side: #07182d;
   color-scheme: light;
   font-family: Inter, "Noto Sans", "Segoe UI", system-ui, sans-serif;
 }
@@ -273,6 +277,7 @@ a {
   --theme-line: #35445f;
   --theme-accent: #a3ea2a;
   --theme-accent-contrast: #10160a;
+  --theme-frame-side: #0b101a;
   font-family: "Source Sans Pro", "Segoe UI", system-ui, sans-serif;
 }
 
@@ -285,6 +290,7 @@ a {
   --theme-line: #29445f;
   --theme-accent: #03ef62;
   --theme-accent-contrast: #05192d;
+  --theme-frame-side: #02101c;
   font-family: Inter, "Segoe UI", system-ui, sans-serif;
 }
 
@@ -402,17 +408,17 @@ a {
   background-size: 100% 100%, 100% 100%, 100% 2.2rem, 100% 100%;
 }
 
-.certificate-viewer[data-theme="cs50"] .theme-masthead {
+.certificate-viewer .theme-masthead {
   padding-top: calc(clamp(1.5rem, 4vw, 3.25rem) + 0.45rem);
-  border-top: 0.55rem solid #557c63;
+  border-top: 0.55rem solid var(--theme-frame-top);
 }
 
-.certificate-viewer[data-theme="cs50"] :is(
+.certificate-viewer :is(
   .theme-masthead,
   .certificate-wall,
   .viewer-controls
 ) {
-  border-left: 0.7rem solid #090b0c;
+  border-left: 0.7rem solid var(--theme-frame-side);
 }
 
 .certificate-viewer[data-theme="cs50"] .theme-wordmark {
