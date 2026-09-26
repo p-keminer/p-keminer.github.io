@@ -1423,7 +1423,7 @@ function renderRoomHotspots(
                Leistungsnachweise werden geöffnet&nbsp;&hellip;
              </div>
              <iframe
-                src="/leistungsnachweise/index.html?v=2026-08-10-ten-study-sections"
+                src="/leistungsnachweise/index.html?v=2026-09-26-current-transcript"
                 title="Leistungsnachweise"
                 loading="eager"
                 referrerpolicy="no-referrer"

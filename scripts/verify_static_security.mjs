@@ -303,6 +303,25 @@ for (const file of textFiles) {
 }
 
 const publicFiles = await collectFiles(join(ROOT_DIRECTORY, 'public'));
+if (!IS_MAINTENANCE_BUILD) {
+  // Pin the independently reviewed PDF and its previews. Metadata checks alone
+  // cannot prove that a private text layer or original image was removed.
+  const transcriptManifest = JSON.parse(await readFile(
+    join(ROOT_DIRECTORY, 'scripts', 'public_transcript_manifest.json'), 'utf8'
+  ));
+  for (const base of ['public', 'dist']) {
+    const directory = join(ROOT_DIRECTORY, base, 'assets', 'leistungsnachweise');
+    const actual = (await readdir(directory)).sort();
+    const expected = Object.keys(transcriptManifest.files).sort();
+    assert(JSON.stringify(actual) === JSON.stringify(expected),
+      `Unexpected transcript files in ${base}; only reviewed assets may be published.`);
+    for (const name of expected) {
+      const digest = createHash('sha256').update(await readFile(join(directory, name))).digest('hex');
+      assert(digest === transcriptManifest.files[name],
+        `Transcript asset differs from the reviewed copy: ${base}/${name}`);
+    }
+  }
+}
 for (const file of publicFiles) {
   const contents = await readFile(file);
   const displayPath = relative(ROOT_DIRECTORY, file).replaceAll('\\', '/');

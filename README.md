@@ -60,7 +60,7 @@ Zwei-Spieler-Anwendung nutzbar.
 |---|---|---|
 | Portfolio | Übersicht der veröffentlichten Projekte | [Öffnen](https://p-keminer.github.io/portfolio/) |
 | Über mich | Profil, Werdegang und technische Schwerpunkte mit markierbarem Text und deutscher/englischer Sprachwahl | [Öffnen](https://p-keminer.github.io/ueber-mich/) |
-| Leistungsnachweise | Semesterweise Darstellung der hinterlegten Dokumente | [Öffnen](https://p-keminer.github.io/leistungsnachweise/) |
+| Leistungsnachweise | Aktueller kumulativer Notenspiegel mit zweiseitiger Vorschau und PDF-Download | [Öffnen](https://p-keminer.github.io/leistungsnachweise/) |
 | Zertifikate | Thematisch geordnete Kurs- und Zertifikatsnachweise | [Öffnen](https://p-keminer.github.io/zertifikate/) |
 
 <a id="de-technik"></a>
@@ -79,7 +79,7 @@ src/
 public/
   portfolio/            Projektübersicht
   ueber-mich/           Profilbereich
-  leistungsnachweise/   Semester- und Dokumentansicht
+  leistungsnachweise/   Aktueller Notenspiegel
   zertifikate/          Zertifikatsbereich
   models/               Aktive 3D-Modelle und Texturen
 ```
@@ -185,7 +185,7 @@ two-player application.
 |---|---|---|
 | Portfolio | Overview of published projects | [Open](https://p-keminer.github.io/portfolio/) |
 | About | Profile, background, and technical focus areas with selectable text and German/English language selection | [Open](https://p-keminer.github.io/ueber-mich/) |
-| Academic records | Semester-based view of the published documents | [Open](https://p-keminer.github.io/leistungsnachweise/) |
+| Academic records | Current cumulative transcript with a two-page preview and PDF download | [Open](https://p-keminer.github.io/leistungsnachweise/) |
 | Certificates | Certificates and course records grouped by topic | [Open](https://p-keminer.github.io/zertifikate/) |
 
 <a id="en-technology"></a>
@@ -204,7 +204,7 @@ src/
 public/
   portfolio/            Project overview
   ueber-mich/           Profile section
-  leistungsnachweise/   Semester and document view
+  leistungsnachweise/   Current cumulative transcript
   zertifikate/          Certificate section
   models/               Active 3D models and textures
 ```

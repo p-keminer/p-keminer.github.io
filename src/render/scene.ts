@@ -559,9 +559,8 @@ function createSemesterOneFrameTexture(renderer: THREE.WebGLRenderer): THREE.Can
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#ffffff';
     ctx.font = '800 54px Segoe UI, sans-serif';
-    ctx.fillText('SEMESTER', labelCenterX, 424 + labelOffsetY);
-    ctx.font = '800 78px Segoe UI, sans-serif';
-    ctx.fillText('1', labelCenterX, 528 + labelOffsetY);
+    ctx.fillText('NOTEN', labelCenterX, 424 + labelOffsetY);
+    ctx.fillText('SPIEGEL', labelCenterX, 528 + labelOffsetY);
 
   }
 
