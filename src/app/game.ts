@@ -1386,7 +1386,7 @@ function renderRoomHotspots(
                Zertifikatsbereich wird ge&ouml;ffnet&nbsp;&hellip;
              </div>
              <iframe
-                src="/zertifikate/index.html?thema=${encodeURIComponent(snapshot.startFlow.activeCertificateTopicId)}&v=2026-08-26-certificates"
+                src="/zertifikate/index.html?thema=${encodeURIComponent(snapshot.startFlow.activeCertificateTopicId)}&v=2026-09-26-datacamp"
                 title="Zertifikate"
                 loading="eager"
                 referrerpolicy="no-referrer"

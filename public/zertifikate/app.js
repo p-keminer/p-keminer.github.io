@@ -112,13 +112,23 @@ const topics = [
     ],
   },
   {
-    id: "jetbrains",
-    label: "JetBrains",
-    theme: "jetbrains",
-    context: "Developer Tools & Learning",
-    description: "Zertifikate und geprüfte Lernnachweise werden hier gesammelt.",
-    mark: "LEARNING",
-    certificates: [],
+    id: "datacamp",
+    label: "DataCamp",
+    theme: "datacamp",
+    context: "Online Learning",
+    description: "Zertifikate und Kursnachweise werden hier gesammelt.",
+    mark: "DataCamp",
+    certificates: [
+      {
+        title: "Containerization and Virtualization with Docker and Kubernetes",
+        issuer: "DataCamp",
+        issued: "23. September 2026",
+        source: "./nachweise/datacamp/containerization-virtualization-docker-kubernetes-2026.pdf",
+        preview: "./nachweise/datacamp/containerization-virtualization-docker-kubernetes-2026.png",
+        previewWidth: 1800,
+        previewHeight: 1039,
+      },
+    ],
   },
   ...Array.from({ length: 3 }, (_, index) => {
     const number = index + 6;
@@ -137,7 +147,8 @@ const topics = [
 
 const availableTopics = topics.filter((topic) => !topic.locked);
 const topicAliases = new Map([
-  ["topic-05", "jetbrains"],
+  ["jetbrains", "datacamp"],
+  ["topic-05", "datacamp"],
 ]);
 
 const topicButtons = Array.from(document.querySelectorAll("[data-topic]"));
@@ -162,7 +173,7 @@ const themeColors = {
   cs50: "#212529",
   cisco: "#f2f5f7",
   tryhackme: "#151c2b",
-  jetbrains: "#f4f4f4",
+  datacamp: "#05192d",
   neutral: "#15191f",
 };
 
@@ -185,6 +196,11 @@ function findAdjacentTopicIndex(index, direction) {
 function findRequestedTopicIndex(topicId) {
   const canonicalTopicId = topicAliases.get(topicId) ?? topicId;
   return topics.findIndex((topic) => topic.id === canonicalTopicId);
+}
+
+function readRequestedTopicId() {
+  const params = new URL(window.location.href).searchParams;
+  return params.get("thema") ?? params.get("topic");
 }
 
 function renderCertificates(topic) {
@@ -281,6 +297,7 @@ function updateAddress(topic, mode) {
 
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.set("thema", topic.id);
+  nextUrl.searchParams.delete("topic");
   window.history[mode === "push" ? "pushState" : "replaceState"](
     { topic: topic.id },
     "",
@@ -366,11 +383,11 @@ document.addEventListener("keydown", (event) => {
 });
 
 window.addEventListener("popstate", () => {
-  const requestedTopicId = new URL(window.location.href).searchParams.get("thema");
+  const requestedTopicId = readRequestedTopicId();
   const requestedTopicIndex = findRequestedTopicIndex(requestedTopicId);
   selectTopic(requestedTopicIndex >= 0 ? requestedTopicIndex : 0, { history: "replace" });
 });
 
-const requestedTopicId = new URL(window.location.href).searchParams.get("thema");
+const requestedTopicId = readRequestedTopicId();
 const requestedTopicIndex = findRequestedTopicIndex(requestedTopicId);
 selectTopic(requestedTopicIndex >= 0 ? requestedTopicIndex : 0, { history: "replace" });

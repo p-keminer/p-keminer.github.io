@@ -206,7 +206,7 @@ a {
 .topic-chip[data-topic="cs50"] { --topic-accent: #6f9f80; }
 .topic-chip[data-topic="cisco"] { --topic-accent: #0a60ff; }
 .topic-chip[data-topic="tryhackme"] { --topic-accent: #a3ea2a; }
-.topic-chip[data-topic="jetbrains"] { --topic-accent: #6b57ff; }
+.topic-chip[data-topic="datacamp"] { --topic-accent: #03ef62; }
 
 .topic-label {
   overflow: hidden;
@@ -276,16 +276,15 @@ a {
   font-family: "Source Sans Pro", "Segoe UI", system-ui, sans-serif;
 }
 
-.certificate-viewer[data-theme="jetbrains"] {
-  --theme-bg: #f4f4f4;
-  --theme-panel: #ffffff;
-  --theme-panel-alt: #ededed;
-  --theme-text: #19191c;
-  --theme-muted: #5e5e60;
-  --theme-line: #d1d1d2;
-  --theme-accent: #6b57ff;
-  --theme-accent-contrast: #ffffff;
-  color-scheme: light;
+.certificate-viewer[data-theme="datacamp"] {
+  --theme-bg: #05192d;
+  --theme-panel: #0b2540;
+  --theme-panel-alt: #123552;
+  --theme-text: #f7fafb;
+  --theme-muted: #b7c8d8;
+  --theme-line: #29445f;
+  --theme-accent: #03ef62;
+  --theme-accent-contrast: #05192d;
   font-family: Inter, "Segoe UI", system-ui, sans-serif;
 }
 
@@ -458,54 +457,12 @@ a {
 .certificate-viewer[data-theme="tryhackme"] .theme-art::before { transform: translateX(-5.4rem) scale(0.82); }
 .certificate-viewer[data-theme="tryhackme"] .theme-art::after { transform: translateX(5.4rem) scale(0.82); }
 
-.certificate-viewer[data-theme="jetbrains"] .theme-art {
-  overflow: hidden;
-  border-color: #d1d1d2;
-  border-radius: 1rem;
-  background: #ffffff;
+.certificate-viewer[data-theme="datacamp"] .theme-art {
+  background: linear-gradient(135deg, #05192d, #0b2540);
 }
 
-.certificate-viewer[data-theme="jetbrains"] .theme-art::before,
-.certificate-viewer[data-theme="jetbrains"] .theme-art::after {
-  position: absolute;
-  inset: 1.25rem 2.1rem;
-  border-radius: 0.8rem;
-  content: "";
-}
-
-.certificate-viewer[data-theme="jetbrains"] .theme-art::before {
-  background: #21d789;
-  transform: rotate(3deg);
-}
-
-.certificate-viewer[data-theme="jetbrains"] .theme-art::after {
-  background: #6b57ff;
-  transform: rotate(-3deg);
-}
-
-.certificate-viewer[data-theme="jetbrains"] .theme-art__line {
-  display: none;
-}
-
-.certificate-viewer[data-theme="jetbrains"] .theme-wordmark {
-  padding: 1.1rem 1.3rem;
-  border: 1px solid #d1d1d2;
-  border-radius: 0.7rem;
-  background: #ffffff;
-  color: #19191c;
-  box-shadow: 0.55rem 0.55rem 0 rgba(25, 25, 28, 0.9);
-  font-size: clamp(0.9rem, 2vw, 1.4rem);
-  letter-spacing: 0.04em;
-}
-
-.certificate-viewer[data-theme="jetbrains"] .theme-context {
-  color: #6b57ff;
-}
-
-.certificate-viewer[data-theme="jetbrains"] .navigation-button--next {
-  border-color: #19191c;
-  background: #19191c;
-  color: #ffffff;
+.certificate-viewer[data-theme="datacamp"] .theme-wordmark {
+  font-size: clamp(1.6rem, 2.4vw, 2.6rem);
 }
 
 .certificate-wall {
@@ -602,13 +559,6 @@ a {
   height: 5.75rem;
   border-color: rgba(163, 234, 42, 0.55);
   border-radius: 0.85rem;
-}
-
-.certificate-viewer[data-theme="jetbrains"] .empty-visual {
-  border: 1px solid #d1d1d2;
-  border-radius: 0.65rem;
-  background: #ffffff;
-  box-shadow: 0.35rem 0.35rem 0 #21d789, -0.3rem -0.3rem 0 #6b57ff;
 }
 
 .certificate-list {

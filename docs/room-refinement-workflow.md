@@ -211,3 +211,30 @@ blender --background --python scripts/repair_room_foliage_lighting.py -- --sourc
 ```
 
 Der Ausgabeordner muss neu sein. `--image-python` benennt bei Bedarf das System-Python mit Pillow. Der Lauf verwendet 128 Samples und liefert eine separate Blend-Datei, GLB, PNG mit Metadaten sowie ein verlustfreies WebP. Die bereits geprüfte AgX-LUT bleibt erhalten; die lokale Übernahme erfolgt anschließend mit dem vorhandenen `publish_room_refinement.py` und dessen `--look`-Option.
+
+## DataCamp-Beschriftung am fünften Zertifikatsrahmen
+
+`scripts/update_room_certificate_label.mjs` ersetzt im geprüften Refined-GLB nur
+die flache Schrift JET/BRAINS durch DATA/CAMP und aktualisiert die Themenmetadaten.
+Der Helfer ist an die Quellen-Prüfsumme gebunden, verwendet den vorhandenen
+Draco-Decoder und Blender für die neuen Glyphen und schreibt einen Kandidaten nach
+`output/room-refined/datacamp/`. Er überschreibt die Quelle nicht. Aufruf:
+`node scripts/update_room_certificate_label.mjs [blender-executable]`.
+
+Die übrigen 207 Dreiecke des gemeinsamen Schriftmeshs werden exakt übernommen.
+Die neue Schrift benötigt 133 statt 168 Dreiecke. Nur dieses Primitive und das
+betroffene Papierprimitive werden unkomprimiert gespeichert; alle anderen 253
+BufferViews bleiben bytegleich. Das GLB wächst um 20.920 Byte; Mesh-, Material-,
+Textur- und Drawcallanzahl bleiben gleich.
+
+Weil die alte Schrift auch Schatten im Lichtatlas hinterlassen hat, verwenden
+ausschließlich die vier UV1-Ecken der Papier05-Vorderseite das bereits gebackene
+leere Nachbarpapier04. Diese lokale Annäherung übernimmt dessen Beleuchtungsverlauf.
+Papiergeometrie, Normalen, UV0 sowie sämtliche übrigen UV1-Koordinaten bleiben
+unverändert. Lichtatlas und AgX-LUT selbst sind bytegleich, es gibt keinen neuen Bake.
+Modell und Atlas verwenden danach Cacheversion 8. Der Altmodell-Fallback bleibt
+unverändert. Bei einer vollständigen Neugenerierung den aktualisierten DataCamp-
+Quelltext aus `create_room_graybox.py` verwenden und den gezielten Patch neu prüfen.
+
+Die reine Entwicklungsansicht `?inspect=certificate` zeigt die tatsächliche
+Beschriftung und Papierbeleuchtung aus der Nähe. Im Produktionsbuild ist sie inaktiv.

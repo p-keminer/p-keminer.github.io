@@ -72,7 +72,7 @@ CERTIFICATE_TOPICS_RIGHT_TO_LEFT = (
     ("cs50", "CS50", "CS50", 0.112),
     ("cisco", "Cisco", "CISCO", 0.112),
     ("tryhackme", "TryHackMe", "THM", 0.112),
-    ("jetbrains", "JetBrains", "JET\nBRAINS", 0.112),
+    ("datacamp", "DataCamp", "DATA\nCAMP", 0.112),
     (None, "", "", 0.0),
     (None, "", "", 0.0),
     (None, "", "", 0.0),

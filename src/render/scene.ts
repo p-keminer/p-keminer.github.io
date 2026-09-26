@@ -317,6 +317,7 @@ function applyRedesignOverviewPreset(roomGroup: THREE.Group): void {
       instruments: [[1.85, 1.4, -0.85], [2.02, 1.1, -2.1]],
       chair: [[1.15, 1.55, 1.5], [0.1, 0.9, -0.48]],
       curtains: [[-0.55, 1.82, 1.25], [-3.315, 1.85, -1.10]],
+      certificate: [[0.1, 2.23, -1.8], [0.1, 2.23, -2.845]],
       plant: [[2.42, 2.32, 2.04], [3.34, 2.17, 1.42]],
       'plant-left': [[-2.34, 1.98, -1.51], [-3.30, 1.60, -2.64]],
       'plant-shelf': [[2.20, 2.53, -0.72], [3.19, 2.30, -1.27]]
@@ -536,7 +537,7 @@ const CERTIFICATE_TOPIC_DEFINITIONS: ReadonlyArray<{
   { anchorObjectName: 'Anchor_Certificate_08', id: 'cs50', label: 'CS50', surfaceObjectName: 'Certificate_08_Paper' },
   { anchorObjectName: 'Anchor_Certificate_07', id: 'cisco', label: 'Cisco', surfaceObjectName: 'Certificate_07_Paper' },
   { anchorObjectName: 'Anchor_Certificate_06', id: 'tryhackme', label: 'TryHackMe', surfaceObjectName: 'Certificate_06_Paper' },
-  { anchorObjectName: 'Anchor_Certificate_05', id: 'jetbrains', label: 'JetBrains', surfaceObjectName: 'Certificate_05_Paper' }
+  { anchorObjectName: 'Anchor_Certificate_05', id: 'datacamp', label: 'DataCamp', surfaceObjectName: 'Certificate_05_Paper' }
 ];
 
 function createSemesterOneFrameTexture(renderer: THREE.WebGLRenderer): THREE.CanvasTexture {
