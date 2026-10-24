@@ -1497,7 +1497,7 @@ function renderRoomHotspots(
                Portfolio wird ge&ouml;ffnet&nbsp;&hellip;
              </div>
              <iframe
-                src="/portfolio/index.html?v=2026-10-24-order-2"
+                src="/portfolio/index.html?v=2026-10-24-builder"
                 title="Portfolio"
                 loading="eager"
                 referrerpolicy="no-referrer"
